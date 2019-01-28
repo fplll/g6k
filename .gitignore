@@ -1,0 +1,11 @@
+# Compiled source #
+###################
+*.pyc
+*.o
+*.so
+
+# Specific Files #
+##################
+
+/g6k/siever.cpp
+/g6k/siever_params.cpp
