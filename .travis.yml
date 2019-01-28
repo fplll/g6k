@@ -1,0 +1,37 @@
+sudo: required
+dist: trusty
+language: python
+python:
+  - "2.7"
+
+cache: pip
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - g++-4.9
+      - libgmp-dev
+      - libmpfr-dev
+      - libqd-dev
+      - build-essential
+      - libtool
+      - autoconf
+      - python-pip
+      - python-dev
+      - python-flake8
+
+install:
+  - export CXX="g++-4.9"
+  - ./install-dependencies.sh $VIRTUAL_ENV
+  - pip install Cython
+  - pip install -r requirements.txt
+  - python setup.py build_ext --inplace
+
+script:
+  - LD_LIBRARY_PATH="$VIRTUAL_ENV/lib" python -m pytest
+
+notifications:
+  on_success: change
+  on_failure: always
