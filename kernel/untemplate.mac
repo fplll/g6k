@@ -1,0 +1,157 @@
+#include <cassert>
+#include <cstdlib>
+
+// if TEMPLATED_DIM is set (via build options),
+// this macro sets the function pointer g to f<n>, where n is determined at runtime.
+// This allows to compile various optimized versions of f with hardwired dimension.
+
+#ifndef TEMPLATED_DIM
+#define UNTEMPLATE_DIM(f,g,n)
+#else
+#define UNTEMPLATE_DIM(f,g,n) \
+    { \
+        if (n==0) {g = f<0>;}\
+        else if (n==1) {g = f<1>;}\
+        else if (n==2) {g = f<2>;}\
+        else if (n==3) {g = f<3>;}\
+        else if (n==4) {g = f<4>;}\
+        else if (n==5) {g = f<5>;}\
+        else if (n==6) {g = f<6>;}\
+        else if (n==7) {g = f<7>;}\
+        else if (n==8) {g = f<8>;}\
+        else if (n==9) {g = f<9>;}\
+        \
+        else if (n==10) {g = f<10>;}\
+        else if (n==11) {g = f<11>;}\
+        else if (n==12) {g = f<12>;}\
+        else if (n==13) {g = f<13>;}\
+        else if (n==14) {g = f<14>;}\
+        else if (n==15) {g = f<15>;}\
+        else if (n==16) {g = f<16>;}\
+        else if (n==17) {g = f<17>;}\
+        else if (n==18) {g = f<18>;}\
+        else if (n==19) {g = f<19>;}\
+        \
+        else if (n==20) {g = f<20>;}\
+        else if (n==21) {g = f<21>;}\
+        else if (n==22) {g = f<22>;}\
+        else if (n==23) {g = f<23>;}\
+        else if (n==24) {g = f<24>;}\
+        else if (n==25) {g = f<25>;}\
+        else if (n==26) {g = f<26>;}\
+        else if (n==27) {g = f<27>;}\
+        else if (n==28) {g = f<28>;}\
+        else if (n==29) {g = f<29>;}\
+        \
+        else if (n==30) {g = f<30>;}\
+        else if (n==31) {g = f<31>;}\
+        else if (n==32) {g = f<32>;}\
+        else if (n==33) {g = f<33>;}\
+        else if (n==34) {g = f<34>;}\
+        else if (n==35) {g = f<35>;}\
+        else if (n==36) {g = f<36>;}\
+        else if (n==37) {g = f<37>;}\
+        else if (n==38) {g = f<38>;}\
+        else if (n==39) {g = f<39>;}\
+        \
+        else if (n==40) {g = f<40>;}\
+        else if (n==41) {g = f<41>;}\
+        else if (n==42) {g = f<42>;}\
+        else if (n==43) {g = f<43>;}\
+        else if (n==44) {g = f<44>;}\
+        else if (n==45) {g = f<45>;}\
+        else if (n==46) {g = f<46>;}\
+        else if (n==47) {g = f<47>;}\
+        else if (n==48) {g = f<48>;}\
+        else if (n==49) {g = f<49>;}\
+        \
+        else if (n==50) {g = f<50>;}\
+        else if (n==51) {g = f<51>;}\
+        else if (n==52) {g = f<52>;}\
+        else if (n==53) {g = f<53>;}\
+        else if (n==54) {g = f<54>;}\
+        else if (n==55) {g = f<55>;}\
+        else if (n==56) {g = f<56>;}\
+        else if (n==57) {g = f<57>;}\
+        else if (n==58) {g = f<58>;}\
+        else if (n==59) {g = f<59>;}\
+        \
+        else if (n==60) {g = f<60>;}\
+        else if (n==61) {g = f<61>;}\
+        else if (n==62) {g = f<62>;}\
+        else if (n==63) {g = f<63>;}\
+        else if (n==64) {g = f<64>;}\
+        else if (n==65) {g = f<65>;}\
+        else if (n==66) {g = f<66>;}\
+        else if (n==67) {g = f<67>;}\
+        else if (n==68) {g = f<68>;}\
+        else if (n==69) {g = f<69>;}\
+        \
+        else if (n==70) {g = f<70>;}\
+        else if (n==71) {g = f<71>;}\
+        else if (n==72) {g = f<72>;}\
+        else if (n==73) {g = f<73>;}\
+        else if (n==74) {g = f<74>;}\
+        else if (n==75) {g = f<75>;}\
+        else if (n==76) {g = f<76>;}\
+        else if (n==77) {g = f<77>;}\
+        else if (n==78) {g = f<78>;}\
+        else if (n==79) {g = f<79>;}\
+        \
+        else if (n==80) {g = f<80>;}\
+        else if (n==81) {g = f<81>;}\
+        else if (n==82) {g = f<82>;}\
+        else if (n==83) {g = f<83>;}\
+        else if (n==84) {g = f<84>;}\
+        else if (n==85) {g = f<85>;}\
+        else if (n==86) {g = f<86>;}\
+        else if (n==87) {g = f<87>;}\
+        else if (n==88) {g = f<88>;}\
+        else if (n==89) {g = f<89>;}\
+        \
+        else if (n==90) {g = f<90>;}\
+        else if (n==91) {g = f<91>;}\
+        else if (n==92) {g = f<92>;}\
+        else if (n==93) {g = f<93>;}\
+        else if (n==94) {g = f<94>;}\
+        else if (n==95) {g = f<95>;}\
+        else if (n==96) {g = f<96>;}\
+        else if (n==97) {g = f<97>;}\
+        else if (n==98) {g = f<98>;}\
+        else if (n==99) {g = f<99>;}\
+        \
+        else if (n==100) {g = f<100>;}\
+        else if (n==101) {g = f<101>;}\
+        else if (n==102) {g = f<102>;}\
+        else if (n==103) {g = f<103>;}\
+        else if (n==104) {g = f<104>;}\
+        else if (n==105) {g = f<105>;}\
+        else if (n==106) {g = f<106>;}\
+        else if (n==107) {g = f<107>;}\
+        else if (n==108) {g = f<108>;}\
+        else if (n==109) {g = f<109>;}\
+        \
+        else if (n==110) {g = f<110>;}\
+        else if (n==111) {g = f<111>;}\
+        else if (n==112) {g = f<112>;}\
+        else if (n==113) {g = f<113>;}\
+        else if (n==114) {g = f<114>;}\
+        else if (n==115) {g = f<115>;}\
+        else if (n==116) {g = f<116>;}\
+        else if (n==117) {g = f<117>;}\
+        else if (n==118) {g = f<118>;}\
+        else if (n==119) {g = f<119>;}\
+        \
+        else if (n==120) {g = f<120>;}\
+        else if (n==121) {g = f<121>;}\
+        else if (n==122) {g = f<122>;}\
+        else if (n==123) {g = f<123>;}\
+        else if (n==124) {g = f<124>;}\
+        else if (n==125) {g = f<125>;}\
+        else if (n==126) {g = f<126>;}\
+        else if (n==127) {g = f<127>;}\
+        else if (n==128) {g = f<128>;}\
+        else {assert(false); std::abort(); } \
+    }
+
+#endif

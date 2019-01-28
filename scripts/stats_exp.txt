@@ -1,0 +1,8 @@
+    @property
+    def _stat_get_REPLACEME(self):
+        return self._core.statistics.get_stats_REPLACEME()
+
+    @property
+    def _stat_c_REPLACEME(self):
+        return self._core.statistics.collect_statistics_REPLACEME
+
