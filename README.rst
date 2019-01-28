@@ -16,8 +16,15 @@ The article is available `in this repository <https://github.com/fplll/g6k/blob/
 Building the library
 ====================
 
-You will need the current master of FPyLLL. See ``bootstrap.sh`` for creating (almost) all dependencies from scratch.
-You will also need to build the Cython extension **in place** like so:
+You will need the current master of FPyLLL. See ``bootstrap.sh`` for creating (almost) all dependencies from scratch:
+
+.. code-block:: bash
+
+    ./bootstrap.sh                # once only: creates local python env, builds fplll, fpylll and G6K
+    source g6k-env/bin/activate   # for every new shell: activates local python env
+    ./rebuild.sh -f               # whenever you want to rebuild G6K
+
+Otherwise, you will need fplll and fpylll already installed and build the G6K Cython extension **in place** like so:
 
 .. code-block:: bash
 
