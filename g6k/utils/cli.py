@@ -254,6 +254,8 @@ def parse_args(description, ParamsClass=SieverParams, **kwds):
 
     multiprocessing_logging.install_mp_handler()
 
+    if not os.path.isdir("logs"):
+        os.makedirs("logs")
     logging.basicConfig(level=logging.DEBUG,
                         format='%(levelname)5s:%(name)12s:%(asctime)s: %(message)s',
                         datefmt='%Y/%m/%d %H:%M:%S %Z',
