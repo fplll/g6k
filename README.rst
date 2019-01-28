@@ -163,3 +163,4 @@ To test the answer we compute:
     >>> v = A.multiply_left(coeffs)
     >>> sum(v_**2 for v_ in v) == l
     True
+

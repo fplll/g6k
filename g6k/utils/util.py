@@ -1,6 +1,7 @@
 import os.path
 import requests
 import sys
+import logging
 
 from math import log
 
@@ -44,7 +45,7 @@ def load_matrix_file(filepath, randomize=False, seed=None):
     return A, bkz
 
 
-def load_svpchallenge_and_randomize(n, s=0, seed=None):
+def load_svpchallenge_and_randomize(n, s=0, seed=None, verbose=True):
     """
     Load SVP challenge (and randomize)
 
@@ -72,11 +73,14 @@ def load_svpchallenge_and_randomize(n, s=0, seed=None):
 
     filename = "svpchallenge/svpchallenge-dim-%03d-seed-%02d.txt"%(n, s)
 
+    if not os.path.isdir("svpchallenge"):
+        os.mkdir("svpchallenge")
+
     if os.path.isfile(filename) is False:
-        print "Did not find '{filename}', downloading ...".format(filename=filename),
+        logging.info("Did not find '{filename}', downloading ...".format(filename=filename),)
         r = requests.post("https://www.latticechallenge.org/svp-challenge/generator.php",
                           data={'dimension': n, 'seed': s, 'sent': 'True'})
-        print "%s %s"%(r.status_code, r.reason)
+        logging.info("%s %s"%(r.status_code, r.reason))
         fn = open(filename, "w")
         fn.write(r.text)
         fn.close()
@@ -89,6 +93,9 @@ def load_prebkz(n, s=0, blocksize=40):
     """
 
     filename = "qarychallenge/prebkz-%02d-dim-%03d-seed-%02d.txt"%(blocksize, n, s)
+
+    if not os.path.isdir("qarychallenge"):
+        os.mkdir("qarychallenge")
 
     if os.path.isfile(filename) is False:
         set_random_seed(s)
@@ -236,6 +243,10 @@ def load_lwe_challenge(n=40, alpha=0.005):
     """
     alpha = int(round(alpha * 1000))
     start = "lwechallenge"
+
+    if not os.path.isdir(start):
+        os.mkdir(start)
+
     end = "{n:03d}-{alpha:03d}-challenge.txt".format(n=n, alpha=alpha)
     filename = os.path.join(start, end)
     if not os.path.isfile(filename):
