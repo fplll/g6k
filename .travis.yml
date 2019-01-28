@@ -23,7 +23,7 @@ addons:
 install:
   - export CXX="g++-4.9"
   - ./install-dependencies.sh
-  - pip install Cython
+  - pip install Cython --upgrade
   - pip install -r requirements.txt --upgrade
   - python setup.py build_ext --inplace
 
