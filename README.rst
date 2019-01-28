@@ -10,7 +10,7 @@ G6K is a C++ and Python (2) library that implements several Sieve algorithms to 
 Martin R. Albrecht and Léo Ducas and Gottfried Herold and Elena Kirshanova and Eamonn W. Postlethwaite and Marc Stevens, 
 The General Sieve Kernel and New Records in Lattice Reduction.
 
-The article is available `in this repository <https://github.com/fplll/g6k/blob/master/article.pdf>`__ and soon on eprint.
+The article is available `in this repository <https://github.com/fplll/g6k/blob/master/article.pdf>`__ and on `eprint <https://eprint.iacr.org/2019/089>`__ .
 
 
 Building the library
