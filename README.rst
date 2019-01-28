@@ -6,7 +6,6 @@ You will also need to build the Cython extension **in place** like so:
 
 .. code-block:: bash
 
-    cd code
     pip install Cython
     pip install -r requirements.txt
     ./rebuild.sh -f
