@@ -1071,7 +1071,7 @@ cdef class Siever(object):
         B = self.params.bgj1_bucket_size_factor * (N ** self.params.bgj1_bucket_size_expo)
 
         y = B/N
-        x = betaincinv((self.n+1.)/2., .5, y)
+        x = betaincinv((self.n-1.)/2., .5, y)
         alpha = (1 - x)**.5
 
         sig_on()
@@ -1134,7 +1134,7 @@ cdef class Siever(object):
         B = self.params.bgj1_bucket_size_factor * (max_db_size ** self.params.bgj1_bucket_size_expo)
 
         y = B/max_db_size
-        x = betaincinv((self.n+1.)/2., .5, y)
+        x = betaincinv((self.n-1.)/2., .5, y)
         alpha = (1 - x)**.5
 
 
