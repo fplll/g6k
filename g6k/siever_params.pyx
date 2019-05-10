@@ -95,7 +95,7 @@ cdef class SieverParams(object):
         if "bgj1_bucket_size_expo" not in kwds:
             kwds["bgj1_bucket_size_expo"] = .5     # The initial bgj1_bucket_size for sieving is
         if "bgj1_bucket_size_factor" not in kwds:
-            kwds["bgj1_bucket_size_factor"] =  3.2
+            kwds["bgj1_bucket_size_factor"] =  6.4
 
         # TODO : remove the two following ?
         if "triplesieve_db_size_base" not in kwds:
