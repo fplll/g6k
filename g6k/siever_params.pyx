@@ -239,7 +239,7 @@ cdef class SieverParams(object):
             >>> from g6k import SieverParams
             >>> sp = SieverParams()
             >>> sp.bgj1_bucket_size_factor
-            3.2
+            6.4
 
             >>> sp.bgj2_bucket_max_size_factor
             Traceback (most recent call last):
