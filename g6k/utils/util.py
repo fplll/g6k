@@ -14,7 +14,7 @@ from fpylll.util import gaussian_heuristic, set_random_seed
 from g6k.utils.stats import SieveTreeTracer
 
 
-def load_matrix_file(filepath, randomize=False, seed=None):
+def load_matrix_file(filepath, randomize=False, seed=None, float_type="double"):
     """
     Load matrix from file, LLL reduce (and randomize).
 
@@ -28,7 +28,7 @@ def load_matrix_file(filepath, randomize=False, seed=None):
     A = LLL.reduction(A)
     A = IntegerMatrix.from_matrix(A, int_type="long")
 
-    M = GSO.Mat(A, float_type="double", flags=GSO.ROW_EXPO)
+    M = GSO.Mat(A, float_type=float_type)
     bkz = BKZReduction(M)
 
     if seed is not None:
@@ -37,15 +37,15 @@ def load_matrix_file(filepath, randomize=False, seed=None):
     if randomize:
         bkz.randomize_block(0, A.nrows, density=A.ncols/4)
         LLL.reduction(A)
-        bkz = BKZReduction(A)
+        M = GSO.Mat(A, float_type=float_type)
+        bkz = BKZReduction(M)
 
-    LLL.reduction(A)
     bkz.lll_obj()  # to initialize bkz.M etc
 
     return A, bkz
 
 
-def load_svpchallenge_and_randomize(n, s=0, seed=None, verbose=True):
+def load_svpchallenge_and_randomize(n, s=0, seed=None, verbose=True, float_type="double"):
     """
     Load SVP challenge (and randomize)
 
@@ -85,7 +85,7 @@ def load_svpchallenge_and_randomize(n, s=0, seed=None, verbose=True):
         fn.write(r.text)
         fn.close()
 
-    return load_matrix_file(filename, randomize=True, seed=seed)
+    return load_matrix_file(filename, randomize=True, seed=seed, float_type=float_type)
 
 
 def load_prebkz(n, s=0, blocksize=40):
