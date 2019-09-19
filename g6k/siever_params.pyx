@@ -491,7 +491,7 @@ cdef class SieverParams(object):
         return hash(tuple(self.items()))
 
     def __eq__(self, SieverParams other):
-        return tuple(self.items()) == tuple(self.items())
+        return tuple(self.items()) == tuple(other.items())
 
 def unpickle_params(cls, *d):
     return cls(**dict(d))
