@@ -53,8 +53,8 @@ def wrapped_sieve(pump):
     if pump.goal_r0 is not None:
         pump.g6k.insert_best_lift(scoring_goal_r0, aux=pump)
 
-    if (pump.g6k.M.get_r(pump.kappa, pump.kappa) <= pump.goal_r0):
-        cont = False
+        if (pump.g6k.M.get_r(pump.kappa, pump.kappa) <= pump.goal_r0):
+            cont = False
 
     return cont
 
