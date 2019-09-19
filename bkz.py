@@ -83,7 +83,7 @@ def bkz_kernel(arg0, params=None, seed=None):
     dont_trace = params.pop("dummy_tracer", False)
 
     if blocksizes[-1] > d:
-        print 'set a smaller maximum blocksize with --blocksizes'
+        print('set a smaller maximum blocksize with --blocksizes')
         return
 
     challenge_seed = params.pop("challenge_seed")
@@ -133,9 +133,9 @@ def bkz_kernel(arg0, params=None, seed=None):
             if verbose:
                 slope = basis_quality(M)["/"]
                 fmt = "{'alg': '%25s', 'jump':%2d, 'pds':%d, 'extra_d4f': %2d, 'beta': %2d, 'slope': %.5f, 'total walltime': %.3f}" # noqa
-                print fmt % (algbkz + "+" + ("enum" if algbkz == "fpylll" else g6k.params.default_sieve),
+                print(fmt % (algbkz + "+" + ("enum" if algbkz == "fpylll" else g6k.params.default_sieve),
                              jump, pump_params["down_sieve"], extra_dim4free,
-                             blocksize, slope, time.time() - T0)
+                             blocksize, slope, time.time() - T0))
 
     tracer.exit()
     try:
@@ -168,7 +168,7 @@ def bkz_tour():
                                   verbose=False
                                   )
 
-    stats = run_all(bkz_kernel, all_params.values(),
+    stats = run_all(bkz_kernel, list(all_params.values()),
                     lower_bound=args.lower_bound,
                     upper_bound=args.upper_bound,
                     step_size=args.step_size,
@@ -176,10 +176,10 @@ def bkz_tour():
                     workers=args.workers,
                     seed=args.seed)
 
-    inverse_all_params = OrderedDict([(v, k) for (k, v) in all_params.iteritems()])
+    inverse_all_params = OrderedDict([(v, k) for (k, v) in all_params.items()])
 
     stats2 = OrderedDict()
-    for (n, params), v in stats.iteritems():
+    for (n, params), v in stats.items():
         params_name = inverse_all_params[params]
         params_name = re.sub("'challenge_seed': [0-9]+,", "", params_name)
         params = params.new(challenge_seed=None)

@@ -107,7 +107,7 @@ class SieveTreeTracer(Tracer):
                 node.data["|v|"] = None
 
         data = basis_quality(self.instance.M)
-        for k, v in data.items():
+        for k, v in list(data.items()):
             if k == "/":
                 node.data[k] = Accumulator(v, repr="max")
             else:
@@ -137,6 +137,6 @@ class SieveTreeTracer(Tracer):
             report["r_0"] = node["r_0"]
             report["/"] = node["/"]
 
-            print(pretty_dict(report))
+            print((pretty_dict(report)))
 
         self.current = self.current.parent

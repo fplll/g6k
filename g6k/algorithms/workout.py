@@ -3,7 +3,7 @@
 
 """
 import sys
-from pump import pump
+from .pump import pump
 from fpylll.util import gaussian_heuristic
 import time
 
@@ -34,7 +34,7 @@ def workout(g6k, tracer, kappa, blocksize, dim4free_min=0,              # Main p
         pump_params = {}
 
     f_start = max(blocksize - start_n, 0, dim4free_min)
-    fs = range(dim4free_min, f_start+1, dim4free_dec)[::-1]
+    fs = list(range(dim4free_min, f_start+1, dim4free_dec))[::-1]
 
     if goal_r0:
         fs += 9999*[dim4free_min]
@@ -56,9 +56,9 @@ def workout(g6k, tracer, kappa, blocksize, dim4free_min=0,              # Main p
             if verbose:
                 gh2 = gaussian_heuristic([g6k.M.get_r(i, i) for i in range(kappa+f, kappa+blocksize)])
                 quality = (gh * (blocksize - f)) / (gh2 * blocksize)
-                print("T:%10.5fs, TT:%10.5fs, q:%10.5f r0/gh:%10.5f" %
+                print(("T:%10.5fs, TT:%10.5fs, q:%10.5f r0/gh:%10.5f" %
                       (time.time() - timestart,
-                       time.time() - runtimestart, quality, g6k.M.get_r(kappa, kappa) / gh))
+                       time.time() - runtimestart, quality, g6k.M.get_r(kappa, kappa) / gh)))
 
             if g6k.M.get_r(kappa, kappa) < goal_r0:
                 break

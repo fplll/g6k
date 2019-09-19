@@ -46,7 +46,7 @@ def apply_aliases(cli_args):
     acli_args = []
 
     for arg in cli_args:
-        for x, y in cli_arg_aliases.iteritems():
+        for x, y in cli_arg_aliases.items():
             arg = arg.replace(x, y)
         acli_args.append(arg)
 
@@ -193,7 +193,7 @@ def parse_args(description, ParamsClass=SieverParams, **kwds):
     args, unknown = parser.parse_known_args()
 
     kwds_ = OrderedDict()
-    for k, v in kwds.iteritems():
+    for k, v in kwds.items():
         k_ = k.replace("__", "/")
         kwds_[k_] = v
     kwds = kwds_
@@ -202,8 +202,8 @@ def parse_args(description, ParamsClass=SieverParams, **kwds):
         pp = ParamsClass(**kwds)
         slen = max(len(p) for p in pp) + 1
         fmt = "{key:%ds}: {value}"%slen
-        for k, v in pp.iteritems():
-            print(fmt.format(key=k, value=v))
+        for k, v in pp.items():
+            print((fmt.format(key=k, value=v)))
         exit(0)
 
     all_params = OrderedDict([("", ParamsClass(**kwds))])
@@ -239,7 +239,7 @@ def parse_args(description, ParamsClass=SieverParams, **kwds):
         if not unknown_args[k]:
             unknown_args[k] = [True]
 
-    for k, v in unknown_args.iteritems():
+    for k, v in unknown_args.items():
         all_params_ = OrderedDict()
         for p in all_params:
             for v_ in v:

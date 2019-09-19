@@ -17,8 +17,7 @@ def temp_params(self, **kwds):
         >>> A = IntegerMatrix.random(50, "qary", k=25, bits=10)
         >>> g6k = Siever(A, seed=0x1337)
         >>> with g6k.temp_params(reserved_n=20):
-        ...      print g6k.params.reserved_n
-        ...
+        ...      print(g6k.params.reserved_n)
         20
 
         >>> g6k.params.reserved_n
@@ -119,7 +118,7 @@ cdef class SieverParams(object):
             read_only = True
             del kwds["read_only"]
 
-        for k, v in kwds.iteritems():
+        for k, v in kwds.items():
             self._set(k, v)
 
         if read_only:
@@ -355,17 +354,20 @@ cdef class SieverParams(object):
         if not minimal:
             for k in self.known_attributes:
                 d[k] = self._get(k)
-            for k, v in self._pyattr.iteritems():
+            for k, v in self._pyattr.items():
                 d[k] = v
         else:
             t = self.__class__()
             for k in self.known_attributes:
                 if k not in t or self._get(k) != t[k]:
                     d[k] = self._get(k)
-            for k, v in self._pyattr.iteritems():
+            for k, v in self._pyattr.items():
                 if k not in t or self._get(k) != t[k]:
                     d[k] = v
         return d
+
+    def items(self):
+        yield from self.iteritems()
 
     def iteritems(self):
         """
@@ -373,12 +375,12 @@ cdef class SieverParams(object):
 
             >>> from g6k import SieverParams
             >>> sp = SieverParams(otf_lift=False)
-            >>> _ = [(k, v) for k, v in sp.iteritems()]
+            >>> _ = [(k, v) for k, v in sp.items()]
 
         """
         for k in self.known_attributes:
             yield k, self._get(k)
-        for k, v in self._pyattr.iteritems():
+        for k, v in self._pyattr.items():
             if k not in self.known_attributes:
                 yield k, v
 
@@ -393,7 +395,7 @@ cdef class SieverParams(object):
         """
         for k in self.known_attributes:
             yield k
-        for k, _ in self._pyattr.iteritems():
+        for k, _ in self._pyattr.items():
             if k not in self.known_attributes:
                 yield k
 
@@ -465,7 +467,7 @@ cdef class SieverParams(object):
             SieverParams({})
 
         """
-        return (unpickle_params, (self.__class__,) + tuple(self.dict().iteritems()))
+        return (unpickle_params, (self.__class__,) + tuple(self.dict().items()))
 
     @property
     def read_only(self):
@@ -486,10 +488,10 @@ cdef class SieverParams(object):
         return tuple(t)
 
     def __hash__(self):
-        return hash(tuple(self.iteritems()))
+        return hash(tuple(self.items()))
 
     def __eq__(self, SieverParams other):
-        return tuple(self.iteritems()) == tuple(self.iteritems())
+        return tuple(self.items()) == tuple(self.items())
 
 def unpickle_params(cls, *d):
     return cls(**dict(d))

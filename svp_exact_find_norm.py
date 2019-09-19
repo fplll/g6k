@@ -29,7 +29,7 @@ def svp_kernel_trial(arg0, params=None, seed=None, goal_r0=None):
     tracer = SieveTreeTracer(g6k, root_label=("svp-challenge", n), start_clocks=True)
 
     gh = gaussian_heuristic([g6k.M.get_r(i, i) for i in range(n)])
-    ds = range(0, n - 40, dim4free_dec)[::-1] + 10*[0]
+    ds = list(range(0, n - 40, dim4free_dec))[::-1] + 10*[0]
 
     if goal_r0 is None:
         goal_r0 = 1.1 * gh
@@ -60,8 +60,8 @@ def svp_kernel(arg0, params=None, seed=None):
         else:
             matches = 0
             goal_r0 = found_r0
-        print "\t", (n, challenge_seed), "Trial %3d, found norm %10d = %.4f*gh, consec matches %d/5" % (
-            trials, goal_r0, goal_r0/gh, matches)
+        print("\t", (n, challenge_seed), "Trial %3d, found norm %10d = %.4f*gh, consec matches %d/5" % (
+            trials, goal_r0, goal_r0/gh, matches))
 
     save_svpchallenge_norm(n, goal_r0, s=challenge_seed)
 
@@ -77,7 +77,7 @@ def svp():
                                   workout__dim4free_dec=2,
                                   challenge_seed=0)
 
-    run_all(svp_kernel, all_params.values(),
+    run_all(svp_kernel, list(all_params.values()),
             lower_bound=args.lower_bound,
             upper_bound=args.upper_bound,
             step_size=args.step_size,

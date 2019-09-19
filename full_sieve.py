@@ -49,7 +49,7 @@ def full_sieve():
 
     args, all_params = parse_args(description,)
 
-    stats = run_all(full_sieve_kernel, all_params.values(),
+    stats = run_all(full_sieve_kernel, list(all_params.values()),
                     lower_bound=args.lower_bound,
                     upper_bound=args.upper_bound,
                     step_size=args.step_size,
@@ -57,7 +57,7 @@ def full_sieve():
                     workers=args.workers,
                     seed=args.seed)
 
-    inverse_all_params = OrderedDict([(v, k) for (k, v) in all_params.iteritems()])
+    inverse_all_params = OrderedDict([(v, k) for (k, v) in all_params.items()])
 
     for (n, params) in stats:
         stat = stats[(n, params)]

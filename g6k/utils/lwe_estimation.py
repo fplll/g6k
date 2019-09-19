@@ -117,7 +117,7 @@ def decoupler(decouple, n, samples, q, stddev, d):
     if d is not None:
         ms = [d - 1]
     else:
-        ms = range(n, min(5*n+1, samples+1))
+        ms = list(range(n, min(5*n+1, samples+1)))
 
     for m in ms:
         beta_bound = min(m+1, 110+default_dim4free_fun(110))
@@ -125,7 +125,7 @@ def decoupler(decouple, n, samples, q, stddev, d):
         for bkz_block_size in range(40, beta_bound):
             delta_0 = delta_0f(bkz_block_size)
             if decouple:
-                svp_dims = range(40, svp_bound)
+                svp_dims = list(range(40, svp_bound))
             else:
                 svp_dims = [min(bkz_block_size, svp_bound)]
 

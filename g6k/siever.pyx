@@ -163,14 +163,14 @@ cdef class Siever(object):
             cr = r_bound
 
         cdef int i, j
-        for i in xrange(cr):
+        for i in range(cr):
             self.M.update_gso_row(i, i)
 
         cdef np.ndarray _gso = zeros((self.M.d, self.M.d), dtype=float64)
 
-        for i in xrange(cr):
+        for i in range(cr):
             _gso[i][i] = self.M.get_r(i, i)
-            for j in xrange(i):
+            for j in range(i):
                 _gso[i][j] = self.M.get_mu(i, j)
 
         sig_on()
@@ -337,6 +337,9 @@ cdef class Siever(object):
 
         """
         return self._core.db_size()
+
+    def values(self):
+        yield from self.itervalues()
 
     def itervalues(self):
         """
@@ -888,7 +891,7 @@ cdef class Siever(object):
 
     @property
     def stats(self):
-        "Returns all collected statistics of the current sieve as a dictionary"
+        """Returns all collected statistics of the current sieve as a dictionary"""
         ret = {"cdb-size:" : self._core.cdb.size()}
         for key in Siever.all_statistics:
             if(getattr(self,"_stat_c_" + key) == True):
@@ -958,8 +961,8 @@ cdef class Siever(object):
     # def print_histo(self):
     #     _, histo = self.db_stats()
     #     for (r, c) in histo[30:40:2]:
-    #         print "%.2f:%.2f "%(r,c),
-    #     print
+    #         print("%.2f:%.2f "%(r,c), end="")
+    #     print()
 
     def resize_db(self, N, large = 0):
         """
@@ -1125,7 +1128,7 @@ cdef class Siever(object):
         if reset_stats:
             self.reset_stats()
 
-        # print self.params.db_size_base
+        # print(self.params.db_size_base)
 
         if max_db_size == 0:
             max_db_size = self.params.db_size_factor * self.params.db_size_base ** self.n
@@ -1186,7 +1189,7 @@ cdef class Siever(object):
             with tracer.context("gauss"):
                 self.gauss_sieve(reset_stats=reset_stats)
         elif alg == "gauss_no_upd":
-            print "--alg gauss_no_upd has been renamed into just --alg gauss. the gauss_no_upd option will be removed soon." #TODO: Remove this line. It just serves to spot issues gracefully.
+            print("--alg gauss_no_upd has been renamed into just --alg gauss. the gauss_no_upd option will be removed soon.") #TODO: Remove this line. It just serves to spot issues gracefully.
             with tracer.context("gauss"):
                 self.gauss_sieve(reset_stats=reset_stats)
         elif alg == "gauss_triple_st":  #Single-threaded 3Sieve
@@ -1338,8 +1341,8 @@ cdef class Siever(object):
         full_j = where(abs(v) == 1)[0][-1]
 
         if full_j < self.l:
-            print full_j, self.l
-            print v
+            print(full_j, self.l)
+            print(v)
             raise NotImplementedError('Can only handle vectors with +/- 1 in sieving context (have you deactivated param.unitary_only ?)')
 
         assert kappa <= self.l
@@ -1350,7 +1353,7 @@ cdef class Siever(object):
         self.M.UinvT.gen_identity()
 
         with self.M.row_ops(0, self.full_n):
-            for i in xrange(kappa, self.r):
+            for i in range(kappa, self.r):
                 if i != full_j:
                     self.M.row_addmul(full_j, i, v[i])
 
@@ -1520,8 +1523,8 @@ cdef class Siever(object):
         score_list = [(scoring(index, nlen, self.M.get_r(index, index), aux), -index, v) for (index, nlen, v) in L]
         score_list = [(a, b, c) for (a,b,c) in score_list if a] + [(None, None, None)]
 
-        # print [("%.3f"%a, b) for (a,b,c) in score_list]
-        # print
+        # print([("%.3f"%a, b) for (a,b,c) in score_list])
+        # print()
         (best_score, best_i, best_v) = max(score_list)
 
         if best_score is None or not best_score:
