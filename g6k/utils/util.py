@@ -35,7 +35,7 @@ def load_matrix_file(filepath, randomize=False, seed=None, float_type="double"):
         FPLLL.set_random_seed(seed)
 
     if randomize:
-        bkz.randomize_block(0, A.nrows, density=A.ncols/4)
+        bkz.randomize_block(0, A.nrows, density=A.ncols//4)
         LLL.reduction(A)
         M = GSO.Mat(A, float_type=float_type)
         bkz = BKZReduction(M)
@@ -58,7 +58,7 @@ def load_svpchallenge_and_randomize(n, s=0, seed=None, verbose=True, float_type=
 
         >>> from g6k.utils.util import load_svpchallenge_and_randomize
         >>> # suppressing downloading message
-        >>> print "skip from here ",; A, _ = load_svpchallenge_and_randomize(50) # doctest: +ELLIPSIS
+        >>> print("skip from here ",end=""); A, _ = load_svpchallenge_and_randomize(50) # doctest: +ELLIPSIS
         skip from here ...
         >>> B, _ = load_svpchallenge_and_randomize(50)
         >>> A == B

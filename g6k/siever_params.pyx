@@ -344,7 +344,7 @@ cdef class SieverParams(object):
             >>> from g6k import SieverParams
             >>> sp = SieverParams(otf_lift=False)
             >>> sp.dict() # doctest: +ELLIPSIS
-            {'triplesieve_db_size_base': 1.1401315713548152, ... 'sample_by_sums': True}
+            {'reserved_n': 0, ... 'gauss_crossover': 50}
 
             >>> sp.dict(True)
             {'otf_lift': False}
@@ -410,7 +410,7 @@ cdef class SieverParams(object):
             SieverParams({'otf_lift': False})
 
             >>> sp = sp.new(foo=2); sp
-            SieverParams({'foo': 2, 'otf_lift': False})
+            SieverParams({'otf_lift': False, 'foo': 2})
 
         """
         d = self.dict(minimal=True)
