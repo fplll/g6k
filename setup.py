@@ -1,16 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from distutils.core import setup
-from distutils.extension import Extension
+try:
+    from setuptools import setup
+    from setuptools.extension import Extension
+except ImportError:
+    from distutils.core import setup
+    from distutils.extension import Extension
 from Cython.Build import cythonize
 
-import numpy
 import subprocess
 import os
 subprocess.check_call("make")
 
-import numpy  # noqa
+import numpy
 
 
 def read_from_makefile(field):
@@ -45,11 +48,13 @@ extensions = [
     Extension("g6k.siever_params", ["g6k/siever_params.pyx"], **kwds)
 ]
 
+
 setup(
     name="G6K",
     version="0.0.1",
     ext_modules=cythonize(extensions, compiler_directives={'binding': True,
                                                            'embedsignature': True,
                                                            'language_level': 2}),
-    packages=[],
+    packages=["g6k", "g6k.algorithms", "g6k.utils"],
+    package_data={"": ["spherical_coding/*.def"]}
 )

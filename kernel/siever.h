@@ -360,7 +360,7 @@ public:
                                             // execute_delayed_insert; 0 means AUTO, i.e. 10 +
                                             // 2*threads.
 
-  std::string simhash_codes_basedir = ".";  // directory holding spherical codes for simhash.
+  std::string simhash_codes_basedir = "";  // directory holding spherical codes for simhash.
 };
 
 /**

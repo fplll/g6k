@@ -4,6 +4,7 @@ Sieving parameters.
 """
 
 from contextlib import contextmanager
+from pkg_resources import resource_filename
 
 @contextmanager
 def temp_params(self, **kwds):
@@ -113,6 +114,11 @@ cdef class SieverParams(object):
             kwds["default_sieve"] = "gauss_triple_mt"
         if "gauss_crossover" not in kwds:
             kwds["gauss_crossover"] = 50
+        if "simhash_codes_basedir" not in kwds:
+            fname = resource_filename("g6k", "spherical_coding").encode()
+            if fname is None:
+                fname = b"./spherical_coding"
+            kwds["simhash_codes_basedir"] = fname
 
         read_only = False
         if "read_only" in kwds:
