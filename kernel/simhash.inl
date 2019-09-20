@@ -23,14 +23,9 @@ inline void SimHashes::reset_compress_pos(Siever const &siever)
 
     size_t x, y;
     std::string const filename = siever.params.simhash_codes_basedir
-      + "/spherical_coding/sc_"+std::to_string(n)+"_"+std::to_string(XPC_BIT_LEN)+".def";
+      + "/sc_"+std::to_string(n)+"_"+std::to_string(XPC_BIT_LEN)+".def";
     std::ifstream in(filename);
     std::vector<int> permut;
-
-    // create random permutation of 0..n-1:
-    permut.resize(n);
-    std::iota(permut.begin(), permut.end(), 0);
-    std::shuffle(permut.begin(), permut.end(), sim_hash_rng);
 
     if (!in)
     {
@@ -38,6 +33,11 @@ inline void SimHashes::reset_compress_pos(Siever const &siever)
         s += filename;
         throw std::runtime_error(s);
     }
+
+    // create random permutation of 0..n-1:
+    permut.resize(n);
+    std::iota(permut.begin(), permut.end(), 0);
+    std::shuffle(permut.begin(), permut.end(), sim_hash_rng);
 
     for (y = 0; y < XPC_BIT_LEN; y++)
     {
