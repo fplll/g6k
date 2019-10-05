@@ -5,7 +5,7 @@ The General Sieve Kernel (G6K)
 .. image:: https://travis-ci.org/fplll/g6k.svg?branch=master
     :target: https://travis-ci.org/fplll/g6k
 
-G6K is a C++ and Python (2) library that implements several Sieve algorithms to be used in more advanced lattice reduction tasks. It follows the stateful machine framework from: 
+G6K is a C++ and Python library that implements several Sieve algorithms to be used in more advanced lattice reduction tasks. It follows the stateful machine framework from: 
 
 Martin R. Albrecht and Léo Ducas and Gottfried Herold and Elena Kirshanova and Eamonn W. Postlethwaite and Marc Stevens, 
 The General Sieve Kernel and New Records in Lattice Reduction.

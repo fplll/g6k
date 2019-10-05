@@ -38,7 +38,7 @@ def load_matrix_file(filepath, randomize=False, seed=None, float_type="double"):
         FPLLL.set_random_seed(seed)
 
     if randomize:
-        bkz.randomize_block(0, A.nrows, density=A.ncols/4)
+        bkz.randomize_block(0, A.nrows, density=A.ncols//4)
         LLL.reduction(A)
         M = GSO.Mat(A, float_type=float_type)
         bkz = BKZReduction(M)

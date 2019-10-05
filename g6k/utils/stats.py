@@ -10,6 +10,10 @@ from fpylll.tools.bkz_stats import dummy_tracer # noqa
 from fpylll.tools.quality import basis_quality
 from g6k.siever import Siever
 import time
+try:
+   from time import process_time # Python 3
+except ImportError:
+  from time import clock as process_time  # Python 2
 import logging
 
 
@@ -51,7 +55,7 @@ class SieveTreeTracer(Tracer):
 
         """
         node = self.current
-        node.data["cputime"]  = node.data.get("cputime",  0) + Accumulator(-time.clock(), repr="sum", count=False)
+        node.data["cputime"]  = node.data.get("cputime",  0) + Accumulator(-process_time(), repr="sum", count=False)
         node.data["walltime"] = node.data.get("walltime", 0) + Accumulator(-time.time(),  repr="sum", count=False)
 
     def exit(self, **kwds):
@@ -60,7 +64,7 @@ class SieveTreeTracer(Tracer):
         """
         node = self.current
 
-        node.data["cputime"] += time.clock()
+        node.data["cputime"] += process_time()
         node.data["walltime"] += time.time()
 
         self.instance.M.update_gso()
