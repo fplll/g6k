@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import
 try:
     from setuptools import setup
     from setuptools.extension import Extension

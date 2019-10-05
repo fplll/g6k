@@ -4,6 +4,7 @@
 Full Sieve Command Line Client
 """
 
+from __future__ import absolute_import
 import logging
 import pickle as pickler
 from collections import OrderedDict
@@ -14,6 +15,7 @@ from g6k.siever import Siever
 from g6k.utils.cli import parse_args, run_all, pop_prefixed_params
 from g6k.utils.stats import SieveTreeTracer
 from g6k.utils.util import load_svpchallenge_and_randomize, db_stats
+import six
 
 
 def full_sieve_kernel(arg0, params=None, seed=None):
@@ -49,7 +51,7 @@ def full_sieve():
 
     args, all_params = parse_args(description,)
 
-    stats = run_all(full_sieve_kernel, all_params.values(),
+    stats = run_all(full_sieve_kernel, list(all_params.values()),
                     lower_bound=args.lower_bound,
                     upper_bound=args.upper_bound,
                     step_size=args.step_size,
@@ -57,7 +59,7 @@ def full_sieve():
                     workers=args.workers,
                     seed=args.seed)
 
-    inverse_all_params = OrderedDict([(v, k) for (k, v) in all_params.iteritems()])
+    inverse_all_params = OrderedDict([(v, k) for (k, v) in six.iteritems(all_params)])
 
     for (n, params) in stats:
         stat = stats[(n, params)]
