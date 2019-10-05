@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 from svp_challenge import asvp_kernel
 from g6k import SieverParams
 

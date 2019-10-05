@@ -3,6 +3,8 @@
 Statistics for sieving.
 """
 
+from __future__ import absolute_import
+from __future__ import print_function
 from fpylll.tools.bkz_stats import Tracer, Node, Accumulator, OrderedDict, pretty_dict
 from fpylll.tools.bkz_stats import dummy_tracer # noqa
 from fpylll.tools.quality import basis_quality
