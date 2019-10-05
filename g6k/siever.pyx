@@ -1315,8 +1315,8 @@ cdef class Siever(object):
             >>> db1 = list(g6k.itervalues())
             >>> len(db1) == len(db0)
             True
-            >>> set(db1).difference([tuple(list(v) + [0]) for v in db0])
-            set([])
+            >>> set(db1).difference([tuple(list(v) + [0]) for v in db0]) in (set(), set([]))
+            True
 
         """
         assert(self.initialized)
@@ -1518,11 +1518,14 @@ cdef class Siever(object):
             return None
 
         score_list = [(scoring(index, nlen, self.M.get_r(index, index), aux), -index, v) for (index, nlen, v) in L]
-        score_list = [(a, b, c) for (a,b,c) in score_list if a] + [(None, None, None)]
+        score_list = [(a, b, c) for (a,b,c) in score_list if a]
 
         # print [("%.3f"%a, b) for (a,b,c) in score_list]
         # print
-        (best_score, best_i, best_v) = max(score_list)
+        if not score_list:
+            (best_score, best_i, best_v) = (None, None, None)
+        else:
+            (best_score, best_i, best_v) = max(score_list)
 
         if best_score is None or not best_score:
             return None

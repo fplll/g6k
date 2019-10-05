@@ -61,8 +61,8 @@ def load_svpchallenge_and_randomize(n, s=0, seed=None, verbose=True, float_type=
 
         >>> from g6k.utils.util import load_svpchallenge_and_randomize
         >>> # suppressing downloading message
-        >>> print "skip from here ",; A, _ = load_svpchallenge_and_randomize(50) # doctest: +ELLIPSIS
-        skip from here ...
+        >>> A, _ = load_svpchallenge_and_randomize(50) # doctest: +ELLIPSIS
+        ...
         >>> B, _ = load_svpchallenge_and_randomize(50)
         >>> A == B
         False

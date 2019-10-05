@@ -52,10 +52,17 @@ extensions = [
 
 setup(
     name="G6K",
+    description="General Sieve Kernel",
     version="0.0.1",
+    url="https://github.com/fplll/g6k",
     ext_modules=cythonize(extensions, compiler_directives={'binding': True,
                                                            'embedsignature': True,
                                                            'language_level': 2}),
     packages=["g6k", "g6k.algorithms", "g6k.utils"],
-    package_data={"": ["spherical_coding/*.def"]}
+    package_data={"": ["spherical_coding/*.def"]},
+    classifiers=[
+        "Programming Language :: C++",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3"
+    ]
 )

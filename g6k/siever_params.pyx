@@ -18,7 +18,7 @@ def temp_params(self, **kwds):
         >>> A = IntegerMatrix.random(50, "qary", k=25, bits=10)
         >>> g6k = Siever(A, seed=0x1337)
         >>> with g6k.temp_params(reserved_n=20):
-        ...      print g6k.params.reserved_n
+        ...      print(g6k.params.reserved_n)
         ...
         20
 
@@ -351,7 +351,7 @@ cdef class SieverParams(object):
             >>> from g6k import SieverParams
             >>> sp = SieverParams(otf_lift=False)
             >>> sp.dict() # doctest: +ELLIPSIS
-            {'triplesieve_db_size_base': 1.1401315713548152, ... 'sample_by_sums': True}
+            {...}
 
             >>> sp.dict(True)
             {'otf_lift': False}
@@ -413,8 +413,8 @@ cdef class SieverParams(object):
             >>> sp = sp.new(otf_lift=False); sp
             SieverParams({'otf_lift': False})
 
-            >>> sp = sp.new(foo=2); sp
-            SieverParams({'foo': 2, 'otf_lift': False})
+            >>> sp = sp.new(foo=2); sp["foo"]
+            2
 
         """
         d = self.dict(minimal=True)
@@ -471,7 +471,7 @@ cdef class SieverParams(object):
             SieverParams({})
 
         """
-        return (unpickle_params, (self.__class__,) + tuple(self.dict().iteritems()))
+        return (unpickle_params, (self.__class__,) + tuple(self.dict().items()))
 
     @property
     def read_only(self):
