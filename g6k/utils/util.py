@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import print_function
 import os.path
 import requests
 import sys
@@ -12,6 +14,7 @@ from fpylll.tools.bkz_stats import dummy_tracer, Accumulator
 from fpylll import Enumeration, EnumerationError
 from fpylll.util import gaussian_heuristic, set_random_seed
 from g6k.utils.stats import SieveTreeTracer
+from six.moves import range
 
 
 def load_matrix_file(filepath, randomize=False, seed=None, float_type="double"):
@@ -35,7 +38,7 @@ def load_matrix_file(filepath, randomize=False, seed=None, float_type="double"):
         FPLLL.set_random_seed(seed)
 
     if randomize:
-        bkz.randomize_block(0, A.nrows, density=A.ncols/4)
+        bkz.randomize_block(0, A.nrows, density=A.ncols//4)
         LLL.reduction(A)
         M = GSO.Mat(A, float_type=float_type)
         bkz = BKZReduction(M)
@@ -58,8 +61,8 @@ def load_svpchallenge_and_randomize(n, s=0, seed=None, verbose=True, float_type=
 
         >>> from g6k.utils.util import load_svpchallenge_and_randomize
         >>> # suppressing downloading message
-        >>> print "skip from here ",; A, _ = load_svpchallenge_and_randomize(50) # doctest: +ELLIPSIS
-        skip from here ...
+        >>> A, _ = load_svpchallenge_and_randomize(50) # doctest: +ELLIPSIS
+        ...
         >>> B, _ = load_svpchallenge_and_randomize(50)
         >>> A == B
         False
@@ -100,11 +103,11 @@ def load_prebkz(n, s=0, blocksize=40):
     if os.path.isfile(filename) is False:
         set_random_seed(s)
         A = IntegerMatrix.random(n, "qary", q=2**30, k=n//2)
-        print "Did not find '{filename}'. Creating and reducing".format(filename=filename)
-        print "created, ",
+        print("Did not find '{filename}'. Creating and reducing".format(filename=filename))
+        print("created, ", end=' ')
         sys.stdout.flush()
         A = LLL.reduction(A)
-        print "LLLed, ",
+        print("LLLed, ", end=' ')
         sys.stdout.flush()
 
         if A.nrows >= 160:
@@ -119,14 +122,14 @@ def load_prebkz(n, s=0, blocksize=40):
         bkz = BKZReduction(M)
 
         for b in range(10, blocksize+1):
-            print "\r created, LLLed, BKZed %d"%b,
+            print("\r created, LLLed, BKZed %d"%b, end=' ')
             sys.stdout.flush()
 
             par = fplll_bkz.Param(b, strategies=fplll_bkz.DEFAULT_STRATEGY,
                                   max_loops=1, flags=fplll_bkz.MAX_LOOPS)
             bkz(par)
 
-        print
+        print()
 
         fn = open(filename, "w")
         fn.write(str(A))
@@ -141,8 +144,8 @@ SVPCHALLENGE_NORM_FMT = "svpchallenge/svpchallenge-dim-%03d-seed-%02d.svp"
 def load_svpchallenge_norm(n, s=0):
     filename = SVPCHALLENGE_NORM_FMT%(n, s)
     if os.path.isfile(filename) is False:
-        print "Did not find '{filename}'. Please run svp_exact_find_norm for this instance first".format(
-            filename=filename)
+        print("Did not find '{filename}'. Please run svp_exact_find_norm for this instance first".format(
+            filename=filename))
     with open(filename, 'r') as file:
         norm = float(file.read())
     return norm
@@ -152,7 +155,7 @@ def save_svpchallenge_norm(n, norm, s=0):
     filename = SVPCHALLENGE_NORM_FMT%(n, s)
 
     with open(filename, 'w') as fh:
-        print >>fh, norm
+        print(norm, file=fh)
     return
 
 
@@ -262,7 +265,7 @@ def load_lwe_challenge(n=40, alpha=0.005):
         fn.close()
 
     data = open(filename, "r").readlines()
-    n, m, q = map(lambda x: int(x), [data[0], data[1], data[2]])
+    n, m, q = [int(x) for x in [data[0], data[1], data[2]]]
 
     c_index = 3 if data[3].startswith("[") else 4
 

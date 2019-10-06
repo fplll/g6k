@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import
 from fpylll import IntegerMatrix
 from g6k.algorithms.bkz import pump_n_jump_bkz_tour as bkz
 from g6k.siever import Siever

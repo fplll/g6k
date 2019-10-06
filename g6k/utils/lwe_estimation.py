@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
+from __future__ import absolute_import
 from math import e, lgamma, log, pi
 
 from fpylll import BKZ as fplll_bkz, GSO, IntegerMatrix, LLL
@@ -10,6 +11,7 @@ from fpylll.util import gaussian_heuristic
 
 from g6k.algorithms.bkz import default_dim4free_fun
 from g6k.utils.util import load_lwe_challenge
+from six.moves import range
 
 
 def delta_0f(k):
@@ -117,7 +119,7 @@ def decoupler(decouple, n, samples, q, stddev, d):
     if d is not None:
         ms = [d - 1]
     else:
-        ms = range(n, min(5*n+1, samples+1))
+        ms = list(range(n, min(5*n+1, samples+1)))
 
     for m in ms:
         beta_bound = min(m+1, 110+default_dim4free_fun(110))
@@ -125,7 +127,7 @@ def decoupler(decouple, n, samples, q, stddev, d):
         for bkz_block_size in range(40, beta_bound):
             delta_0 = delta_0f(bkz_block_size)
             if decouple:
-                svp_dims = range(40, svp_bound)
+                svp_dims = list(range(40, svp_bound))
             else:
                 svp_dims = [min(bkz_block_size, svp_bound)]
 

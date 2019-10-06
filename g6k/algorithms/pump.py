@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 import time
 from math import log
@@ -10,9 +12,9 @@ import logging
 def print_pump_state(pump):
     pump.minl = min(pump.g6k.l, pump.minl)
     if pump.phase != "down":
-        print "\r %3d: ↑%3d      " % (pump.r-pump.l, pump.g6k.r-pump.g6k.l),
+        print("\r %3d: ↑%3d      " % (pump.r-pump.l, pump.g6k.r-pump.g6k.l), end=' ')
     else:
-        print "\r %3d: ↑%3d ↓%3d " % (pump.r-pump.l, pump.r-pump.minl, pump.r-pump.g6k.l),
+        print("\r %3d: ↑%3d ↓%3d " % (pump.r-pump.l, pump.r-pump.minl, pump.r-pump.g6k.l), end=' ')
     sys.stdout.flush()
 
 
@@ -51,8 +53,8 @@ def wrapped_sieve(pump):
     if pump.goal_r0 is not None:
         pump.g6k.insert_best_lift(scoring_goal_r0, aux=pump)
 
-    if (pump.g6k.M.get_r(pump.kappa, pump.kappa) <= pump.goal_r0):
-        cont = False
+        if (pump.g6k.M.get_r(pump.kappa, pump.kappa) <= pump.goal_r0):
+            cont = False
 
     return cont
 

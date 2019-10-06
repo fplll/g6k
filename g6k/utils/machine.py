@@ -7,8 +7,10 @@ notation and write ``(b*a)``
 
 """
 
+from __future__ import absolute_import
 import sys
 from g6k import Siever
+from six.moves import range
 
 #
 # Base Instruction

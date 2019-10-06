@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import
 import re
 import copy
 import logging
@@ -21,6 +22,8 @@ from g6k.utils.util import load_svpchallenge_and_randomize, load_svpchallenge_no
 from fpylll import BKZ as fplll_bkz
 from fpylll.tools.bkz_stats import dummy_tracer
 from fpylll import Enumeration, EnumerationError
+import six
+from six.moves import range
 
 
 GRADIENT_BLOCKSIZE = 31
@@ -114,7 +117,7 @@ def svp():
                                   svp__alg="workout"
                                   )
 
-    stats = run_all(svp_kernel, all_params.values(),
+    stats = run_all(svp_kernel, list(all_params.values()),
                     lower_bound=args.lower_bound,
                     upper_bound=args.upper_bound,
                     step_size=args.step_size,
@@ -122,10 +125,10 @@ def svp():
                     workers=args.workers,
                     seed=args.seed)
 
-    inverse_all_params = OrderedDict([(v, k) for (k, v) in all_params.iteritems()])
+    inverse_all_params = OrderedDict([(v, k) for (k, v) in six.iteritems(all_params)])
 
     stats2 = OrderedDict()
-    for (n, params), v in stats.iteritems():
+    for (n, params), v in six.iteritems(stats):
         params_name = inverse_all_params[params]
         params_name = re.sub("'challenge_seed': [0-9]+,", "", params_name)
         params = params.new(challenge_seed=None)
