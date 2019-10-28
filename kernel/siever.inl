@@ -181,8 +181,7 @@ inline void Siever::recompute_data_for_entry(Entry &e)
         for (int k = 0; k < OTF_LIFT_HELPER_DIM; ++k)
         {
             int const i = l - (k + 1);
-            // std::cerr << "RECNOB" << k << " " << i << " " << l << " " << (params.lift_left_bound) << std::endl;
-            if (i < static_cast<signed int>(params.lift_left_bound)) break;
+            if (i < static_cast<signed int>(ll)) break;
             e.otf_helper[k] = std::inner_product(e.x.cbegin(), e.x.cbegin()+n, full_muT[i].cbegin()+l,  static_cast<FT>(0.));
         }
     }
@@ -248,9 +247,8 @@ inline void Siever::recompute_data_for_entry_babai(Entry &e, int babai_index)
         for (int k = 0; k < OTF_LIFT_HELPER_DIM; ++k)
         {
             int const i = l - (k + 1);
-            // std::cerr << "RECBAB" << k << " " << i << " " << l << " " << (params.lift_left_bound) << std::endl;
-
-            if (i < static_cast<signed int>(params.lift_left_bound)) break;
+            
+            if (i < static_cast<signed int>(ll)) break;
             e.otf_helper[k] = std::inner_product(e.x.cbegin(), e.x.cbegin()+n, full_muT[i].cbegin()+l,  static_cast<FT>(0.));
         }
     }

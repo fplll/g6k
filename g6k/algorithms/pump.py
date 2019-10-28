@@ -103,7 +103,7 @@ def pump(g6k, tracer, kappa, blocksize, dim4free, down_sieve=False,             
     pump.l = kappa+dim4free  # noqa
 
     g6k.lll(kappa, pump.r)
-    g6k.initialize_local(max(pump.r-start_up_n, pump.l+1), pump.r)
+    g6k.initialize_local(kappa, max(pump.r-start_up_n, pump.l+1), pump.r)
     g6k.shrink_db(0)
 
     pump.sat_factor = 1.
@@ -119,7 +119,7 @@ def pump(g6k, tracer, kappa, blocksize, dim4free, down_sieve=False,             
         down_stop = dim4free
 
     with tracer.context(("pump", "kappa:%d beta:%d f:%d" % (kappa, blocksize, dim4free))):
-        with g6k.temp_params(reserved_n=pump.r-pump.l, lift_left_bound=kappa):
+        with g6k.temp_params(reserved_n=pump.r-pump.l):
             pump.phase = "init"
             wrapped_sieve(pump)  # The first initializing Sieve should always be Gauss to avoid rank-loss
 

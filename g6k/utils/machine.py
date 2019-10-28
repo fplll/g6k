@@ -121,8 +121,7 @@ class Reset(IdentityInstruction):
                                self.lprime, self.l, self.r)
 
     def __call__(self, state):
-        state.initialize_local(self.l, self.r)
-        state.params = state.params.new(lift_left_bound=self.lprime)
+        state.initialize_local(self.lprime, self.l, self.r)
         return state
 
 

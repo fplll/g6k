@@ -26,6 +26,8 @@ from scipy.special import betaincinv
 
 from siever_params import temp_params
 
+from libc.math cimport NAN
+
 class SaturationError(RuntimeError):
     pass
 
@@ -155,7 +157,9 @@ cdef class Siever(object):
         objects might get out of sync and behaviour becomes undefined.
 
         """
-
+        
+        llb = self.params.lift_left_bound
+        
         cdef int cr
         if r_bound == -1:
             cr = self.full_n
@@ -169,15 +173,17 @@ cdef class Siever(object):
         cdef np.ndarray _gso = zeros((self.M.d, self.M.d), dtype=float64)
 
         for i in xrange(cr):
-            _gso[i][i] = self.M.get_r(i, i)
+            #~ _gso[i][i] = self.M.get_r(i, i)
+            _gso[i][i] = NAN if (i < llb) else self.M.get_r(i, i)
             for j in xrange(i):
-                _gso[i][j] = self.M.get_mu(i, j)
+                #~ _gso[i][j] = self.M.get_mu(i, j)
+                _gso[i][j] = NAN if (i < llb) else self.M.get_mu(i, j)
 
         sig_on()
         self._core.load_gso(self.M.d, <double*>_gso.data)
         sig_off()
 
-    def initialize_local(self, l, r, update_gso=True):
+    def initialize_local(self, ll, l, r, update_gso=True):
         """
         Local set-up.
 
@@ -187,8 +193,9 @@ cdef class Siever(object):
         - reset compression and uid functions
 
 
-        :param l: left index (inclusive)
-        :param r: right index (exclusive)
+        :param ll: lift context left index (inclusive)
+        :param l: sieve context left index (inclusive)
+        :param r: sieve context right index (exclusive)
 
         EXAMPLE::
 
@@ -219,7 +226,7 @@ cdef class Siever(object):
         if update_gso:
             self.update_gso(r_bound=r)
         sig_on()
-        self._core.initialize_local(l, r)
+        self._core.initialize_local(ll, l, r)
         sig_off()
         self.initialized = True
 
@@ -271,6 +278,23 @@ cdef class Siever(object):
 
         """
         return self._core.r
+
+    @property
+    def ll(self):
+        """
+        Current lift left bound.
+
+        EXAMPLE::
+
+            >>> from fpylll import IntegerMatrix
+            >>> from g6k import Siever
+            >>> siever= Siever(IntegerMatrix.random(50, "qary", k=25, bits=10), seed=0x1337)
+            >>> siever.initialize_local(1, 11)
+            >>> siever.r
+            11
+
+        """
+        return self._core.ll
 
 
     @property
@@ -1359,7 +1383,7 @@ cdef class Siever(object):
         new_l = self.l + 1
         new_n = self.n - 1
 
-        self.split_lll(self.params.lift_left_bound, new_l, self.r)
+        self.split_lll(self.ll, new_l, self.r)
 
         cdef np.ndarray T = zeros((new_n, self.n), dtype=int64, order='C')
         for i in range(new_n):

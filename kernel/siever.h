@@ -331,8 +331,6 @@ public:
 
   size_t threads = 1;  // ... number of threads
 
-  unsigned int lift_left_bound = 0;  // Stop lift-and-compare at this absolute position (inclusive)
-
   bool sample_by_sums = true;
 
   bool otf_lift = true;       // Lift on the fly. If set to false,
@@ -433,7 +431,7 @@ public:
     // - update the local gso and recompute gaussian_heuristic for renormalization
     // - reset best_lift_so_far if r changed
     // - reset compression and uid functions
-    void initialize_local(unsigned int l_, unsigned int r_); // implemented in control.cpp
+    void initialize_local(unsigned int ll_, unsigned int l_, unsigned int r_); // implemented in control.cpp
 
     // Extend the context to the left (threaded)
     // - change the context
@@ -542,6 +540,7 @@ public: // TODO: Make more things private and do not export to Python.
     unsigned int l;                           // current context left position
     unsigned int r;                           // current context right position
     unsigned int n;                           // current context dimension, n = r - l
+    unsigned int ll;                          // left of the lift context
 
     // gso_update_postprocessing post-processes the database with the change-of-basis transformation M
     // - Thread-safety ensured by each thread working on different data

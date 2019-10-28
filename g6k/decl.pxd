@@ -190,7 +190,6 @@ cdef extern from "../kernel/siever.h" nogil:
         unsigned int reserved_n
         size_t reserved_db_size
         size_t threads
-        unsigned int lift_left_bound
         bool sample_by_sums
         bool otf_lift
         double lift_radius
@@ -219,7 +218,7 @@ cdef extern from "../kernel/siever.h" nogil:
         void load_gso(unsigned int full_n, double* mu)
 
         # Local setup methods:
-        void initialize_local(unsigned int l_, unsigned int r_)
+        void initialize_local(unsigned int ll_, unsigned int l_, unsigned int r_)
         void extend_left(unsigned int lp)
         void shrink_left(unsigned int lp)
         void extend_right(unsigned int rp)
@@ -263,6 +262,7 @@ cdef extern from "../kernel/siever.h" nogil:
         unsigned int l
         unsigned int r
         unsigned int n
+        unsigned int ll
 
         void gso_update_postprocessing(const unsigned int l_, const unsigned int r_, long* M)
 
