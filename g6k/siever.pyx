@@ -158,7 +158,7 @@ cdef class Siever(object):
 
         """
         
-        llb = self.params.lift_left_bound
+        llb = self.ll
         
         cdef int cr
         if r_bound == -1:
