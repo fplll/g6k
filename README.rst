@@ -21,7 +21,7 @@ You will need the current master of FPyLLL. See ``bootstrap.sh`` for creating (a
 .. code-block:: bash
 
     ./bootstrap.sh                # once only: creates local python env, builds fplll, fpylll and G6K
-    source g6k-env/bin/activate   # for every new shell: activates local python env
+    source ./activate             # for every new shell: activates local python env
     ./rebuild.sh -f               # whenever you want to rebuild G6K
 
 Otherwise, you will need fplll and fpylll already installed and build the G6K Cython extension **in place** like so:
