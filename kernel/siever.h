@@ -400,7 +400,7 @@ public:
     */
 
     explicit Siever(const SieverParams &params, unsigned long int seed = 0) :
-        full_n(0), full_muT(), full_rr(), l(0), r(-1), n(0), muT(), db(), cdb(),
+        full_n(0), full_muT(), full_rr(), l(0), r(-1), n(0), ll(0), muT(), db(), cdb(),
         best_lifts_so_far(), histo(),
         rng(seed), sim_hashes(rng.rng_nolock())
 #ifdef PERFORMANCE_COUNTING

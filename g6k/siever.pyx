@@ -222,7 +222,7 @@ cdef class Siever(object):
         """
         if not (0 <= l and l <= r and r <= self.M.d):
             raise ValueError("Parameters %d, %d do not satisfy constraint  0 <= l <= r <= self.M.d"%(l, r))
-
+        
         if update_gso:
             self.update_gso(r_bound=r)
         sig_on()
