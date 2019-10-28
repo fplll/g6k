@@ -175,7 +175,7 @@ void Siever::initialize_local(unsigned int ll_, unsigned int l_, unsigned int r_
         best_lifts_so_far.resize(l_+1);
     }
     
-    for (int i = 0; i < ll;++i)
+    for (int i = 0; i < ll; ++i)
     {
         assert(best_lifts_so_far[i].len == 0);
     }

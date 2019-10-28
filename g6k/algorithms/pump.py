@@ -30,7 +30,8 @@ def wrapped_sieve(pump):
     try:
         with pump.g6k.temp_params(saturation_ratio=pump.g6k.params.saturation_ratio * pump.sat_factor):
             llb = pump.kappa if pump.goal_r0 else pump.insert_left_bound
-            pump.g6k.initialize_local(llb, pump.g6k.l,pump.g6k.r) 
+            pump.g6k.initialize_local(llb, pump.g6k.l, pump.g6k.r)
+
             # Match lifting effort to insertion strategy
             pump.g6k(alg=alg, tracer=pump.tracer)
 
