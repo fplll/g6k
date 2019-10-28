@@ -203,17 +203,17 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = IntegerMatrix.random(50, "qary", k=25, bits=10)
             >>> siever = Siever(A, seed=0x1337)
-            >>> siever.initialize_local(0, 50)
-            >>> siever.initialize_local(1, 25)
+            >>> siever.initialize_local(0, 0, 50)
+            >>> siever.initialize_local(1, 1, 25)
 
         TESTS::
 
-            >>> siever.initialize_local(-1, 25)
+            >>> siever.initialize_local(0, -1, 25)
             Traceback (most recent call last):
             ...
             ValueError: Parameters -1, 25 do not satisfy constraint  0 <= l <= r <= self.M.d
 
-            >>> siever.initialize_local( 0, 51)
+            >>> siever.initialize_local(0, 0, 51)
             Traceback (most recent call last):
             ...
             ValueError: Parameters 0, 51 do not satisfy constraint  0 <= l <= r <= self.M.d
@@ -255,7 +255,7 @@ cdef class Siever(object):
             >>> from fpylll import IntegerMatrix
             >>> from g6k import Siever
             >>> siever= Siever(IntegerMatrix.random(50, "qary", k=25, bits=10), seed=0x1337)
-            >>> siever.initialize_local(1, 11)
+            >>> siever.initialize_local(0, 1, 11)
             >>> siever.l
             1
 
@@ -272,7 +272,7 @@ cdef class Siever(object):
             >>> from fpylll import IntegerMatrix
             >>> from g6k import Siever
             >>> siever= Siever(IntegerMatrix.random(50, "qary", k=25, bits=10), seed=0x1337)
-            >>> siever.initialize_local(1, 11)
+            >>> siever.initialize_local(0, 1, 11)
             >>> siever.r
             11
 
@@ -289,7 +289,7 @@ cdef class Siever(object):
             >>> from fpylll import IntegerMatrix
             >>> from g6k import Siever
             >>> siever= Siever(IntegerMatrix.random(50, "qary", k=25, bits=10), seed=0x1337)
-            >>> siever.initialize_local(1, 11)
+            >>> siever.initialize_local(0, 1, 11)
             >>> siever.r
             11
 
@@ -307,7 +307,7 @@ cdef class Siever(object):
             >>> from fpylll import IntegerMatrix
             >>> from g6k import Siever
             >>> siever= Siever(IntegerMatrix.random(50, "qary", k=25, bits=10), seed=0x1337)
-            >>> siever.initialize_local(1, 11)
+            >>> siever.initialize_local(0, 1, 11)
             >>> siever.r - siever.l == siever.n
             True
 
@@ -324,7 +324,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(50, "qary", k=25, bits=10))
             >>> g6k = Siever(A, seed=0x1337)
-            >>> g6k.initialize_local(0, 50)
+            >>> g6k.initialize_local(0, 0, 50)
             >>> g6k(alg="gauss") # Run that first to avoid rank-loss bug
             >>> g6k()
             >>> len(g6k)
@@ -348,7 +348,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(50, "qary", k=25, bits=10))
             >>> g6k = Siever(A, seed=0x1337)
-            >>> g6k.initialize_local(0, 50) 
+            >>> g6k.initialize_local(0, 0, 50) 
             >>> g6k(alg="gauss") # Run that first to avoid rank-loss bug
             >>> g6k()
             >>> g6k.db_size()
@@ -373,7 +373,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(30, "qary", k=25, bits=10))
             >>> g6k = Siever(A)
-            >>> g6k.initialize_local(0, 10)
+            >>> g6k.initialize_local(0, 0, 10)
             >>> g6k()
             >>> len(g6k)
             20
@@ -998,7 +998,7 @@ cdef class Siever(object):
             >>> from fpylll import IntegerMatrix
             >>> from g6k import Siever
             >>> siever= Siever(IntegerMatrix.random(50, "qary", k=25, bits=10), seed=0x1337)
-            >>> siever.initialize_local(1, 11)
+            >>> siever.initialize_local(0, 1, 11)
             >>> siever()
             >>> len(siever)
             20
@@ -1062,7 +1062,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(30, "qary", k=25, bits=10))
             >>> g6k = Siever(A)
-            >>> g6k.initialize_local(10, 30)
+            >>> g6k.initialize_local(0, 10, 30)
             >>> g6k()
             >>> g6k.check_saturation(10)
 
@@ -1241,7 +1241,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(30, "qary", k=25, bits=10))
             >>> g6k = Siever(A)
-            >>> g6k.initialize_local(1, 5)
+            >>> g6k.initialize_local(0, 1, 5)
             >>> g6k()
             >>> db = list(g6k.itervalues())[:16];
             >>> abs(sum(db[0])) == 1
@@ -1280,7 +1280,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(30, "qary", k=25, bits=10))
             >>> g6k = Siever(A)
-            >>> g6k.initialize_local(1, 10)
+            >>> g6k.initialize_local(0, 1, 10)
             >>> g6k()
             >>> db = list(g6k.itervalues())[:16]
             >>> out = db[0]
@@ -1320,7 +1320,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(30, "qary", k=15, bits=10))
             >>> g6k = Siever(A)
-            >>> g6k.initialize_local(1, 5)
+            >>> g6k.initialize_local(0, 1, 5)
             >>> g6k.l, g6k.r
             (1, 5)
             >>> g6k()
@@ -1414,7 +1414,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(40, "qary", k=20, bits=20))
             >>> g6k = Siever(A)
-            >>> g6k.initialize_local(10, 30)
+            >>> g6k.initialize_local(0, 10, 30)
             >>> _ = g6k.lll(10, 30)
 
         """
@@ -1442,7 +1442,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(40, "qary", k=20, bits=20))
             >>> g6k = Siever(A)
-            >>> g6k.initialize_local(10, 30)
+            >>> g6k.initialize_local(0, 10, 30)
             >>> _ = g6k.split_lll(0, 10, 30)
 
         """
@@ -1468,7 +1468,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(30, "qary", k=25, bits=10))
             >>> g6k = Siever(A)
-            >>> g6k.initialize_local(0, 20)
+            >>> g6k.initialize_local(0, 0, 20)
             >>> g6k.best_lifts()
             []
 
@@ -1481,7 +1481,7 @@ cdef class Siever(object):
             197445
 
             >>> g6k = Siever(A)
-            >>> g6k.initialize_local(10, 30)
+            >>> g6k.initialize_local(0, 10, 30)
             >>> g6k.best_lifts()
             []
 
@@ -1530,7 +1530,7 @@ cdef class Siever(object):
             >>> A = IntegerMatrix.random(80, "qary", k=40, bits=20)
             >>> A = LLL.reduction(A)
             >>> sieve = Siever(A)
-            >>> sieve.initialize_local(20, 50)
+            >>> sieve.initialize_local(10, 20, 50)
             >>> sieve()
             >>> _ = sieve.insert_best_lift()
 
