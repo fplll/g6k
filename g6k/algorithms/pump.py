@@ -29,8 +29,6 @@ def wrapped_sieve(pump):
     cont = True
     try:
         with pump.g6k.temp_params(saturation_ratio=pump.g6k.params.saturation_ratio * pump.sat_factor):
-            llb = pump.kappa if pump.goal_r0 else pump.insert_left_bound
-            pump.g6k.initialize_local(llb, pump.g6k.l, pump.g6k.r)
 
             # Match lifting effort to insertion strategy
             pump.g6k(alg=alg, tracer=pump.tracer)
@@ -148,6 +146,9 @@ def pump(g6k, tracer, kappa, blocksize, dim4free, down_sieve=False,             
                     ii = g6k.insert_best_lift(scoring_down, aux=pump)
                     if ii is not None and increasing_insert_index:
                         pump.insert_left_bound = ii + 1
+                        llb = pump.kappa if pump.goal_r0 else pump.insert_left_bound
+                        pump.g6k.initialize_local(llb, pump.g6k.l, pump.g6k.r)
+
                     else:
                         g6k.shrink_left(1)
 
