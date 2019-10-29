@@ -10,3 +10,7 @@
 /g6k/siever.cpp
 /g6k/siever_params.cpp
 /svpchallenge/*
+/g6k-fplll
+/g6k-fpylll
+/g6k-env
+/activate
