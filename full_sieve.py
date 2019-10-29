@@ -38,6 +38,8 @@ def full_sieve_kernel(arg0, params=None, seed=None):
     # Actually runs a workout with very large decrements, so that the basis is kind-of reduced
     # for the final full-sieve
     workout(g6k, tracer, 0, n, dim4free_min=0, dim4free_dec=15, pump_params=pump_params, verbose=verbose)
+    g6k.update_gso(0, n)
+    print [g6k.M.get_r(i, i) for i in range(n)]
 
     tracer.exit()
     return tracer.trace

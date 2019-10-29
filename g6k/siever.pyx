@@ -183,10 +183,10 @@ cdef class Siever(object):
         else:
             m = self.full_n
             for i in xrange(l_bound, r_bound):
-                _rr[i] = 1. / self.M.get_r(m-i, m-i)
+                _rr[i] = 1. / self.M.get_r(m - 1 - i, m - 1 - i)
                 _mu[i][i] = 1.
                 for j in xrange(i):
-                    _mu[i][j] = self.M.get_mu(m-i, m-j)
+                    _mu[i][j] = self.M.get_mu(m - 1 - i, m - 1 - j)
 
             _mu = npp.linalg.inv(_mu)
             _mu = npp.matrix.transpose(_mu)
@@ -1373,6 +1373,7 @@ cdef class Siever(object):
         """
         assert(self.initialized)      
         assert(len(v) == self.r)
+        m = self.full_n
 
         full_j = where(abs(v) == 1)[0][-1]
 
@@ -1387,13 +1388,21 @@ cdef class Siever(object):
             v *= -1
 
         self.M.UinvT.gen_identity()
+        self.M.U.gen_identity()
 
-        with self.M.row_ops(0, self.full_n):
-            for i in xrange(kappa, self.r):
-                if i != full_j:
-                    self.M.row_addmul(full_j, i, v[i])
+        if not self.params.dual_mode:
+            with self.M.row_ops(kappa, self.r):
+                for i in xrange(kappa, self.r):
+                    if i != full_j:
+                        self.M.row_addmul(full_j, i, v[i])
+                self.M.move_row(full_j, kappa)
+        else:
+            with self.M.row_ops(m-self.r, m-kappa):
+                for i in xrange(kappa, self.r):
+                    if i != full_j:
+                        self.M.row_addmul(m-1-i, m-1-full_j, -v[i])
+                self.M.move_row(m-1-full_j, m-1-kappa)
 
-            self.M.move_row(full_j, kappa)
 
         new_l = self.l + 1
         new_n = self.n - 1
@@ -1401,9 +1410,15 @@ cdef class Siever(object):
         self.split_lll(self.ll, new_l, self.r)
 
         cdef np.ndarray T = zeros((new_n, self.n), dtype=int64, order='C')
-        for i in range(new_n):
-            for j in range(self.n):
-                T[i][j] = self.M.UinvT[new_l + i][self.l + j]
+
+        if not self.params.dual_mode:
+            for i in range(new_n):
+                for j in range(self.n):
+                    T[i][j] = self.M.UinvT[new_l + i][self.l + j]
+        else:
+            for i in range(new_n):
+                for j in range(self.n):
+                    T[i][j] = self.M.U[m-1-(new_l + i)][m-1-(self.l + j)]
 
         # update the basis (GSO or integral) of the lattice after insert
         sig_on()
@@ -1435,7 +1450,12 @@ cdef class Siever(object):
         """
 
         lll = LLL.Reduction(self.M)      
-        lll(l, l, r)
+        if not self.params.dual_mode:
+            lll(l, l, r)
+        else:
+            m = self.full_n
+            lll(m-r, m-r, m-l)
+
         self.initialized=False
 
 
