@@ -146,6 +146,7 @@ def pump(g6k, tracer, kappa, blocksize, dim4free, down_sieve=False,             
                     ii = g6k.insert_best_lift(scoring_down, aux=pump)
                     if ii is not None and increasing_insert_index:
                         pump.insert_left_bound = ii + 1
+                        # print(g6k.db_stats()[0])
                         # llb = pump.kappa if pump.goal_r0 else pump.insert_left_bound
                         # pump.g6k.initialize_local(llb, pump.g6k.l, pump.g6k.r)
 

@@ -741,7 +741,12 @@ void Siever::db_stats(double* min_av_max, long* cumul_histo)
     parallel_sort_cdb();
     min_av_max[0] = cdb[0].len;
     min_av_max[1] = 0;
-    min_av_max[2] = 0;
+    min_av_max[2] = cdb[cdb.size()-1].len;
+    for (int i = 0; i < cdb.size(); ++i)
+    {
+        min_av_max[1] += cdb[i].len;
+    }
+    min_av_max[1] /= cdb.size();
 
     recompute_histo();
 

@@ -16,6 +16,7 @@ from g6k.utils.cli import parse_args, run_all, pop_prefixed_params
 from g6k.utils.stats import SieveTreeTracer
 from g6k.utils.util import load_svpchallenge_and_randomize, db_stats
 import six
+from math import log
 
 
 def full_sieve_kernel(arg0, params=None, seed=None):
@@ -39,7 +40,6 @@ def full_sieve_kernel(arg0, params=None, seed=None):
     # for the final full-sieve
     workout(g6k, tracer, 0, n, dim4free_min=0, dim4free_dec=15, pump_params=pump_params, verbose=verbose)
     g6k.update_gso(0, n)
-    print [g6k.M.get_r(i, i) for i in range(n)]
 
     tracer.exit()
     return tracer.trace

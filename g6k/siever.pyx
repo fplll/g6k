@@ -4,8 +4,12 @@ Generalised Sieving Kernel (G6K) Siever
 
 This class is the interface to the C++ implementation of sieving algorithm.  All higher-level
 algorithms go through this class.
-
 """
+import os
+os.environ["MKL_NUM_THREADS"] = "1" 
+os.environ["NUMEXPR_NUM_THREADS"] = "1" 
+os.environ["OMP_NUM_THREADS"] = "1"
+
 from fpylll.tools.bkz_stats import dummy_tracer
 from cysignals.signals cimport sig_on, sig_off
 from libcpp cimport bool
@@ -177,7 +181,7 @@ cdef class Siever(object):
             for i in xrange(l_bound, r_bound):
                 _rr[i] = self.M.get_r(i, i)
                 _mu[i][i] = 1.
-                for j in xrange(i):
+                for j in xrange(l_bound, i):
                     _mu[i][j] = self.M.get_mu(i, j)
 
         else:
@@ -185,10 +189,12 @@ cdef class Siever(object):
             for i in xrange(l_bound, r_bound):
                 _rr[i] = 1. / self.M.get_r(m - 1 - i, m - 1 - i)
                 _mu[i][i] = 1.
-                for j in xrange(i):
+                for j in xrange(l_bound, i):
                     _mu[i][j] = self.M.get_mu(m - 1 - j, m - 1 - i)
-            _mu = npp.linalg.inv(_mu)
+            al = l_bound
+            ar = r_bound
             _mu = npp.matrix.transpose(_mu)
+            _mu[al:ar, al:ar] = npp.linalg.inv(_mu[al:ar, al:ar])
 
         for i in xrange(l_bound, r_bound):
             _mu[i][i] = _rr[i]
@@ -1312,6 +1318,7 @@ cdef class Siever(object):
         """
         # TODO the documentation needs fixing
         assert(self.initialized)
+        # print("SHRIMP", self.ll, self.l, self.r, self.n)
         sig_on()
         self._core.shrink_left(lp)
         sig_off()
@@ -1358,7 +1365,8 @@ cdef class Siever(object):
 
         """
         assert(self.initialized)
-        self.update_gso(self.ll, self.r + offset)
+        if not self.params.dual_mode:
+            self.update_gso(self.ll, self.r + offset)
         sig_on()
         self._core.extend_right(offset)
         sig_off()
@@ -1448,7 +1456,7 @@ cdef class Siever(object):
 
         """
 
-        lll = LLL.Reduction(self.M)      
+        lll = LLL.Reduction(self.M)
         if not self.params.dual_mode:
             lll(l, l, r)
         else:
@@ -1481,9 +1489,14 @@ cdef class Siever(object):
 
         """
 
-        lll = LLL.Reduction(self.M)      
-        lll(lp, lp, l)
-        lll(l, l, r)
+        lll_ = LLL.Reduction(self.M)
+        m = self.full_n
+        if not self.params.dual_mode:
+            lll_(lp, lp, l)
+            lll_(l, l, r)
+        else:
+            lll_(m-r, m-r, m-l)
+            lll_(m-l, m-l, m-lp, size_reduction_start=m-l)
 
         self.update_gso(self.ll, self.r)
 

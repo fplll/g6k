@@ -20,3 +20,8 @@ def test_bkz():
         A = make_integer_matrix(d)
         g6k = Siever(A)
         bkz(g6k, dummy_tracer, 20)
+
+        A = make_integer_matrix(d)
+        g6k = Siever(A)
+        with g6k.temp_params(dual_mode=True):
+        	bkz(g6k, dummy_tracer, 20)
