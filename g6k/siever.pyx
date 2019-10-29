@@ -186,8 +186,7 @@ cdef class Siever(object):
                 _rr[i] = 1. / self.M.get_r(m - 1 - i, m - 1 - i)
                 _mu[i][i] = 1.
                 for j in xrange(i):
-                    _mu[i][j] = self.M.get_mu(m - 1 - i, m - 1 - j)
-
+                    _mu[i][j] = self.M.get_mu(m - 1 - j, m - 1 - i)
             _mu = npp.linalg.inv(_mu)
             _mu = npp.matrix.transpose(_mu)
 
