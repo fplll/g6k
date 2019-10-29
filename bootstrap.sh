@@ -23,14 +23,15 @@ export CFLAGS
 export CXXFLAGS
 EOF
 
-source g6k-env/bin/activate
+ln -s g6k-env/bin/activate ./
+source ./activate
 
 pip install -U pip
 
 # Install FPLLL
 
-git clone https://github.com/fplll/fplll
-cd fplll || exit
+git clone https://github.com/fplll/fplll g6k-fplll
+cd g6k-fplll || exit
 ./autogen.sh
 ./configure --prefix="$VIRTUAL_ENV" $CONFIGURE_FLAGS
 make clean
@@ -39,8 +40,8 @@ make install
 cd ..
 
 # Install FPyLLL
-git clone https://github.com/fplll/fpylll
-cd fpylll || exit
+git clone https://github.com/fplll/fpylll g6k-fpylll
+cd g6k-fpylll || exit
 pip install Cython
 pip install -r requirements.txt
 pip install -r suggestions.txt
@@ -53,7 +54,5 @@ pip install -r requirements.txt
 python setup.py clean
 python setup.py build_ext --inplace
 
-# Otherwise py.test may fail
-
-rm -rf ./fplll
-rm -rf ./fpylll
+echo "Don't forget to activate environment each time:"
+echo " source ./activate"
