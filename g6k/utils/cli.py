@@ -194,6 +194,7 @@ def parse_args(description, ParamsClass=SieverParams, **kwds):
                         help="Show default parameters and exit.")
     parser.add_argument('--loglvl', type=str, help="Logging level (one of DEBUG, WARN, INFO)", default="INFO")
     parser.add_argument('--log-filename', dest="log_filename", type=str, help="Logfile filename", default=None)
+    parser.add_argument('--profile', dest="profile", type=bool, help="Print average basis profile", default=False)
     args, unknown = parser.parse_known_args()
 
     kwds_ = OrderedDict()

@@ -9,6 +9,7 @@ import logging
 import pickle as pickler
 from collections import OrderedDict
 
+import re
 
 from g6k.algorithms.workout import workout
 from g6k.siever import Siever
@@ -17,6 +18,8 @@ from g6k.utils.stats import SieveTreeTracer
 from g6k.utils.util import load_svpchallenge_and_randomize, db_stats
 import six
 from math import log
+import numpy as np
+import sys
 
 
 def full_sieve_kernel(arg0, params=None, seed=None):
@@ -32,7 +35,9 @@ def full_sieve_kernel(arg0, params=None, seed=None):
     reserved_n = n
     params = params.new(reserved_n=reserved_n, otf_lift=False)
 
-    A, _ = load_svpchallenge_and_randomize(n, s=0, seed=seed)
+    challenge_seed = params.pop("challenge_seed")
+    A, _ = load_svpchallenge_and_randomize(n, s=challenge_seed, seed=seed)
+
     g6k = Siever(A, params, seed=seed)
     tracer = SieveTreeTracer(g6k, root_label=("full-sieve", n), start_clocks=True)
 
@@ -42,7 +47,10 @@ def full_sieve_kernel(arg0, params=None, seed=None):
     g6k.update_gso(0, n)
 
     tracer.exit()
-    return tracer.trace
+    stat = tracer.trace
+    stat.data["profile"] = np.array([log(g6k.M.get_r(i, i)) for i in range(n)])
+
+    return stat
 
 
 def full_sieve():
@@ -51,7 +59,8 @@ def full_sieve():
     """
     description = full_sieve.__doc__
 
-    args, all_params = parse_args(description,)
+    args, all_params = parse_args(description,
+                                  challenge_seed=0)
 
     stats = run_all(full_sieve_kernel, list(all_params.values()),
                     lower_bound=args.lower_bound,
@@ -59,21 +68,43 @@ def full_sieve():
                     step_size=args.step_size,
                     trials=args.trials,
                     workers=args.workers,
-                    seed=args.seed)
+                    seed=args.seed                    
+                    )
 
     inverse_all_params = OrderedDict([(v, k) for (k, v) in six.iteritems(all_params)])
+
+    stats2 = OrderedDict()
+    for (n, params), v in six.iteritems(stats):
+        params_name = inverse_all_params[params]
+        params_name = re.sub("'challenge_seed': [0-9]+,", "", params_name)
+        params = params.new(challenge_seed=None)
+        stats2[(n, params_name)] = stats2.get((n, params_name), []) + v
+    stats = stats2
+
 
     for (n, params) in stats:
         stat = stats[(n, params)]
         cputime = sum([float(node["cputime"]) for node in stat])/len(stat)
         walltime = sum([float(node["walltime"]) for node in stat])/len(stat)
+        avr_profile = sum([node["profile"] for node in stat])/len(stat)
+
         avr_db, max_db = db_stats(stat)
-        fmt = "%48s :: m: %1d, n: %2d, cputime :%7.4fs, walltime :%7.4fs, avr_max |db|: 2^%2.2f, max_max db |db|: 2^%2.2f"  # noqa
-        logging.info(fmt %(inverse_all_params[params], params.threads, n, cputime, walltime, avr_db, max_db))
+        fmt = "%100s :: n: %2d, cputime :%7.4fs, walltime :%7.4fs, , avr_max db: 2^%2.2f, max_max db: 2^%2.2f" # noqa
+        logging.info(fmt % (params, n, cputime, walltime, avr_db, max_db))
+
+        if args.profile:
+            import matplotlib.pyplot as plt
+            L = [x for x in avr_profile]
+            plt.plot(L, label=params)
+            print(L)
+
 
     if args.pickle:
         pickler.dump(stats, open("full-sieve-%d-%d-%d-%d.sobj" %
                                  (args.lower_bound, args.upper_bound, args.step_size, args.trials), "wb"))
+    if args.profile:
+        plt.legend()
+        plt.show()
 
 
 if __name__ == '__main__':
