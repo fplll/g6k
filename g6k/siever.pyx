@@ -15,6 +15,8 @@ import logging
 import copy
 
 from numpy import zeros, float64, int64, matrix, array, where, matmul
+
+import numpy as npp
 cimport numpy as np
 from fpylll import LLL, GSO, IntegerMatrix
 from math import ceil, floor
@@ -140,7 +142,7 @@ cdef class Siever(object):
     def __dealloc__(self):
         del self._core
 
-    def update_gso(self, int r_bound=-1):
+    def update_gso(self, int l_bound, int r_bound):
         """
         Update the Gram-Schmidt vectors (up to the right bound r if specified).
 
@@ -150,7 +152,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = IntegerMatrix.random(50, "qary", k=25, bits=10)
             >>> siever = Siever(A, seed=0x1337)
-            >>> siever.update_gso()
+            >>> siever.update_gso(0, 50)
 
         ..  warning:: Do not call ``self.M.update_gso()`` directly but call this function instead as
         this function also updates the sieve's internal GSO coefficients.  Otherwise, the two
@@ -158,29 +160,42 @@ cdef class Siever(object):
 
         """
         
-        llb = self.ll
-        
-        cdef int cr
-        if r_bound == -1:
-            cr = self.full_n
-        else:
-            cr = r_bound
-
         cdef int i, j
-        for i in xrange(cr):
-            self.M.update_gso_row(i, i)
+        m = self.full_n
 
-        cdef np.ndarray _gso = zeros((self.M.d, self.M.d), dtype=float64)
+        if not self.params.dual_mode:
+            for i in xrange(r_bound):
+                self.M.update_gso_row(i, i)
+        else:
+            for i in xrange(m - l_bound):
+                self.M.update_gso_row(i, i)
 
-        for i in xrange(cr):
-            #~ _gso[i][i] = self.M.get_r(i, i)
-            _gso[i][i] = NAN if (i < llb) else self.M.get_r(i, i)
-            for j in xrange(i):
-                #~ _gso[i][j] = self.M.get_mu(i, j)
-                _gso[i][j] = NAN if (i < llb) else self.M.get_mu(i, j)
+        cdef np.ndarray _mu = zeros((self.M.d, self.M.d), dtype=float64)
+        cdef np.ndarray _rr = zeros((self.M.d), dtype=float64)
+
+        if not self.params.dual_mode:
+            for i in xrange(l_bound, r_bound):
+                _rr[i] = self.M.get_r(i, i)
+                _mu[i][i] = 1.
+                for j in xrange(i):
+                    _mu[i][j] = self.M.get_mu(i, j)
+
+        else:
+            m = self.full_n
+            for i in xrange(l_bound, r_bound):
+                _rr[i] = 1. / self.M.get_r(m-i, m-i)
+                _mu[i][i] = 1.
+                for j in xrange(i):
+                    _mu[i][j] = self.M.get_mu(m-i, m-j)
+
+            _mu = npp.linalg.inv(_mu)
+            _mu = npp.matrix.transpose(_mu)
+
+        for i in xrange(l_bound, r_bound):
+            _mu[i][i] = _rr[i]
 
         sig_on()
-        self._core.load_gso(self.M.d, <double*>_gso.data)
+        self._core.load_gso(self.M.d, <double*>_mu.data)
         sig_off()
 
     def initialize_local(self, ll, l, r, update_gso=True):
@@ -224,7 +239,7 @@ cdef class Siever(object):
             raise ValueError("Parameters %d, %d do not satisfy constraint  0 <= l <= r <= self.M.d"%(l, r))
         
         if update_gso:
-            self.update_gso(r_bound=r)
+            self.update_gso(self.ll, r)
         sig_on()
         self._core.initialize_local(ll, l, r)
         sig_off()
@@ -1344,7 +1359,7 @@ cdef class Siever(object):
 
         """
         assert(self.initialized)
-        self.update_gso(self.r + offset)
+        self.update_gso(self.ll, self.r + offset)
         sig_on()
         self._core.extend_right(offset)
         sig_off()
@@ -1451,7 +1466,7 @@ cdef class Siever(object):
         lll(lp, lp, l)
         lll(l, l, r)
 
-        self.update_gso(r_bound=self.r)
+        self.update_gso(self.ll, self.r)
 
     def best_lifts(self):
         """

@@ -107,7 +107,7 @@ class SieveTreeTracer(Tracer):
                 if i == 0:
                     node.data["|v|"] = length
                 else:
-                    self.instance.update_gso()
+                    self.instance.update_gso(0, self.instance.full_n)
                     node.data["|v|"] = self.instance.M.get_r(0, 0)
             except (IndexError, AttributeError):
                 node.data["|v|"] = None
