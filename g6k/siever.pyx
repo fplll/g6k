@@ -203,7 +203,7 @@ cdef class Siever(object):
             _mu[l_bound:r_bound,l_bound:r_bound] = _muinv
 
         for i in xrange(l_bound, r_bound):
-            _mu[i][i] = _rr[i]
+            _mu_view[i][i] = _rr[i]
 
         sig_on()
         self._core.load_gso(self.M.d, <double*>_mu.data)
