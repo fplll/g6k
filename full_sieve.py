@@ -44,13 +44,8 @@ def full_sieve_kernel(arg0, params=None, seed=None):
     # Actually runs a workout with very large decrements, so that the basis is kind-of reduced
     # for the final full-sieve
     workout(g6k, tracer, 0, n, dim4free_min=0, dim4free_dec=15, pump_params=pump_params, verbose=verbose)
-    g6k.update_gso(0, n)
 
-    tracer.exit()
-    stat = tracer.trace
-    stat.data["profile"] = np.array([log(g6k.M.get_r(i, i)) for i in range(n)])
-
-    return stat
+    return tracer.exit()
 
 
 def full_sieve():
@@ -81,30 +76,48 @@ def full_sieve():
         stats2[(n, params_name)] = stats2.get((n, params_name), []) + v
     stats = stats2
 
+    profiles_transpose = []
 
     for (n, params) in stats:
         stat = stats[(n, params)]
         cputime = sum([float(node["cputime"]) for node in stat])/len(stat)
         walltime = sum([float(node["walltime"]) for node in stat])/len(stat)
-        avr_profile = sum([node["profile"] for node in stat])/len(stat)
 
         avr_db, max_db = db_stats(stat)
         fmt = "%100s :: n: %2d, cputime :%7.4fs, walltime :%7.4fs, , avr_max db: 2^%2.2f, max_max db: 2^%2.2f" # noqa
         logging.info(fmt % (params, n, cputime, walltime, avr_db, max_db))
 
-        if args.profile:
-            import matplotlib.pyplot as plt
+        if args.profile is not None:
+            avr_profile = sum([node["final_profile"] for node in stat])/len(stat)
             L = [x for x in avr_profile]
-            plt.plot(L, label=params)
-            print(L)
 
+            if args.profile.endswith('.csv'):
+                profiles_transpose += [[params]+L]
+
+            else:
+                import matplotlib.pyplot as plt
+                plt.plot(L, label=params)
 
     if args.pickle:
         pickler.dump(stats, open("full-sieve-%d-%d-%d-%d.sobj" %
                                  (args.lower_bound, args.upper_bound, args.step_size, args.trials), "wb"))
-    if args.profile:
-        plt.legend()
-        plt.show()
+
+    if args.profile is not None:
+        if args.profile.endswith('.csv'):
+            import csv
+            csv_data = map(list, zip(*profiles_transpose))
+
+            with open(args.profile , 'wb') as csvfile:
+                spamwriter = csv.writer(csvfile)
+                for L in csv_data:
+                    spamwriter.writerow(L)
+
+        else:
+            plt.legend()
+            if args.profile=="show":
+                plt.show()
+            else:
+                plt.savefig(args.profile)
 
 
 if __name__ == '__main__':

@@ -15,6 +15,7 @@ try:
 except ImportError:
   from time import clock as process_time  # Python 2
 import logging
+import numpy as np
 
 
 class SieveTreeTracer(Tracer):
@@ -66,6 +67,10 @@ class SieveTreeTracer(Tracer):
 
         node.data["cputime"] += process_time()
         node.data["walltime"] += time.time()
+        self.instance.update_gso(0, self.instance.M.d)
+        node.data["final_profile"] = np.array([np.log(self.instance.M.get_r(i, i)) for i in range(self.instance.M.d)])
+
+
 
         self.instance.M.update_gso()
 
@@ -146,3 +151,4 @@ class SieveTreeTracer(Tracer):
             print(pretty_dict(report))
 
         self.current = self.current.parent
+        return self.trace
