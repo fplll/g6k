@@ -193,17 +193,21 @@ cdef class Siever(object):
                     _mu_view[i][j] = self.M.get_mu(m - 1 - j, m - 1 - i)
             
             for i in xrange(n):
-                for k in range(i+1,n):
-                    _muinv_view[k,i] = -_mu_view[l_bound + k, l_bound + i]
+                for k in range(i+1, n):
+                    _muinv_view[k, i] = -_mu_view[l_bound + k, l_bound + i]
                 
                 for k in xrange(i):
                     for j in range(i+1, n):
-                        _muinv_view[j,k] += _muinv_view[j, i]*_muinv_view[i, k]
+                        _muinv_view[j, k] += _muinv_view[j, i]*_muinv_view[i, k]
             
-            _mu[l_bound:r_bound,l_bound:r_bound] = _muinv
+            _mu[l_bound:r_bound, l_bound:r_bound] = _muinv
 
         for i in xrange(l_bound, r_bound):
             _mu[i][i] = _rr[i]
+
+        if l_bound==0:
+            print(_rr)
+            print(_mu)
 
         sig_on()
         self._core.load_gso(self.M.d, <double*>_mu.data)
@@ -1156,7 +1160,6 @@ cdef class Siever(object):
 
         if max_db_size==0:
           max_db_size = 200 + 10*self.n + 2 * self.params.triplesieve_db_size_factor * self.params.triplesieve_db_size_base ** self.n
-
         sig_on()
         self._core.gauss_triple_sieve_st(max_db_size)
         sig_off()
@@ -1204,6 +1207,8 @@ cdef class Siever(object):
 
         if max_db_size==0:
             max_db_size = 500 + 10*self.n + 2 * self.params.db_size_factor * self.params.db_size_base ** self.n
+
+        print("M ", self.db_size(), max_db_size)
 
         if self.db_size() > max_db_size:
             self.resize_db(max_db_size)

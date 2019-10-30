@@ -23,7 +23,7 @@ def print_pump_state(pump):
 def wrapped_sieve(pump):
     if pump.phase == "init":
         print("init")
-        alg = "bgj1"
+        alg = "nv"
     else:
         alg = None
 
