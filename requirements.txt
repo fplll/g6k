@@ -8,4 +8,3 @@ pytest
 requests
 scipy
 multiprocessing-logging
-parse
