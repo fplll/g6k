@@ -537,10 +537,10 @@ public: // TODO: Make more things private and do not export to Python.
     // Note:  As usual with loops, iterators, ranges in c++, the range considered is [l, r),
     //        i.e. the left boundary in inclusive, the right boundary is exclusive.
 
+    unsigned int ll;                          // left of the lift context
     unsigned int l;                           // current context left position
     unsigned int r;                           // current context right position
     unsigned int n;                           // current context dimension, n = r - l
-    unsigned int ll;                          // left of the lift context
 
     // gso_update_postprocessing post-processes the database with the change-of-basis transformation M
     // - Thread-safety ensured by each thread working on different data

@@ -169,10 +169,10 @@ cdef class Siever(object):
         cdef int d = self.M.d
 
         if not self.params.dual_mode:
-            for i in xrange(r_bound):
+            for i in range(r_bound):
                 self.M.update_gso_row(i, i)
         else:
-            for i in xrange(m - l_bound):
+            for i in range(m - l_bound):
                 self.M.update_gso_row(i, i)
 
         cdef np.ndarray _mu = zeros((d, d), dtype=float64)
@@ -182,30 +182,30 @@ cdef class Siever(object):
         cdef double[:,:] _muinv_view = _muinv
 
         if not self.params.dual_mode:
-            for i in xrange(l_bound, r_bound):
+            for i in range(l_bound, r_bound):
                 _rr[i] = self.M.get_r(i, i)
                 _mu_view[i][i] = 1.
-                for j in xrange(l_bound, i):
+                for j in range(l_bound, i):
                     _mu_view[i][j] = self.M.get_mu(i, j)
         
         else:
-            for i in xrange(l_bound, r_bound):
+            for i in range(l_bound, r_bound):
                 _rr[i] = 1. / self.M.get_r(m - 1 - i, m - 1 - i)
                 _mu_view[i][i] = 1.
-                for j in xrange(l_bound, i):
+                for j in range(l_bound, i):
                     _mu_view[i][j] = self.M.get_mu(m - 1 - j, m - 1 - i)
             
-            for i in xrange(n):
+            for i in range(n):
                 for k in range(i+1, n):
                     _muinv_view[k, i] = -_mu_view[l_bound + k, l_bound + i]
                 
-                for k in xrange(i):
+                for k in range(i):
                     for j in range(i+1, n):
                         _muinv_view[j, k] += _muinv_view[j, i]*_muinv_view[i, k]
             
             _mu[l_bound:r_bound, l_bound:r_bound] = _muinv
 
-        for i in xrange(l_bound, r_bound):
+        for i in range(l_bound, r_bound):
             _mu_view[i][i] = _rr[i]
 
         sig_on()
@@ -237,15 +237,20 @@ cdef class Siever(object):
 
         TESTS::
 
-            >>> siever.initialize_local(0, -1, 25)
+            >>> siever.initialize_local(5, 4, 25)
             Traceback (most recent call last):
             ...
-            ValueError: Parameters 0, -1, 25 do not satisfy constraint  0 <= ll <= l <= r <= self.M.d
+            ValueError: Parameters 5, 4, 25 do not satisfy constraint  0 <= ll <= l <= r <= self.M.d
 
             >>> siever.initialize_local(0, 0, 51)
             Traceback (most recent call last):
             ...
             ValueError: Parameters 0, 0, 51 do not satisfy constraint  0 <= ll <= l <= r <= self.M.d
+
+            >>> siever.initialize_local(-1, 0, 50)
+            Traceback (most recent call last):
+            ...
+            ValueError: Parameters -1, 0, 50 do not satisfy constraint  0 <= ll <= l <= r <= self.M.d
 
 
         """
@@ -1327,7 +1332,6 @@ cdef class Siever(object):
         """
         # TODO the documentation needs fixing
         assert(self.initialized)
-        # print("SHRIMP", self.ll, self.l, self.r, self.n)
         sig_on()
         self._core.shrink_left(lp)
         sig_off()
@@ -1408,13 +1412,13 @@ cdef class Siever(object):
 
         if not self.params.dual_mode:
             with self.M.row_ops(kappa, self.r):
-                for i in xrange(kappa, self.r):
+                for i in range(kappa, self.r):
                     if i != full_j:
                         self.M.row_addmul(full_j, i, v[i])
                 self.M.move_row(full_j, kappa)
         else:
             with self.M.row_ops(m-self.r, m-kappa):
-                for i in xrange(kappa, self.r):
+                for i in range(kappa, self.r):
                     if i != full_j:
                         self.M.row_addmul(m-1-i, m-1-full_j, -v[i])
                 self.M.move_row(m-1-full_j, m-1-kappa)

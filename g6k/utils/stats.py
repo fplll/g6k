@@ -152,3 +152,4 @@ class SieveTreeTracer(Tracer):
 
         self.current = self.current.parent
         return self.trace
+        

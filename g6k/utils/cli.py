@@ -16,7 +16,6 @@ import subprocess
 import sys
 from collections import OrderedDict
 from multiprocessing import Pool
-from parse import parse
 
 from fpylll import BKZ
 
@@ -234,21 +233,15 @@ def parse_args(description, ParamsClass=SieverParams, **kwds):
                 break
 
             try:
-                L = list(parse('{0}~{1}~{2}', v))
-                v = range(int(L[0]), int(L[1]), int(L[2]))
+                L = re.match("([0-9]+)~([0-9]+)~?([0-9]+)?", v).groups()
+                if L[2] is not None:
+                    v = range(int(L[0]), int(L[1]), int(L[2]))
+                else:
+                    v = range(int(L[0]), int(L[1]))
                 unknown_args[k].extend(v)
                 continue
             except:
                 pass
-
-            try:
-                L = list(parse('{0}~{1}', v))
-                v = range(int(L[0]), int(L[1]))
-                unknown_args[k].extend(v)
-                continue
-            except:
-                pass
-
 
             try:
                 v = eval(v, {"BKZ": BKZ})

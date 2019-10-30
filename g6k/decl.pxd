@@ -259,10 +259,10 @@ cdef extern from "../kernel/siever.h" nogil:
         vector[vector[FT]] full_muT
         vector[FT] full_rr
 
+        unsigned int ll
         unsigned int l
         unsigned int r
         unsigned int n
-        unsigned int ll
 
         void gso_update_postprocessing(const unsigned int l_, const unsigned int r_, long* M)
 
