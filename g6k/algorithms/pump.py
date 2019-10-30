@@ -22,7 +22,8 @@ def print_pump_state(pump):
 # Return true if we should continue
 def wrapped_sieve(pump):
     if pump.phase == "init":
-        alg = "gauss"
+        print("init")
+        alg = "bgj1"
     else:
         alg = None
 
@@ -98,13 +99,15 @@ def pump(g6k, tracer, kappa, blocksize, dim4free, down_sieve=False,             
     :param verbose: print pump steps on the standard output.
 
     """
+    print(g6k.ll, g6k.l, g6k.r, g6k.n, g6k.db_size())
 
     pump.r = kappa+blocksize
     pump.l = kappa+dim4free  # noqa
 
+    g6k.shrink_db(0)
     g6k.lll(kappa, pump.r)
     g6k.initialize_local(kappa, max(pump.r-start_up_n, pump.l+1), pump.r)
-    g6k.shrink_db(0)
+    print(g6k.ll, g6k.l, g6k.r, g6k.n, g6k.db_size())
 
     pump.sat_factor = 1.
     pump.up_time_start = time.time()

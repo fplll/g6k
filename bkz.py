@@ -111,6 +111,12 @@ def bkz_kernel(arg0, params=None, seed=None):
 
     T0 = time.time()
     for blocksize in blocksizes:
+        # g6k = Siever(MM, params, seed=seed)
+        # if dont_trace:
+        #     tracer = dummy_tracer
+        # else:
+        #     tracer = SieveTreeTracer(g6k, root_label=("bkz", d), start_clocks=True)
+
         for t in range(tours):
             with tracer.context("tour", t):
                 if algbkz == "fpylll":

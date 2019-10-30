@@ -1005,7 +1005,7 @@ cdef class Siever(object):
     #         print "%.2f:%.2f "%(r,c),
     #     print
 
-    def resize_db(self, N, large = 0):
+    def resize_db(self, N, large=0):
         """
         Resize db to ``N``.
 
@@ -1031,7 +1031,7 @@ cdef class Siever(object):
             10
 
         """
-        assert(self.initialized)
+
         if N < self.db_size():
             self.shrink_db(N)
         elif N > self.db_size():
@@ -1041,7 +1041,8 @@ cdef class Siever(object):
         """
         Shrinks db to size (at most) N. This preferentially deletes vectors that are longer.
         """
-        assert(self.initialized)
+        if N>0:
+            assert(self.initialized)
         self._core.shrink_db(int(ceil(N)))
 
     def grow_db(self, N, large=0):
