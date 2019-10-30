@@ -5,10 +5,6 @@ Generalised Sieving Kernel (G6K) Siever
 This class is the interface to the C++ implementation of sieving algorithm.  All higher-level
 algorithms go through this class.
 """
-import os
-os.environ["MKL_NUM_THREADS"] = "1" 
-os.environ["NUMEXPR_NUM_THREADS"] = "1" 
-os.environ["OMP_NUM_THREADS"] = "1"
 
 from fpylll.tools.bkz_stats import dummy_tracer
 from cysignals.signals cimport sig_on, sig_off
@@ -164,9 +160,10 @@ cdef class Siever(object):
 
         """
         
-        cdef int i, j
-        m = self.full_n
-        n = r_bound - l_bound
+        cdef int i, j, k
+        cdef int m = self.full_n
+        cdef int n = r_bound - l_bound
+        cdef int d = self.M.d
 
         if not self.params.dual_mode:
             for i in xrange(r_bound):
@@ -175,34 +172,33 @@ cdef class Siever(object):
             for i in xrange(m - l_bound):
                 self.M.update_gso_row(i, i)
 
-        cdef np.ndarray _mu = zeros((self.M.d, self.M.d), dtype=float64)
-        cdef np.ndarray _rr = zeros((self.M.d), dtype=float64)
+        cdef np.ndarray _mu = zeros((d, d), dtype=float64)
+        cdef double[:,:] _mu_view = _mu
+        cdef np.ndarray _rr = zeros(d, dtype=float64)
         cdef np.ndarray _muinv = identity(n, dtype=float64)
-        cdef np.ndarray _li = zeros((n, n), dtype=float64)
+        cdef double[:,:] _muinv_view = _muinv
 
         if not self.params.dual_mode:
             for i in xrange(l_bound, r_bound):
                 _rr[i] = self.M.get_r(i, i)
-                _mu[i][i] = 1.
+                _mu_view[i][i] = 1.
                 for j in xrange(l_bound, i):
-                    _mu[i][j] = self.M.get_mu(i, j)
-
+                    _mu_view[i][j] = self.M.get_mu(i, j)
+        
         else:
-            m = self.full_n
             for i in xrange(l_bound, r_bound):
                 _rr[i] = 1. / self.M.get_r(m - 1 - i, m - 1 - i)
-                _mu[i][i] = 1.
+                _mu_view[i][i] = 1.
                 for j in xrange(l_bound, i):
-                    _mu[i][j] = self.M.get_mu(m - 1 - j, m - 1 - i)
-            # invert _mu
-            #~ al = l_bound
-            #~ ar = r_bound
-            #~ _mu[al:ar, al:ar] = npp.linalg.inv(_mu[al:ar, al:ar])
+                    _mu_view[i][j] = self.M.get_mu(m - 1 - j, m - 1 - i)
+            
             for i in xrange(n):
-                _li = identity(n, dtype=float64)
-                for k in range(i+1, n):
-                    _li[k,i] = -_mu[l_bound + k,l_bound + i]
-                _muinv = dot(_li, _muinv)
+                for k in range(i+1,n):
+                    _muinv_view[k,i] = -_mu_view[l_bound + k, l_bound + i]
+                
+                for k in xrange(i):
+                    for j in range(i+1, n):
+                        _muinv_view[j,k] += _muinv_view[j, i]*_muinv_view[i, k]
             
             _mu[l_bound:r_bound,l_bound:r_bound] = _muinv
 
