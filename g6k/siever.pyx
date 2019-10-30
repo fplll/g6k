@@ -18,7 +18,7 @@ import warnings
 import logging
 import copy
 
-from numpy import zeros, float64, int64, matrix, array, where, matmul
+from numpy import zeros, float64, int64, matrix, array, where, matmul, identity, dot
 
 import numpy as npp
 cimport numpy as np
@@ -166,6 +166,7 @@ cdef class Siever(object):
         
         cdef int i, j
         m = self.full_n
+        n = r_bound - l_bound
 
         if not self.params.dual_mode:
             for i in xrange(r_bound):
@@ -176,6 +177,8 @@ cdef class Siever(object):
 
         cdef np.ndarray _mu = zeros((self.M.d, self.M.d), dtype=float64)
         cdef np.ndarray _rr = zeros((self.M.d), dtype=float64)
+        cdef np.ndarray _muinv = identity(n, dtype=float64)
+        cdef np.ndarray _li = zeros((n, n), dtype=float64)
 
         if not self.params.dual_mode:
             for i in xrange(l_bound, r_bound):
@@ -191,9 +194,17 @@ cdef class Siever(object):
                 _mu[i][i] = 1.
                 for j in xrange(l_bound, i):
                     _mu[i][j] = self.M.get_mu(m - 1 - j, m - 1 - i)
-            al = l_bound
-            ar = r_bound
-            _mu[al:ar, al:ar] = npp.linalg.inv(_mu[al:ar, al:ar])
+            # invert _mu
+            #~ al = l_bound
+            #~ ar = r_bound
+            #~ _mu[al:ar, al:ar] = npp.linalg.inv(_mu[al:ar, al:ar])
+            for i in xrange(n):
+                _li = identity(n, dtype=float64)
+                for k in range(i+1, n):
+                    _li[k,i] = -_mu[l_bound + k,l_bound + i]
+                _muinv = dot(_li, _muinv)
+            
+            _mu[l_bound:r_bound,l_bound:r_bound] = _muinv
 
         for i in xrange(l_bound, r_bound):
             _mu[i][i] = _rr[i]
