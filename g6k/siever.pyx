@@ -159,6 +159,9 @@ cdef class Siever(object):
         objects might get out of sync and behaviour becomes undefined.
 
         """
+        if not (0 <= l_bound and l_bound <= r_bound and r_bound <= self.M.d):
+            raise ValueError("Parameters %d, %d, %d do not satisfy constraint  0 <= l_bound <= r_bound <= self.M.d"%(l_bound, r_bound))
+        
         
         cdef int i, j, k
         cdef int m = self.full_n
@@ -237,17 +240,17 @@ cdef class Siever(object):
             >>> siever.initialize_local(0, -1, 25)
             Traceback (most recent call last):
             ...
-            ValueError: Parameters -1, 25 do not satisfy constraint  0 <= l <= r <= self.M.d
+            ValueError: Parameters 0, -1, 25 do not satisfy constraint  0 <= ll <= l <= r <= self.M.d
 
             >>> siever.initialize_local(0, 0, 51)
             Traceback (most recent call last):
             ...
-            ValueError: Parameters 0, 51 do not satisfy constraint  0 <= l <= r <= self.M.d
+            ValueError: Parameters 0, 0, 51 do not satisfy constraint  0 <= ll <= l <= r <= self.M.d
 
 
         """
-        if not (0 <= l and l <= r and r <= self.M.d):
-            raise ValueError("Parameters %d, %d do not satisfy constraint  0 <= l <= r <= self.M.d"%(l, r))
+        if not (0 <= ll and ll <= l and l <= r and r <= self.M.d):
+            raise ValueError("Parameters %d, %d, %d do not satisfy constraint  0 <= ll <= l <= r <= self.M.d"%(ll, l, r))
         
         if update_gso:
             self.update_gso(ll, r)
