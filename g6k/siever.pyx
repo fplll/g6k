@@ -193,14 +193,14 @@ cdef class Siever(object):
                     _mu_view[i][j] = self.M.get_mu(m - 1 - j, m - 1 - i)
             
             for i in xrange(n):
-                for k in range(i+1,n):
-                    _muinv_view[k,i] = -_mu_view[l_bound + k, l_bound + i]
+                for k in range(i+1, n):
+                    _muinv_view[k, i] = -_mu_view[l_bound + k, l_bound + i]
                 
                 for k in xrange(i):
                     for j in range(i+1, n):
-                        _muinv_view[j,k] += _muinv_view[j, i]*_muinv_view[i, k]
+                        _muinv_view[j, k] += _muinv_view[j, i]*_muinv_view[i, k]
             
-            _mu[l_bound:r_bound,l_bound:r_bound] = _muinv
+            _mu[l_bound:r_bound, l_bound:r_bound] = _muinv
 
         for i in xrange(l_bound, r_bound):
             _mu_view[i][i] = _rr[i]
@@ -250,7 +250,7 @@ cdef class Siever(object):
             raise ValueError("Parameters %d, %d do not satisfy constraint  0 <= l <= r <= self.M.d"%(l, r))
         
         if update_gso:
-            self.update_gso(self.ll, r)
+            self.update_gso(ll, r)
         sig_on()
         self._core.initialize_local(ll, l, r)
         sig_off()
@@ -1011,7 +1011,7 @@ cdef class Siever(object):
     #         print "%.2f:%.2f "%(r,c),
     #     print
 
-    def resize_db(self, N, large = 0):
+    def resize_db(self, N, large=0):
         """
         Resize db to ``N``.
 
@@ -1037,7 +1037,7 @@ cdef class Siever(object):
             10
 
         """
-        assert(self.initialized)
+
         if N < self.db_size():
             self.shrink_db(N)
         elif N > self.db_size():
@@ -1047,7 +1047,8 @@ cdef class Siever(object):
         """
         Shrinks db to size (at most) N. This preferentially deletes vectors that are longer.
         """
-        assert(self.initialized)
+        if N>0:
+            assert(self.initialized)
         self._core.shrink_db(int(ceil(N)))
 
     def grow_db(self, N, large=0):
@@ -1155,7 +1156,6 @@ cdef class Siever(object):
 
         if max_db_size==0:
           max_db_size = 200 + 10*self.n + 2 * self.params.triplesieve_db_size_factor * self.params.triplesieve_db_size_base ** self.n
-
         sig_on()
         self._core.gauss_triple_sieve_st(max_db_size)
         sig_off()

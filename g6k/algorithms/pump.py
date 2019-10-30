@@ -98,13 +98,12 @@ def pump(g6k, tracer, kappa, blocksize, dim4free, down_sieve=False,             
     :param verbose: print pump steps on the standard output.
 
     """
-
     pump.r = kappa+blocksize
     pump.l = kappa+dim4free  # noqa
 
+    g6k.shrink_db(0)
     g6k.lll(kappa, pump.r)
     g6k.initialize_local(kappa, max(pump.r-start_up_n, pump.l+1), pump.r)
-    g6k.shrink_db(0)
 
     pump.sat_factor = 1.
     pump.up_time_start = time.time()

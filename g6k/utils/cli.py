@@ -234,7 +234,7 @@ def parse_args(description, ParamsClass=SieverParams, **kwds):
                 break
 
             try:
-                L = list(parse('{0}:{1}:{2}', v))
+                L = list(parse('{0}~{1}~{2}', v))
                 v = range(int(L[0]), int(L[1]), int(L[2]))
                 unknown_args[k].extend(v)
                 continue
@@ -242,7 +242,7 @@ def parse_args(description, ParamsClass=SieverParams, **kwds):
                 pass
 
             try:
-                L = list(parse('{0}:{1}', v))
+                L = list(parse('{0}~{1}', v))
                 v = range(int(L[0]), int(L[1]))
                 unknown_args[k].extend(v)
                 continue

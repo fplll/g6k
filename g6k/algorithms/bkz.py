@@ -97,6 +97,10 @@ def pump_n_jump_bkz_tour(g6k, tracer, blocksize, jump=1,
         raise ValueError("In pump_n_jump_bkz, you should choose dim4free via dim4free_fun.")
 
     d = g6k.full_n
+    g6k.shrink_db(0)
+    g6k.lll(0, d)
+    g6k.update_gso(0, d)
+
 
     if isinstance(dim4free_fun, six.string_types):
         dim4free_fun = eval(dim4free_fun)
@@ -108,7 +112,7 @@ def pump_n_jump_bkz_tour(g6k, tracer, blocksize, jump=1,
     indices += [(i, blocksize, dim4free) for i in range(0, d - blocksize, jump)]
     indices += [(d - blocksize + i, blocksize - i, dim4free - i) for i in range(0, dim4free, jump)]
 
-    pump_params["down_stop"] = (blocksize-dim4free)
+    pump_params["down_stop"] = dim4free + 3
 
     for (kappa, beta, f) in indices:
         if verbose:
@@ -123,7 +127,7 @@ def pump_n_jump_bkz_tour(g6k, tracer, blocksize, jump=1,
     if verbose:
         print("\r k:%d, b:%d, f:%d " % (d-(blocksize-dim4free), blocksize-dim4free, 0), end=' ')
         sys.stdout.flush()
-
+    pump_params["down_stop"] = blocksize-dim4free
     pump(g6k, tracer, d-(blocksize-dim4free), blocksize-dim4free, 0, **pump_params)
     if verbose:
         print()
