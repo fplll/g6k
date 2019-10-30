@@ -48,7 +48,7 @@ def load_matrix_file(filepath, randomize=False, seed=None, float_type="double"):
     return A, bkz
 
 
-def load_svpchallenge_and_randomize(n, s=0, seed=None, verbose=True, float_type="double"):
+def load_svpchallenge_and_randomize(n, s=None, seed=None, verbose=True, float_type="double"):
     """
     Load SVP challenge (and randomize)
 
@@ -73,6 +73,9 @@ def load_svpchallenge_and_randomize(n, s=0, seed=None, verbose=True, float_type=
         True
 
     """
+
+    if s is None:
+        s=0
 
     filename = "svpchallenge/svpchallenge-dim-%03d-seed-%02d.txt"%(n, s)
 

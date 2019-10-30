@@ -331,8 +331,6 @@ public:
 
   size_t threads = 1;  // ... number of threads
 
-  unsigned int lift_left_bound = 0;  // Stop lift-and-compare at this absolute position (inclusive)
-
   bool sample_by_sums = true;
 
   bool otf_lift = true;       // Lift on the fly. If set to false,
@@ -402,7 +400,7 @@ public:
     */
 
     explicit Siever(const SieverParams &params, unsigned long int seed = 0) :
-        full_n(0), full_muT(), full_rr(), l(0), r(-1), n(0), muT(), db(), cdb(),
+        full_n(0), full_muT(), full_rr(), l(0), r(-1), n(0), ll(0), muT(), db(), cdb(),
         best_lifts_so_far(), histo(),
         rng(seed), sim_hashes(rng.rng_nolock())
 #ifdef PERFORMANCE_COUNTING
@@ -433,7 +431,7 @@ public:
     // - update the local gso and recompute gaussian_heuristic for renormalization
     // - reset best_lift_so_far if r changed
     // - reset compression and uid functions
-    void initialize_local(unsigned int l_, unsigned int r_); // implemented in control.cpp
+    void initialize_local(unsigned int ll_, unsigned int l_, unsigned int r_); // implemented in control.cpp
 
     // Extend the context to the left (threaded)
     // - change the context
@@ -539,6 +537,7 @@ public: // TODO: Make more things private and do not export to Python.
     // Note:  As usual with loops, iterators, ranges in c++, the range considered is [l, r),
     //        i.e. the left boundary in inclusive, the right boundary is exclusive.
 
+    unsigned int ll;                          // left of the lift context
     unsigned int l;                           // current context left position
     unsigned int r;                           // current context right position
     unsigned int n;                           // current context dimension, n = r - l

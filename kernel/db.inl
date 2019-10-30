@@ -158,9 +158,9 @@ inline void Siever::lift_and_compare(ZT * const x_full, FT len, LFT const * cons
     if (UNLIKELY(len >= params.lift_radius * gh)) return;
     if (UNLIKELY(len < lift_bounds[l])) lift_and_replace_best_lift(x_full, l);
 
-    // i must be signed such that if params.lift_left_bound == 0, we terminate properly.
+    // i must be signed such that if ll == 0, we terminate properly.
     int i = static_cast<signed int>(l) - 1;
-    const int llb = static_cast<signed int>(params.lift_left_bound);
+    const int llb = static_cast<signed int>(ll);
 
     if (helper)
     {

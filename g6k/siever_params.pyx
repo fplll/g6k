@@ -43,7 +43,6 @@ cdef class SieverParams(object):
         "reserved_n",
         "reserved_db_size",
         "threads",
-        "lift_left_bound",
         "sample_by_sums",
         "otf_lift",
         "lift_radius",
@@ -63,7 +62,8 @@ cdef class SieverParams(object):
         "triplesieve_db_size_base",
         "triplesieve_db_size_factor",
         "default_sieve",
-        "gauss_crossover"
+        "gauss_crossover",
+        "dual_mode"
     ]
 
     def __init__(self, **kwds):
@@ -107,6 +107,10 @@ cdef class SieverParams(object):
                                                            # db_size_base_3sieve**n for the next
                                                            # iteration
 
+        if "dual_mode" not in kwds:
+            kwds["dual_mode"] = False                      
+
+
         if "reserved_db_size" not in kwds and "reserved_n" in kwds:
             kwds["reserved_db_size"] = kwds["db_size_factor"] * kwds["db_size_base"]**kwds["reserved_n"] + 100
 
@@ -141,8 +145,6 @@ cdef class SieverParams(object):
             self._core.reserved_db_size = value
         elif key == "threads":
             self._core.threads = value
-        elif key == "lift_left_bound":
-            self._core.lift_left_bound = value
         elif key == "sample_by_sums":
             self._core.sample_by_sums = value
         elif key == "otf_lift":
@@ -175,8 +177,6 @@ cdef class SieverParams(object):
             return self._core.reserved_db_size
         elif key == "threads":
             return self._core.threads
-        elif key == "lift_left_bound":
-            return self._core.lift_left_bound
         elif key == "sample_by_sums":
             return self._core.sample_by_sums
         elif key == "otf_lift":

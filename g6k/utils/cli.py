@@ -194,6 +194,7 @@ def parse_args(description, ParamsClass=SieverParams, **kwds):
                         help="Show default parameters and exit.")
     parser.add_argument('--loglvl', type=str, help="Logging level (one of DEBUG, WARN, INFO)", default="INFO")
     parser.add_argument('--log-filename', dest="log_filename", type=str, help="Logfile filename", default=None)
+    parser.add_argument('--profile', dest="profile", type=str, help="Output final log-profile into specified file (.csv, .pdf, .png, ...)", default=None)
     args, unknown = parser.parse_known_args()
 
     kwds_ = OrderedDict()
@@ -230,6 +231,18 @@ def parse_args(description, ParamsClass=SieverParams, **kwds):
             if v.startswith("--") or v.startswith("-"):
                 i -= 1
                 break
+
+            try:
+                L = re.match("([0-9]+)~([0-9]+)~?([0-9]+)?", v).groups()
+                if L[2] is not None:
+                    v = range(int(L[0]), int(L[1]), int(L[2]))
+                else:
+                    v = range(int(L[0]), int(L[1]))
+                unknown_args[k].extend(v)
+                continue
+            except:
+                pass
+
             try:
                 v = eval(v, {"BKZ": BKZ})
             except NameError:

@@ -28,8 +28,8 @@ def wrapped_sieve(pump):
 
     cont = True
     try:
-        with pump.g6k.temp_params(saturation_ratio=pump.g6k.params.saturation_ratio * pump.sat_factor,
-                                  lift_left_bound=pump.kappa if pump.goal_r0 else pump.insert_left_bound):
+        with pump.g6k.temp_params(saturation_ratio=pump.g6k.params.saturation_ratio * pump.sat_factor):
+
             # Match lifting effort to insertion strategy
             pump.g6k(alg=alg, tracer=pump.tracer)
 
@@ -98,13 +98,12 @@ def pump(g6k, tracer, kappa, blocksize, dim4free, down_sieve=False,             
     :param verbose: print pump steps on the standard output.
 
     """
-
     pump.r = kappa+blocksize
     pump.l = kappa+dim4free  # noqa
 
-    g6k.lll(kappa, pump.r)
-    g6k.initialize_local(max(pump.r-start_up_n, pump.l+1), pump.r)
     g6k.shrink_db(0)
+    g6k.lll(kappa, pump.r)
+    g6k.initialize_local(kappa, max(pump.r-start_up_n, pump.l+1), pump.r)
 
     pump.sat_factor = 1.
     pump.up_time_start = time.time()
@@ -119,7 +118,7 @@ def pump(g6k, tracer, kappa, blocksize, dim4free, down_sieve=False,             
         down_stop = dim4free
 
     with tracer.context(("pump", "kappa:%d beta:%d f:%d" % (kappa, blocksize, dim4free))):
-        with g6k.temp_params(reserved_n=pump.r-pump.l, lift_left_bound=kappa):
+        with g6k.temp_params(reserved_n=pump.r-pump.l):
             pump.phase = "init"
             wrapped_sieve(pump)  # The first initializing Sieve should always be Gauss to avoid rank-loss
 
@@ -146,6 +145,7 @@ def pump(g6k, tracer, kappa, blocksize, dim4free, down_sieve=False,             
                     ii = g6k.insert_best_lift(scoring_down, aux=pump)
                     if ii is not None and increasing_insert_index:
                         pump.insert_left_bound = ii + 1
+
                     else:
                         g6k.shrink_left(1)
 

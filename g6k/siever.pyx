@@ -4,8 +4,8 @@ Generalised Sieving Kernel (G6K) Siever
 
 This class is the interface to the C++ implementation of sieving algorithm.  All higher-level
 algorithms go through this class.
-
 """
+
 from fpylll.tools.bkz_stats import dummy_tracer
 from cysignals.signals cimport sig_on, sig_off
 from libcpp cimport bool
@@ -14,7 +14,9 @@ import warnings
 import logging
 import copy
 
-from numpy import zeros, float64, int64, matrix, array, where, matmul
+from numpy import zeros, float64, int64, matrix, array, where, matmul, identity, dot
+
+import numpy as npp
 cimport numpy as np
 from fpylll import LLL, GSO, IntegerMatrix
 from math import ceil, floor
@@ -25,6 +27,8 @@ from decl cimport show_cpu_stats
 from scipy.special import betaincinv
 
 from siever_params import temp_params
+
+from libc.math cimport NAN
 
 class SaturationError(RuntimeError):
     pass
@@ -138,7 +142,7 @@ cdef class Siever(object):
     def __dealloc__(self):
         del self._core
 
-    def update_gso(self, int r_bound=-1):
+    def update_gso(self, int l_bound, int r_bound):
         """
         Update the Gram-Schmidt vectors (up to the right bound r if specified).
 
@@ -148,36 +152,67 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = IntegerMatrix.random(50, "qary", k=25, bits=10)
             >>> siever = Siever(A, seed=0x1337)
-            >>> siever.update_gso()
+            >>> siever.update_gso(0, 50)
 
         ..  warning:: Do not call ``self.M.update_gso()`` directly but call this function instead as
         this function also updates the sieve's internal GSO coefficients.  Otherwise, the two
         objects might get out of sync and behaviour becomes undefined.
 
         """
+        if not (0 <= l_bound and l_bound <= r_bound and r_bound <= self.M.d):
+            raise ValueError("Parameters %d, %d, %d do not satisfy constraint  0 <= l_bound <= r_bound <= self.M.d"%(l_bound, r_bound))
+        
+        
+        cdef int i, j, k
+        cdef int m = self.full_n
+        cdef int n = r_bound - l_bound
+        cdef int d = self.M.d
 
-        cdef int cr
-        if r_bound == -1:
-            cr = self.full_n
+        if not self.params.dual_mode:
+            for i in range(r_bound):
+                self.M.update_gso_row(i, i)
         else:
-            cr = r_bound
+            for i in range(m - l_bound):
+                self.M.update_gso_row(i, i)
 
-        cdef int i, j
-        for i in xrange(cr):
-            self.M.update_gso_row(i, i)
+        cdef np.ndarray _mu = zeros((d, d), dtype=float64)
+        cdef double[:,:] _mu_view = _mu
+        cdef np.ndarray _rr = zeros(d, dtype=float64)
+        cdef np.ndarray _muinv = identity(n, dtype=float64)
+        cdef double[:,:] _muinv_view = _muinv
 
-        cdef np.ndarray _gso = zeros((self.M.d, self.M.d), dtype=float64)
+        if not self.params.dual_mode:
+            for i in range(l_bound, r_bound):
+                _rr[i] = self.M.get_r(i, i)
+                _mu_view[i][i] = 1.
+                for j in range(l_bound, i):
+                    _mu_view[i][j] = self.M.get_mu(i, j)
+        
+        else:
+            for i in range(l_bound, r_bound):
+                _rr[i] = 1. / self.M.get_r(m - 1 - i, m - 1 - i)
+                _mu_view[i][i] = 1.
+                for j in range(l_bound, i):
+                    _mu_view[i][j] = self.M.get_mu(m - 1 - j, m - 1 - i)
+            
+            for i in range(n):
+                for k in range(i+1, n):
+                    _muinv_view[k, i] = -_mu_view[l_bound + k, l_bound + i]
+                
+                for k in range(i):
+                    for j in range(i+1, n):
+                        _muinv_view[j, k] += _muinv_view[j, i]*_muinv_view[i, k]
+            
+            _mu[l_bound:r_bound, l_bound:r_bound] = _muinv
 
-        for i in xrange(cr):
-            _gso[i][i] = self.M.get_r(i, i)
-            for j in xrange(i):
-                _gso[i][j] = self.M.get_mu(i, j)
+        for i in range(l_bound, r_bound):
+            _mu_view[i][i] = _rr[i]
 
         sig_on()
-        self._core.load_gso(self.M.d, <double*>_gso.data)
+        self._core.load_gso(self.M.d, <double*>_mu.data)
         sig_off()
 
-    def initialize_local(self, l, r, update_gso=True):
+    def initialize_local(self, ll, l, r, update_gso=True):
         """
         Local set-up.
 
@@ -187,8 +222,9 @@ cdef class Siever(object):
         - reset compression and uid functions
 
 
-        :param l: left index (inclusive)
-        :param r: right index (exclusive)
+        :param ll: lift context left index (inclusive)
+        :param l: sieve context left index (inclusive)
+        :param r: sieve context right index (exclusive)
 
         EXAMPLE::
 
@@ -196,30 +232,35 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = IntegerMatrix.random(50, "qary", k=25, bits=10)
             >>> siever = Siever(A, seed=0x1337)
-            >>> siever.initialize_local(0, 50)
-            >>> siever.initialize_local(1, 25)
+            >>> siever.initialize_local(0, 0, 50)
+            >>> siever.initialize_local(1, 1, 25)
 
         TESTS::
 
-            >>> siever.initialize_local(-1, 25)
+            >>> siever.initialize_local(5, 4, 25)
             Traceback (most recent call last):
             ...
-            ValueError: Parameters -1, 25 do not satisfy constraint  0 <= l <= r <= self.M.d
+            ValueError: Parameters 5, 4, 25 do not satisfy constraint  0 <= ll <= l <= r <= self.M.d
 
-            >>> siever.initialize_local( 0, 51)
+            >>> siever.initialize_local(0, 0, 51)
             Traceback (most recent call last):
             ...
-            ValueError: Parameters 0, 51 do not satisfy constraint  0 <= l <= r <= self.M.d
+            ValueError: Parameters 0, 0, 51 do not satisfy constraint  0 <= ll <= l <= r <= self.M.d
+
+            >>> siever.initialize_local(-1, 0, 50)
+            Traceback (most recent call last):
+            ...
+            ValueError: Parameters -1, 0, 50 do not satisfy constraint  0 <= ll <= l <= r <= self.M.d
 
 
         """
-        if not (0 <= l and l <= r and r <= self.M.d):
-            raise ValueError("Parameters %d, %d do not satisfy constraint  0 <= l <= r <= self.M.d"%(l, r))
-
+        if not (0 <= ll and ll <= l and l <= r and r <= self.M.d):
+            raise ValueError("Parameters %d, %d, %d do not satisfy constraint  0 <= ll <= l <= r <= self.M.d"%(ll, l, r))
+        
         if update_gso:
-            self.update_gso(r_bound=r)
+            self.update_gso(ll, r)
         sig_on()
-        self._core.initialize_local(l, r)
+        self._core.initialize_local(ll, l, r)
         sig_off()
         self.initialized = True
 
@@ -248,7 +289,7 @@ cdef class Siever(object):
             >>> from fpylll import IntegerMatrix
             >>> from g6k import Siever
             >>> siever= Siever(IntegerMatrix.random(50, "qary", k=25, bits=10), seed=0x1337)
-            >>> siever.initialize_local(1, 11)
+            >>> siever.initialize_local(0, 1, 11)
             >>> siever.l
             1
 
@@ -265,12 +306,29 @@ cdef class Siever(object):
             >>> from fpylll import IntegerMatrix
             >>> from g6k import Siever
             >>> siever= Siever(IntegerMatrix.random(50, "qary", k=25, bits=10), seed=0x1337)
-            >>> siever.initialize_local(1, 11)
+            >>> siever.initialize_local(0, 1, 11)
             >>> siever.r
             11
 
         """
         return self._core.r
+
+    @property
+    def ll(self):
+        """
+        Current lift left bound.
+
+        EXAMPLE::
+
+            >>> from fpylll import IntegerMatrix
+            >>> from g6k import Siever
+            >>> siever= Siever(IntegerMatrix.random(50, "qary", k=25, bits=10), seed=0x1337)
+            >>> siever.initialize_local(0, 1, 11)
+            >>> siever.r
+            11
+
+        """
+        return self._core.ll
 
 
     @property
@@ -283,7 +341,7 @@ cdef class Siever(object):
             >>> from fpylll import IntegerMatrix
             >>> from g6k import Siever
             >>> siever= Siever(IntegerMatrix.random(50, "qary", k=25, bits=10), seed=0x1337)
-            >>> siever.initialize_local(1, 11)
+            >>> siever.initialize_local(0, 1, 11)
             >>> siever.r - siever.l == siever.n
             True
 
@@ -300,7 +358,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(50, "qary", k=25, bits=10))
             >>> g6k = Siever(A, seed=0x1337)
-            >>> g6k.initialize_local(0, 50)
+            >>> g6k.initialize_local(0, 0, 50)
             >>> g6k(alg="gauss") # Run that first to avoid rank-loss bug
             >>> g6k()
             >>> len(g6k)
@@ -324,7 +382,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(50, "qary", k=25, bits=10))
             >>> g6k = Siever(A, seed=0x1337)
-            >>> g6k.initialize_local(0, 50) 
+            >>> g6k.initialize_local(0, 0, 50) 
             >>> g6k(alg="gauss") # Run that first to avoid rank-loss bug
             >>> g6k()
             >>> g6k.db_size()
@@ -349,7 +407,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(30, "qary", k=25, bits=10))
             >>> g6k = Siever(A)
-            >>> g6k.initialize_local(0, 10)
+            >>> g6k.initialize_local(0, 0, 10)
             >>> g6k()
             >>> len(g6k)
             20
@@ -961,7 +1019,7 @@ cdef class Siever(object):
     #         print "%.2f:%.2f "%(r,c),
     #     print
 
-    def resize_db(self, N, large = 0):
+    def resize_db(self, N, large=0):
         """
         Resize db to ``N``.
 
@@ -974,7 +1032,7 @@ cdef class Siever(object):
             >>> from fpylll import IntegerMatrix
             >>> from g6k import Siever
             >>> siever= Siever(IntegerMatrix.random(50, "qary", k=25, bits=10), seed=0x1337)
-            >>> siever.initialize_local(1, 11)
+            >>> siever.initialize_local(0, 1, 11)
             >>> siever()
             >>> len(siever)
             20
@@ -987,7 +1045,7 @@ cdef class Siever(object):
             10
 
         """
-        assert(self.initialized)
+
         if N < self.db_size():
             self.shrink_db(N)
         elif N > self.db_size():
@@ -997,7 +1055,8 @@ cdef class Siever(object):
         """
         Shrinks db to size (at most) N. This preferentially deletes vectors that are longer.
         """
-        assert(self.initialized)
+        if N>0:
+            assert(self.initialized)
         self._core.shrink_db(int(ceil(N)))
 
     def grow_db(self, N, large=0):
@@ -1038,7 +1097,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(30, "qary", k=25, bits=10))
             >>> g6k = Siever(A)
-            >>> g6k.initialize_local(10, 30)
+            >>> g6k.initialize_local(0, 10, 30)
             >>> g6k()
             >>> g6k.check_saturation(10)
 
@@ -1105,7 +1164,6 @@ cdef class Siever(object):
 
         if max_db_size==0:
           max_db_size = 200 + 10*self.n + 2 * self.params.triplesieve_db_size_factor * self.params.triplesieve_db_size_base ** self.n
-
         sig_on()
         self._core.gauss_triple_sieve_st(max_db_size)
         sig_off()
@@ -1217,7 +1275,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(30, "qary", k=25, bits=10))
             >>> g6k = Siever(A)
-            >>> g6k.initialize_local(1, 5)
+            >>> g6k.initialize_local(0, 1, 5)
             >>> g6k()
             >>> db = list(g6k.itervalues())[:16];
             >>> abs(sum(db[0])) == 1
@@ -1256,7 +1314,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(30, "qary", k=25, bits=10))
             >>> g6k = Siever(A)
-            >>> g6k.initialize_local(1, 10)
+            >>> g6k.initialize_local(0, 1, 10)
             >>> g6k()
             >>> db = list(g6k.itervalues())[:16]
             >>> out = db[0]
@@ -1296,7 +1354,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(30, "qary", k=15, bits=10))
             >>> g6k = Siever(A)
-            >>> g6k.initialize_local(1, 5)
+            >>> g6k.initialize_local(0, 1, 5)
             >>> g6k.l, g6k.r
             (1, 5)
             >>> g6k()
@@ -1320,7 +1378,8 @@ cdef class Siever(object):
 
         """
         assert(self.initialized)
-        self.update_gso(self.r + offset)
+        if not self.params.dual_mode:
+            self.update_gso(self.ll, self.r + offset)
         sig_on()
         self._core.extend_right(offset)
         sig_off()
@@ -1334,6 +1393,7 @@ cdef class Siever(object):
         """
         assert(self.initialized)      
         assert(len(v) == self.r)
+        m = self.full_n
 
         full_j = where(abs(v) == 1)[0][-1]
 
@@ -1348,23 +1408,37 @@ cdef class Siever(object):
             v *= -1
 
         self.M.UinvT.gen_identity()
+        self.M.U.gen_identity()
 
-        with self.M.row_ops(0, self.full_n):
-            for i in xrange(kappa, self.r):
-                if i != full_j:
-                    self.M.row_addmul(full_j, i, v[i])
+        if not self.params.dual_mode:
+            with self.M.row_ops(kappa, self.r):
+                for i in range(kappa, self.r):
+                    if i != full_j:
+                        self.M.row_addmul(full_j, i, v[i])
+                self.M.move_row(full_j, kappa)
+        else:
+            with self.M.row_ops(m-self.r, m-kappa):
+                for i in range(kappa, self.r):
+                    if i != full_j:
+                        self.M.row_addmul(m-1-i, m-1-full_j, -v[i])
+                self.M.move_row(m-1-full_j, m-1-kappa)
 
-            self.M.move_row(full_j, kappa)
 
         new_l = self.l + 1
         new_n = self.n - 1
 
-        self.split_lll(self.params.lift_left_bound, new_l, self.r)
+        self.split_lll(self.ll, new_l, self.r)
 
         cdef np.ndarray T = zeros((new_n, self.n), dtype=int64, order='C')
-        for i in range(new_n):
-            for j in range(self.n):
-                T[i][j] = self.M.UinvT[new_l + i][self.l + j]
+
+        if not self.params.dual_mode:
+            for i in range(new_n):
+                for j in range(self.n):
+                    T[i][j] = self.M.UinvT[new_l + i][self.l + j]
+        else:
+            for i in range(new_n):
+                for j in range(self.n):
+                    T[i][j] = self.M.U[m-1-(new_l + i)][m-1-(self.l + j)]
 
         # update the basis (GSO or integral) of the lattice after insert
         sig_on()
@@ -1390,13 +1464,18 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(40, "qary", k=20, bits=20))
             >>> g6k = Siever(A)
-            >>> g6k.initialize_local(10, 30)
+            >>> g6k.initialize_local(0, 10, 30)
             >>> _ = g6k.lll(10, 30)
 
         """
 
-        lll = LLL.Reduction(self.M)      
-        lll(l, l, r)
+        lll = LLL.Reduction(self.M)
+        if not self.params.dual_mode:
+            lll(l, l, r)
+        else:
+            m = self.full_n
+            lll(m-r, m-r, m-l)
+
         self.initialized=False
 
 
@@ -1418,16 +1497,21 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(40, "qary", k=20, bits=20))
             >>> g6k = Siever(A)
-            >>> g6k.initialize_local(10, 30)
+            >>> g6k.initialize_local(0, 10, 30)
             >>> _ = g6k.split_lll(0, 10, 30)
 
         """
 
-        lll = LLL.Reduction(self.M)      
-        lll(lp, lp, l)
-        lll(l, l, r)
+        lll_ = LLL.Reduction(self.M)
+        m = self.full_n
+        if not self.params.dual_mode:
+            lll_(lp, lp, l)
+            lll_(l, l, r)
+        else:
+            lll_(m-r, m-r, m-l)
+            lll_(m-l, m-l, m-lp, size_reduction_start=m-l)
 
-        self.update_gso(r_bound=self.r)
+        self.update_gso(self.ll, self.r)
 
     def best_lifts(self):
         """
@@ -1444,7 +1528,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(30, "qary", k=25, bits=10))
             >>> g6k = Siever(A)
-            >>> g6k.initialize_local(0, 20)
+            >>> g6k.initialize_local(0, 0, 20)
             >>> g6k.best_lifts()
             []
 
@@ -1457,7 +1541,7 @@ cdef class Siever(object):
             197445
 
             >>> g6k = Siever(A)
-            >>> g6k.initialize_local(10, 30)
+            >>> g6k.initialize_local(0, 10, 30)
             >>> g6k.best_lifts()
             []
 
@@ -1506,7 +1590,7 @@ cdef class Siever(object):
             >>> A = IntegerMatrix.random(80, "qary", k=40, bits=20)
             >>> A = LLL.reduction(A)
             >>> sieve = Siever(A)
-            >>> sieve.initialize_local(20, 50)
+            >>> sieve.initialize_local(10, 20, 50)
             >>> sieve()
             >>> _ = sieve.insert_best_lift()
 

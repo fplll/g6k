@@ -141,10 +141,11 @@ void Siever::load_gso(unsigned int full_n, double const* mu)
 
 // initializes a local block from [l_,  r_) from the full GSO object.
 // This has to be called before we start sieving.
-void Siever::initialize_local(unsigned int l_, unsigned int r_)
+void Siever::initialize_local(unsigned int ll_, unsigned int l_, unsigned int r_)
 {
     CPUCOUNT(200);
-
+    
+    assert(l_ >= ll_);
     assert(r_ >= l_);
     assert(full_n >= r_);
     // r stays same or increases => keep best lifts
@@ -173,11 +174,22 @@ void Siever::initialize_local(unsigned int l_, unsigned int r_)
         best_lifts_so_far.clear();
         best_lifts_so_far.resize(l_+1);
     }
-
+    
+    for (int i = 0; i < ll; ++i)
+    {
+        assert(best_lifts_so_far[i].len == 0);
+    }
+    
+    for (int i = ll; i < ll_; ++i)
+    {
+        best_lifts_so_far[i].x.clear();
+        best_lifts_so_far[i].len = 0;
+    }
 
     l = l_;
     r = r_;
     n = r_ - l_;
+    ll = ll_;
 
     // std::fill(histo.begin(), histo.end(), 0);
     invalidate_histo();
@@ -258,7 +270,7 @@ void Siever::extend_left(unsigned int lp)
     CPUCOUNT(202);
 
     assert(lp <= l);
-    initialize_local(l - lp, r);
+    initialize_local(ll, l - lp, r);
 
     apply_to_all_entries([lp,this](Entry &e)
         {
@@ -278,7 +290,7 @@ void Siever::extend_left(unsigned int lp)
 void Siever::shrink_left(unsigned int lp)
 {
     CPUCOUNT(204);
-    initialize_local(l + lp , r);
+    initialize_local(ll, l + lp , r);
     apply_to_all_entries([lp,this](Entry &e)
         {
             std::copy(e.x.begin()+lp,e.x.begin()+lp+n,e.x.begin());
@@ -295,7 +307,7 @@ void Siever::extend_right(unsigned int rp)
 {
     CPUCOUNT(203);
 
-    initialize_local(l, r + rp);
+    initialize_local(ll, l, r + rp);
 
     apply_to_all_entries([rp,this](Entry &e)
                           {
@@ -345,7 +357,7 @@ void Siever::gso_update_postprocessing(const unsigned int l_, const unsigned int
     best_lifts_so_far.clear();
     best_lifts_so_far.resize(l_+1);
 
-    initialize_local(l_, r_);
+    initialize_local(ll, l_, r_);
 
     std::vector<std::array<ZT,MAX_SIEVING_DIM>> MT;
     MT.resize(n);
@@ -385,7 +397,7 @@ void Siever::gso_update_postprocessing(const unsigned int l_, const unsigned int
 
 void Siever::lift_and_replace_best_lift(ZT * const x_full, unsigned int const i)
 {
-    assert(i >= params.lift_left_bound);
+    assert(i >= ll);
 
     if (params.lift_unitary_only)
     {
@@ -420,10 +432,10 @@ void Siever::lift_and_replace_best_lift(ZT * const x_full, unsigned int const i)
 
 void Siever::set_lift_bounds()
 {
-    assert(params.lift_left_bound <= l);
+    assert(ll <= l);
     lift_bounds.resize(l+1);
     FT max_so_far = 0.;
-    for (size_t i = params.lift_left_bound; i <= l; ++i)
+    for (size_t i = ll; i <= l; ++i)
     {
         FT const bli_len = best_lifts_so_far[i].len;
         if (bli_len == 0.)
@@ -729,7 +741,12 @@ void Siever::db_stats(double* min_av_max, long* cumul_histo)
     parallel_sort_cdb();
     min_av_max[0] = cdb[0].len;
     min_av_max[1] = 0;
-    min_av_max[2] = 0;
+    min_av_max[2] = cdb[cdb.size()-1].len;
+    for (int i = 0; i < cdb.size(); ++i)
+    {
+        min_av_max[1] += cdb[i].len;
+    }
+    min_av_max[1] /= cdb.size();
 
     recompute_histo();
 

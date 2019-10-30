@@ -153,7 +153,7 @@ Construct the instance
 .. code-block:: python
 
     >>> g6k = Siever(A)
-    >>> g6k.initialize_local(0, 50)
+    >>> g6k.initialize_local(0, 0, 50)
     >>> g6k(alg="gauss")
 
 We recover the shortest vector found. Best lift returns the index, the squared norm and the vector expressed in base `A`:
