@@ -205,10 +205,6 @@ cdef class Siever(object):
         for i in xrange(l_bound, r_bound):
             _mu[i][i] = _rr[i]
 
-        if l_bound==0:
-            print(_rr)
-            print(_mu)
-
         sig_on()
         self._core.load_gso(self.M.d, <double*>_mu.data)
         sig_off()
@@ -254,7 +250,7 @@ cdef class Siever(object):
             raise ValueError("Parameters %d, %d do not satisfy constraint  0 <= l <= r <= self.M.d"%(l, r))
         
         if update_gso:
-            self.update_gso(self.ll, r)
+            self.update_gso(ll, r)
         sig_on()
         self._core.initialize_local(ll, l, r)
         sig_off()
@@ -1207,8 +1203,6 @@ cdef class Siever(object):
 
         if max_db_size==0:
             max_db_size = 500 + 10*self.n + 2 * self.params.db_size_factor * self.params.db_size_base ** self.n
-
-        print("M ", self.db_size(), max_db_size)
 
         if self.db_size() > max_db_size:
             self.resize_db(max_db_size)
