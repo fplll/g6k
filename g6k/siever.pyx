@@ -144,7 +144,8 @@ cdef class Siever(object):
 
     def update_gso(self, int l_bound, int r_bound):
         """
-        Update the Gram-Schmidt vectors (up to the right bound r if specified).
+        Update the Gram-Schmidt vectors (from the left bound l_bound up to the right bound r_bound). 
+        If in dual mode, l_bound and r_bound are automatically reflected about self.full_n/2.
 
         EXAMPLE::
 
@@ -182,6 +183,7 @@ cdef class Siever(object):
         cdef double[:,:] _muinv_view = _muinv
 
         if not self.params.dual_mode:
+            # copy mu and rr from the MatGSO object
             for i in range(l_bound, r_bound):
                 _rr[i] = self.M.get_r(i, i)
                 _mu_view[i][i] = 1.
@@ -189,12 +191,14 @@ cdef class Siever(object):
                     _mu_view[i][j] = self.M.get_mu(i, j)
         
         else:
+            # copy mu and rr from the MatGSO object and invert them (to compute the GSO of the dual)
             for i in range(l_bound, r_bound):
                 _rr[i] = 1. / self.M.get_r(m - 1 - i, m - 1 - i)
                 _mu_view[i][i] = 1.
                 for j in range(l_bound, i):
                     _mu_view[i][j] = self.M.get_mu(m - 1 - j, m - 1 - i)
             
+            # the following inverts _mu (into _mu_view) by exploiting the lower triangular structure
             for i in range(n):
                 for k in range(i+1, n):
                     _muinv_view[k, i] = -_mu_view[l_bound + k, l_bound + i]
@@ -1378,6 +1382,7 @@ cdef class Siever(object):
 
         """
         assert(self.initialized)
+        # in dual mode this is really an extend left (under the hood) so no need to update gso
         if not self.params.dual_mode:
             self.update_gso(self.ll, self.r + offset)
         sig_on()
@@ -1418,6 +1423,7 @@ cdef class Siever(object):
                 self.M.move_row(full_j, kappa)
         else:
             with self.M.row_ops(m-self.r, m-kappa):
+                # perform the dual operations to insert in the dual
                 for i in range(kappa, self.r):
                     if i != full_j:
                         self.M.row_addmul(m-1-i, m-1-full_j, -v[i])
@@ -1448,10 +1454,9 @@ cdef class Siever(object):
 
     def lll(self, l, r):
         """
-        Run LLL from l to r.
+        Run LLL from l to r. (l and r are automatically reflected in dual mode)
 
         :param l: left index
-        :param lp: middle index
         :param r: right index
         :returns: transposed inverse of transformation matrix
 
@@ -1481,14 +1486,17 @@ cdef class Siever(object):
 
     def split_lll(self, lp, l, r):
         """
-        Run partials LLL first between lp and l and then between l and r.
+        Run partials LLL first between lp and l and then between l and r. text 
+        does not change.
 
-        :param l: left index
-        :param lp: middle index
+        :param lp: left index
+        :param l: middle index
         :param r: right index
 
         ..  note:: This enforces that the projected sublattice between l and r does not change
-            and thus the sieving can be maintained. This maintaince is /not/ done here.
+            and thus the sieving can be maintained. This maintaince is /not/ done here. In dual mode
+            this requires to limit the size reduction in one of the calls so the result might not be 
+            fully size reduced.
 
         EXAMPLES::
 
