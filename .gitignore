@@ -14,3 +14,6 @@
 /g6k-fpylll
 /g6k-env
 /activate
+/build/
+/dist/
+/G6K.egg-info/
