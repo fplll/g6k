@@ -25,16 +25,16 @@ from six.moves import range
 
 
 cli_arg_aliases = {
-                "--wo/": "--workout/",
-                "--sat_": "--saturation_",
-                "--sat-": "--saturation-",
-                "--chal_": "--challenge_",
-                "--sieve": "--default_sieve",
-                "hk3": "gauss_triple_mt",
-                "d4f": "dim4free",
-                "pnj": "pump_and_jump",
-                "beta": "blocksize"
-                }
+    "--wo/": "--workout/",
+    "--sat_": "--saturation_",
+    "--sat-": "--saturation-",
+    "--chal_": "--challenge_",
+    "--sieve": "--default_sieve",
+    "hk3": "gauss_triple_mt",
+    "d4f": "dim4free",
+    "pnj": "pump_and_jump",
+    "beta": "blocksize"
+}
 
 
 def apply_aliases(cli_args):
@@ -171,7 +171,6 @@ def parse_args(description, ParamsClass=SieverParams, **kwds):
     :param kwds: default parameters
 
     """
-
     parser = argparse.ArgumentParser(description=description,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('lower_bound', type=int,
