@@ -107,7 +107,7 @@ def asvp():
     output_profiles(args.profile, profiles)
 
     if args.pickle:
-        pickler.dump(stats, open("svp-exact-%d-%d-%d-%d.sobj" %
+        pickler.dump(stats, open("svp-challenge-%d-%d-%d-%d.sobj" %
                                  (args.lower_bound, args.upper_bound, args.step_size, args.trials), "wb"))
 
 if __name__ == '__main__':
