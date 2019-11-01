@@ -159,9 +159,9 @@ It is also possible to plot or to output the so called `profile', namely the log
 
 .. code-block:: bash
 
-        --profile filename.csv      (exporting raw data as column seperated values)
-        --profile filename.EXT      (for EXT∊{_png_,_pdf_,...} plot in a file, requires matplotlib)
-        --profile show              (plot in a pop-up window, requires matplotlib)
+        --profile filename.csv      #exporting raw data as column seperated values
+        --profile filename.EXT      #for EXT∊{_png_,_pdf_,...} plot in a file, requires matplotlib
+        --profile show              #plot in a pop-up window, requires matplotlib
 
 
 Interactive use of G6K from Python
