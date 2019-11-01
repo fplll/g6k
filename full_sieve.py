@@ -5,21 +5,16 @@ Full Sieve Command Line Client
 """
 
 from __future__ import absolute_import
-import logging
 import pickle as pickler
 from collections import OrderedDict
-
-import re
 
 from g6k.algorithms.workout import workout
 from g6k.siever import Siever
 from g6k.utils.cli import parse_args, run_all, pop_prefixed_params
 from g6k.utils.stats import SieveTreeTracer
 from g6k.utils.util import load_svpchallenge_and_randomize, db_stats
+from g6k.utils.util import sanitize_params_names, print_stats, output_profiles
 import six
-from math import log
-import numpy as np
-import sys
 
 
 def full_sieve_kernel(arg0, params=None, seed=None):
@@ -63,61 +58,22 @@ def full_sieve():
                     step_size=args.step_size,
                     trials=args.trials,
                     workers=args.workers,
-                    seed=args.seed                    
+                    seed=args.seed
                     )
 
     inverse_all_params = OrderedDict([(v, k) for (k, v) in six.iteritems(all_params)])
 
-    stats2 = OrderedDict()
-    for (n, params), v in six.iteritems(stats):
-        params_name = inverse_all_params[params]
-        params_name = re.sub("'challenge_seed': [0-9]+,", "", params_name)
-        params = params.new(challenge_seed=None)
-        stats2[(n, params_name)] = stats2.get((n, params_name), []) + v
-    stats = stats2
+    stats = sanitize_params_names(stats, inverse_all_params)
 
-    profiles_transpose = []
+    fmt = "{name:50s} :: n: {n:2d}, cputime {cputime:7.4f}s, walltime: {walltime:7.4f}s, |db|: 2^{avg_max:.2f}"
+    profiles = print_stats(fmt, stats, ("cputime", "walltime", "avg_max"),
+                           extractf={"avg_max": lambda n, params, stat: db_stats(stat)[0]})
 
-    for (n, params) in stats:
-        stat = stats[(n, params)]
-        cputime = sum([float(node["cputime"]) for node in stat])/len(stat)
-        walltime = sum([float(node["walltime"]) for node in stat])/len(stat)
-
-        avr_db, max_db = db_stats(stat)
-        fmt = "%100s :: n: %2d, cputime :%7.4fs, walltime :%7.4fs, , avr_max db: 2^%2.2f, max_max db: 2^%2.2f" # noqa
-        logging.info(fmt % (params, n, cputime, walltime, avr_db, max_db))
-
-        if args.profile is not None:
-            avr_profile = sum([node["final_profile"] for node in stat])/len(stat)
-            L = [x for x in avr_profile]
-
-            if args.profile.endswith('.csv'):
-                profiles_transpose += [[params]+L]
-
-            else:
-                import matplotlib.pyplot as plt
-                plt.plot(L, label=params)
+    output_profiles(args.profile, profiles)
 
     if args.pickle:
         pickler.dump(stats, open("full-sieve-%d-%d-%d-%d.sobj" %
                                  (args.lower_bound, args.upper_bound, args.step_size, args.trials), "wb"))
-
-    if args.profile is not None:
-        if args.profile.endswith('.csv'):
-            import csv
-            csv_data = map(list, zip(*profiles_transpose))
-
-            with open(args.profile , 'wb') as csvfile:
-                spamwriter = csv.writer(csvfile)
-                for L in csv_data:
-                    spamwriter.writerow(L)
-
-        else:
-            plt.legend()
-            if args.profile=="show":
-                plt.show()
-            else:
-                plt.savefig(args.profile)
 
 
 if __name__ == '__main__':

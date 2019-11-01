@@ -2,8 +2,11 @@ from __future__ import absolute_import
 from __future__ import print_function
 import os.path
 import requests
+import re
 import sys
+import six
 import logging
+from collections import OrderedDict
 
 from math import log
 
@@ -276,3 +279,81 @@ def load_lwe_challenge(n=40, alpha=0.005):
     A = IntegerMatrix.from_matrix(A)
     c = tuple(eval(data[c_index].replace(" ", ", ")))
     return A, c, q
+
+
+name_aliases = (
+    ("'challenge_seed': [0-9]+,", ""),
+    ("'verbose': [^ ]+", ""),
+)
+
+
+def sanitize_name(name):
+    for regex, to in name_aliases:
+        name = re.sub(regex, to, name)
+    return name
+
+
+def sanitize_params_names(stats, inverse_all_params):
+    stats2 = OrderedDict()
+    for (n, params), v in six.iteritems(stats):
+        params_name = inverse_all_params[params]
+        sanitize_params_names
+        params_name = sanitize_name(params_name)
+        stats2[(n, params_name)] = stats2.get((n, params_name), []) + v
+    return stats2
+
+
+def print_stats(fmt, stats, keys, extractf=None):
+    """
+    Print ``stats`` using format string ``fmt`` with ``keys`` extracted from stats object.
+
+    :param fmt: format string
+    :param stats: the stats to print
+    :param keys: names to print
+    :param extractf: used to handle tricky attributes
+
+    """
+    r = []
+    if extractf is None:
+        extractf = {}
+    for (n, params), stat in stats.items():
+        kv = OrderedDict()
+        for key in keys:
+            if key in extractf:
+                value = extractf[key](n, params, stat)
+            else:
+                value = sum([float(node[key]) for node in stat])/len(stat)
+            kv[key] = value
+
+        logging.info(fmt.format(name=params, n=n, **kv))
+
+        try:
+            L = sum([node["final_profile"] for node in stat])/len(stat)
+            r += [[params]+list(L)]
+        except KeyError:
+            pass
+    return r
+
+
+def output_profiles(what, profiles):
+    import matplotlib.pyplot as plt
+    import csv
+
+    if not what:
+        return
+
+    if what.endswith('.csv'):
+        csv_data = map(list, zip(*profiles))
+        with open(what, 'w') as csvfile:
+            spamwriter = csv.writer(csvfile)
+            for L in csv_data:
+                spamwriter.writerow(L)
+    else:
+        for profile in profiles:
+            params, L = profile[0], profile[1:]
+            plt.plot(L, label=params)
+        plt.legend()
+        if what == "show":
+            plt.show()
+        else:
+            plt.savefig(what)
