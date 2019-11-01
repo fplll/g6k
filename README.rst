@@ -130,6 +130,30 @@ To automatically attempt to solve a Darmstadt LWE Challenge (n, alpha) run:
     python lwe_challenge.py n --lwe/alpha alpha
 
 
+Other CLI programs and commands
+===============================
+
+It is also possible ot ask for HKZ reduction with hkz.py and hkz_maybe.py; the former really tries 
+hard to get *the* HKZ basis (with no formal guarentees though) while the latter is providing a 
+somewhat HKZ significantly faster than the former.
+
+Other options:
+Each of the paramters PARAM of the subprograms SUBPRG∊{_pump_, _workout_, _bkz_} can be set-up to a value VAL form the CLI by adding the option
+-- PARAM/SUBPRG VAL
+
+One can also specify a set of value, or a range of value to iterate over
+-- PARAM/SUBPRG VAL0 VAL1 ... VALx
+-- PARAM/SUBPRG MIN_VAL~MAX_VAL
+-- PARAM/SUBPRG MIN_VAL~MAX_VAL~STEP_VAL
+
+One can find all the available option by browsing through the programs in the g6k/algorithms/ subdirectory.
+
+It is also possible to plot or to output the so called `basis profile', namely the logarithmic plot of the Gram-Schmidt norms, with the option
+--profile filename.csv      (exporting raw data)
+--profile filename.EXT      (for EXT∊{_png_,_pdf_,...} plot in a file, requires matplotlib)
+--profile show              (plot in a pop-up window, requires matplotlib)
+
+
 Interactive use of G6K from Python
 ==================================
 

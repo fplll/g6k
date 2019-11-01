@@ -12,6 +12,7 @@ from g6k.siever import Siever
 from g6k.utils.cli import parse_args, run_all, pop_prefixed_params
 from g6k.utils.stats import SieveTreeTracer
 from g6k.utils.util import load_svpchallenge_and_randomize, save_svpchallenge_norm
+from g6k.utils.util import sanitize_params_names, print_stats, output_profiles
 from six.moves import range
 
 
