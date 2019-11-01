@@ -283,6 +283,7 @@ def load_lwe_challenge(n=40, alpha=0.005):
 
 name_aliases = (
     ("'challenge_seed': [0-9]+,", ""),
+    ("'[^ ]+/verbose': [^ ]+", ""),
     ("'verbose': [^ ]+", ""),
 )
 

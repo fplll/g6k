@@ -8,7 +8,9 @@ from __future__ import absolute_import
 import pickle as pickler
 from collections import OrderedDict
 
-from g6k.algorithms.workout import workout
+
+from g6k.algorithms.workout import workout, pump
+from g6k.algorithms.bkz import dim4free_wrapper, default_dim4free_fun
 from g6k.siever import Siever
 from g6k.utils.cli import parse_args, run_all, pop_prefixed_params
 from g6k.utils.stats import SieveTreeTracer
@@ -17,42 +19,57 @@ from g6k.utils.util import sanitize_params_names, print_stats, output_profiles
 import six
 
 
-def full_sieve_kernel(arg0, params=None, seed=None):
+def hkz_kernel(arg0, params=None, seed=None):
     # Pool.map only supports a single parameter
     if params is None and seed is None:
         n, params, seed = arg0
     else:
         n = arg0
 
-    pump_params = pop_prefixed_params("pump", params)
-    verbose = params.pop("verbose")
-
     reserved_n = n
     params = params.new(reserved_n=reserved_n, otf_lift=False)
+    verbose = params.pop("verbose")
 
+    pump_params = pop_prefixed_params("pump", params)
+    workout_params = pop_prefixed_params("workout", params)
+
+    verbose = params.pop("verbose")
+    if verbose:
+        workout_params["verbose"] = True
     challenge_seed = params.pop("challenge_seed")
+
+    if workout_params["dim4free_min"]:
+        workout_params["dim4free_min"] = dim4free_wrapper(default_dim4free_fun, n)
+
     A, _ = load_svpchallenge_and_randomize(n, s=challenge_seed, seed=seed)
 
     g6k = Siever(A, params, seed=seed)
-    tracer = SieveTreeTracer(g6k, root_label=("full-sieve", n), start_clocks=True)
+    tracer = SieveTreeTracer(g6k, root_label=("hkz", n), start_clocks=True)
 
-    # Actually runs a workout with very large decrements, so that the basis is kind-of reduced
-    # for the final full-sieve
-    workout(g6k, tracer, 0, n, dim4free_min=0, dim4free_dec=15, pump_params=pump_params, verbose=verbose)
+    # runs a workout woth pump-down down until the end
+    workout(g6k, tracer, 0, n, pump_params=pump_params, verbose=verbose, **workout_params)
+    pump_params["down_stop"] = 9990
+    pump(g6k, tracer, 0, n, workout_params["dim4free_min"], **pump_params)
+    g6k.lll(0, n)
 
     return tracer.exit()
 
 
-def full_sieve():
+def hkz():
     """
-    Run a a full sieve (with some partial sieve as precomputation).
+    Attempt HKZ reduction. 
     """
-    description = full_sieve.__doc__
+    description = hkz.__doc__
 
     args, all_params = parse_args(description,
-                                  challenge_seed=0)
+                                  challenge_seed=0,
+                                  pump__down_sieve=True,
+                                  pump__prefer_left_insert=10,
+                                  workout__dim4free_min=-1, #automatic 
+                                  workout__dim4free_dec=2
+                                  )
 
-    stats = run_all(full_sieve_kernel, list(all_params.values()),
+    stats = run_all(hkz_kernel, list(all_params.values()),
                     lower_bound=args.lower_bound,
                     upper_bound=args.upper_bound,
                     step_size=args.step_size,
@@ -71,9 +88,9 @@ def full_sieve():
     output_profiles(args.profile, profiles)
 
     if args.pickle:
-        pickler.dump(stats, open("full-sieve-%d-%d-%d-%d.sobj" %
+        pickler.dump(stats, open("hkz-%d-%d-%d-%d.sobj" %
                                  (args.lower_bound, args.upper_bound, args.step_size, args.trials), "wb"))
 
 
 if __name__ == '__main__':
-    full_sieve()
+    hkz()

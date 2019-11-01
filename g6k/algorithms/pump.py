@@ -138,7 +138,7 @@ def pump(g6k, tracer, kappa, blocksize, dim4free, down_sieve=False,             
 
             # Pump Down
             pump.phase = "down"
-            while (g6k.n > 3) and (pump.insert_left_bound <= kappa+down_stop):
+            while (g6k.n > 1) and (pump.insert_left_bound <= kappa+down_stop):
                 with tracer.context(("pump-step-down", "l:%d r:%d n:%d" % (g6k.l, g6k.r, g6k.n))):
 
                     # (try to) Insert
