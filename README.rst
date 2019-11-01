@@ -142,23 +142,24 @@ Each of the paramters PARAM of the subprograms SUBPRG∊{_pump_, _workout_, _bkz
 
 .. code-block:: bash
 
-        --PARAM/SUBPRG VAL
+        --SUBPRG/PARAM VAL
 
-One can also specify a set of value, or a range of value to iterate over
-
+One can also specify a set of values, or a range of value, to iterate over
 
 .. code-block:: bash
 
-        --PARAM/SUBPRG VAL0 VAL1 ... VALx
-        --PARAM/SUBPRG MIN_VAL~MAX_VAL
-        --PARAM/SUBPRG MIN_VAL~MAX_VAL~STEP_VAL
+
+        --SUBPRG/PARAM VAL0 VAL1 ... VALx
+        --SUBPRG/PARAM MIN_VAL~MAX_VAL
+        --SUBPRG/PARAM MIN_VAL~MAX_VAL~STEP_VAL
 
 One can find all the available option by browsing through the programs in the g6k/algorithms/ subdirectory.
 
-It is also possible to plot or to output the so called `basis profile', namely the logarithmic plot of the Gram-Schmidt norms, with the option
+It is also possible to plot or to output the so called `profile', namely the logarithmic plot of the Gram-Schmidt norms, with the option
+
 .. code-block:: bash
 
-        --profile filename.csv      (exporting raw data)
+        --profile filename.csv      (exporting raw data as column seperated values)
         --profile filename.EXT      (for EXT∊{_png_,_pdf_,...} plot in a file, requires matplotlib)
         --profile show              (plot in a pop-up window, requires matplotlib)
 
