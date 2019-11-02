@@ -156,7 +156,7 @@ Though some of them may be overwritten by the call chain. A subset of reasonable
         saturation_radius               # Define the ball square-radius for the saturation_ratio condition. Default=1.333333333
         dual_mode                       # Implicitly run all operations on the dual-basis (in reversed order).
 
-Other parameters specific to subprograms SUBPRG∊{_pump_, _workout_, _bkz_} can be set-up to a value VAL form the CLI by adding the option
+Other parameters specific to subprograms SUBPRG∊{pump, workout, bkz} can be set-up to a value VAL form the CLI by adding the option
 
 .. code-block:: bash
 
@@ -178,7 +178,7 @@ It is also possible to plot or to output the so called `profile', namely the log
 .. code-block:: bash
 
         --profile filename.csv      #exporting raw data as column seperated values
-        --profile filename.EXT      #for EXT∊{_png_,_pdf_,...} plot in a file, requires matplotlib
+        --profile filename.EXT      #for EXT∊{png,pdf,...} plot in a file, requires matplotlib
         --profile show              #plot in a pop-up window, requires matplotlib
 
 
