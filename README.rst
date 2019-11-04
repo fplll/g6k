@@ -133,9 +133,7 @@ To automatically attempt to solve a Darmstadt LWE Challenge (n, alpha) run:
 Other CLI programs and commands
 ===============================
 
-It is also possible ot ask for HKZ reduction with hkz.py and hkz_maybe.py; the former really tries 
-hard to get *the* HKZ basis (with no formal guarentees though) while the latter is providing a 
-somewhat HKZ significantly faster than the former.
+It is also possible ot ask for HKZ reduction with hkz.py and hkz_maybe.py; the former really tries hard to get a HKZ basis (with no formal guarentees though) while the latter is providing something close to a HKZ basis significantly significantly faster than the former.
 
 Other options:
 Each of the parameters PARAM listed in g6k/siever_param.pyx can be set-up to a value VAL from the command line
