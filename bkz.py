@@ -20,7 +20,9 @@ from g6k.siever import Siever
 from g6k.utils.cli import parse_args, run_all, pop_prefixed_params
 from g6k.utils.stats import SieveTreeTracer, dummy_tracer
 from g6k.utils.util import load_prebkz
+from g6k.utils.util import sanitize_params_names, print_stats, output_profiles, db_stats
 import six
+import numpy as np
 from six.moves import range
 
 
@@ -143,8 +145,11 @@ def bkz_kernel(arg0, params=None, seed=None):
                              blocksize, slope, time.time() - T0))
 
     tracer.exit()
+    slope = basis_quality(M)["/"]
+    stat = tracer.trace
     try:
-        return tracer.trace
+        stat.data["slope"] = np.array(slope)
+        return stat
     except AttributeError:
         return None
 
@@ -181,23 +186,19 @@ def bkz_tour():
                     workers=args.workers,
                     seed=args.seed)
 
+
     inverse_all_params = OrderedDict([(v, k) for (k, v) in six.iteritems(all_params)])
+    stats = sanitize_params_names(stats, inverse_all_params)
 
-    stats2 = OrderedDict()
-    for (n, params), v in six.iteritems(stats):
-        params_name = inverse_all_params[params]
-        params_name = re.sub("'challenge_seed': [0-9]+,", "", params_name)
-        params = params.new(challenge_seed=None)
-        stats2[(n, params_name)] = stats2.get((n, params_name), []) + v
-    stats = stats2
+    fmt = "{name:50s} :: n: {n:2d}, cputime {cputime:7.4f}s, walltime: {walltime:7.4f}s, slope: {slope:1.5f}, |db|: 2^{avg_max:.2f}"
+    profiles = print_stats(fmt, stats, ("cputime", "walltime", "slope", "avg_max"),
+                           extractf={"avg_max": lambda n, params, stat: db_stats(stat)[0]})
 
-    for (n, params) in stats:
-        stat = stats[(n, params)]
-        if stat[0]:  # may be None if dummy_tracer is used
-            cputime = sum([float(node["cputime"]) for node in stat])/len(stat)
-            walltime = sum([float(node["walltime"]) for node in stat])/len(stat)
-            fmt = "%48s :: n: %2d, cputime :%7.4fs, walltime :%7.4fs"
-            logging.info(fmt % (params, n, cputime, walltime))
+    output_profiles(args.profile, profiles)
+
+    if args.pickle:
+        pickler.dump(stats, open("bkz-%d-%d-%d-%d.sobj" %
+                                 (args.lower_bound, args.upper_bound, args.step_size, args.trials), "wb"))
 
 
 if __name__ == '__main__':

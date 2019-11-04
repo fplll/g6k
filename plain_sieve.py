@@ -14,6 +14,8 @@ from g6k.siever import Siever
 from g6k.utils.cli import parse_args, run_all
 from g6k.utils.stats import SieveTreeTracer
 from g6k.utils.util import load_svpchallenge_and_randomize, db_stats
+from g6k.utils.util import sanitize_params_names, print_stats, output_profiles, db_stats
+
 import six
 
 
@@ -32,7 +34,7 @@ def plain_sieve_kernel(arg0, params=None, seed=None):
     A, _ = load_svpchallenge_and_randomize(n, s=0, seed=seed)
     g6k = Siever(A, params, seed=seed)
     tracer = SieveTreeTracer(g6k, root_label=("plain-sieve", n), start_clocks=True)
-    g6k.initialize_local(0, n)
+    g6k.initialize_local(0, 0, n)
     g6k(alg=alg, tracer=tracer)
     tracer.exit()
     return tracer.trace
@@ -56,13 +58,14 @@ def plain_sieve():
 
     inverse_all_params = OrderedDict([(v, k) for (k, v) in six.iteritems(all_params)])
 
-    for (n, params) in stats:
-        stat = stats[(n, params)]
-        cputime = sum([float(node["cputime"]) for node in stat])/len(stat)
-        walltime = sum([float(node["walltime"]) for node in stat])/len(stat)
-        avr_db, max_db = db_stats(stat)
-        fmt = "%48s :: m: %1d, n: %2d, cputime :%7.4fs, walltime :%7.4fs, avr_max |db|: 2^%2.2f, max_max db |db|: 2^%2.2f"  # noqa
-        logging.info(fmt %(inverse_all_params[params], params.threads, n, cputime, walltime, avr_db, max_db))
+    inverse_all_params = OrderedDict([(v, k) for (k, v) in six.iteritems(all_params)])
+    stats = sanitize_params_names(stats, inverse_all_params)
+
+    fmt = "{name:50s} :: n: {n:2d}, cputime {cputime:7.4f}s, walltime: {walltime:7.4f}s, |db|: 2^{avg_max:.2f}"
+    profiles = print_stats(fmt, stats, ("cputime", "walltime", "avg_max"),
+                           extractf={"avg_max": lambda n, params, stat: db_stats(stat)[0]})
+
+    output_profiles(args.profile, profiles)
 
     if args.pickle:
         pickler.dump(stats, open("plain-sieve-%d-%d-%d-%d.sobj" %

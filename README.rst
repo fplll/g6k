@@ -130,6 +130,56 @@ To automatically attempt to solve a Darmstadt LWE Challenge (n, alpha) run:
     python lwe_challenge.py n --lwe/alpha alpha
 
 
+Other CLI programs and commands
+===============================
+
+It is also possible ot ask for HKZ reduction with hkz.py and hkz_maybe.py; the former really tries hard to get a HKZ basis (with no formal guarentees though) while the latter is providing something close to a HKZ basis significantly significantly faster than the former.
+
+Other options:
+Each of the parameters PARAM listed in g6k/siever_param.pyx can be set-up to a value VAL from the command line
+
+.. code-block:: bash
+
+        --PARAM VAL
+
+Though some of them may be overwritten by the call chain. A subset of reasonable parameter to play with are:
+
+.. code-block:: python
+
+        threads                         # Number of threads collaborating in a single g6k instance. Default=1
+        sample_by_sums                  # When increasing the db size, do that aggressively by sampling vectors as sums of existing vectors. Default=True
+        otf_lift                        # Lift vectors on the fly; slower per sieve, but highter probability to find a short vector in the lift context. Default=True
+        lift_radius                     # Bound (relative to squared-GH) to try to lift a vector on the fly. Default=1.7
+        saturation_ratio                # Stop the sieve when this ratio of vector has been found compared to the expected number of vector. Default=.5 
+        saturation_radius               # Define the ball square-radius for the saturation_ratio condition. Default=1.333333333
+        dual_mode                       # Implicitly run all operations on the dual-basis (in reversed order).
+
+Other parameters specific to subprograms SUBPRG∊{pump, workout, bkz} can be set-up to a value VAL form the CLI by adding the option
+
+.. code-block:: bash
+
+        --SUBPRG/PARAM VAL
+
+One can also specify a set of values, or a range of value, to iterate over
+
+.. code-block:: bash
+
+
+        --SUBPRG/PARAM VAL0 VAL1 ... VALx
+        --SUBPRG/PARAM MIN_VAL~MAX_VAL
+        --SUBPRG/PARAM MIN_VAL~MAX_VAL~STEP_VAL
+
+One can find all the available option by browsing through the programs in the g6k/algorithms/ subdirectory.
+
+It is also possible to plot or to output the so called `profile', namely the logarithmic plot of the Gram-Schmidt norms, with the option
+
+.. code-block:: bash
+
+        --profile filename.csv      #exporting raw data as column seperated values
+        --profile filename.EXT      #for EXT∊{png,pdf,...} plot in a file, requires matplotlib
+        --profile show              #plot in a pop-up window, requires matplotlib
+
+
 Interactive use of G6K from Python
 ==================================
 

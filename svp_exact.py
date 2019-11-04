@@ -17,6 +17,7 @@ from g6k.siever import Siever
 from g6k.utils.cli import parse_args, run_all, pop_prefixed_params
 from g6k.utils.stats import SieveTreeTracer
 from g6k.utils.util import load_svpchallenge_and_randomize, load_svpchallenge_norm, db_stats
+from g6k.utils.util import sanitize_params_names, print_stats, output_profiles
 
 
 from fpylll import BKZ as fplll_bkz
@@ -126,26 +127,16 @@ def svp():
                     seed=args.seed)
 
     inverse_all_params = OrderedDict([(v, k) for (k, v) in six.iteritems(all_params)])
+    stats = sanitize_params_names(stats, inverse_all_params)
 
-    stats2 = OrderedDict()
-    for (n, params), v in six.iteritems(stats):
-        params_name = inverse_all_params[params]
-        params_name = re.sub("'challenge_seed': [0-9]+,", "", params_name)
-        params = params.new(challenge_seed=None)
-        stats2[(n, params_name)] = stats2.get((n, params_name), []) + v
-    stats = stats2
+    fmt = "{name:50s} :: n: {n:2d}, cputime {cputime:7.4f}s, walltime: {walltime:7.4f}s, flast: {flast:3.2f}, |db|: 2^{avg_max:.2f}"
+    profiles = print_stats(fmt, stats, ("cputime", "walltime", "flast", "avg_max"),
+                           extractf={"avg_max": lambda n, params, stat: db_stats(stat)[0]})
 
-    for (n, params) in stats:
-        stat = stats[(n, params)]
-        cputime = sum([float(node["cputime"]) for node in stat])/len(stat)
-        walltime = sum([float(node["walltime"]) for node in stat])/len(stat)
-        flast = sum([float(node["flast"]) for node in stat])/len(stat)
-        avr_db, max_db = db_stats(stat)
-        fmt = "%100s :: n: %2d, cputime :%7.4fs, walltime :%7.4fs, flast : %2.2f, , avr_max db: 2^%2.2f, max_max db: 2^%2.2f" # noqa
-        logging.info(fmt % (params, n, cputime, walltime, flast, avr_db, max_db))
+    output_profiles(args.profile, profiles)
 
     if args.pickle:
-        pickler.dump(stats, open("hkz-svp-%d-%d-%d-%d.sobj" %
+        pickler.dump(stats, open("svp-exact-%d-%d-%d-%d.sobj" %
                                  (args.lower_bound, args.upper_bound, args.step_size, args.trials), "wb"))
 
 
