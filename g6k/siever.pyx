@@ -6,6 +6,7 @@ This class is the interface to the C++ implementation of sieving algorithm.  All
 algorithms go through this class.
 """
 
+from fpylll import FPLLL
 from fpylll.tools.bkz_stats import dummy_tracer
 from cysignals.signals cimport sig_on, sig_off
 from libcpp cimport bool
@@ -104,6 +105,26 @@ cdef class Siever(object):
         self._core.full_n = M.d
         self.lll(0, M.d)
         self.initialized = False
+
+    @classmethod
+    def MatGSO(cls, A, float_type="d"):
+        """
+        Create a GSO object from `A` that works for G6K.
+
+        :param A: an integer matrix
+        :param float_type:  a floating point type or a precision (which implies MPFR)
+
+        """
+        try:
+            float_type = int(float_type)
+            FPLLL.set_precision(float_type)
+            float_type = "mpfr"
+        except (TypeError, ValueError):
+            pass
+        M = GSO.Mat(A, float_type=float_type,
+                    U=IntegerMatrix.identity(A.nrows, int_type=A.int_type),
+                    UinvT=IntegerMatrix.identity(A.nrows, int_type=A.int_type))
+        return M
 
     @property
     def params(self):
