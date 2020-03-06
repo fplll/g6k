@@ -81,9 +81,7 @@ cdef class Siever(object):
             else:
                 float_type = "double"
 
-            M = GSO.Mat(M, float_type=float_type,
-                        U=IntegerMatrix.identity(M.nrows, int_type=M.int_type),
-                        UinvT=IntegerMatrix.identity(M.nrows, int_type=M.int_type))
+            M = self.MatGSO(M, float_type=float_type)
 
         else:
             raise TypeError("Matrix must be IntegerMatrix or GSO object but got type '%s'"%type(M))
