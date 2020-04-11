@@ -1536,7 +1536,7 @@ cdef class Siever(object):
             lll_(l, l, r)
         else:
             lll_(m-r, m-r, m-l)
-            lll_(m-l, m-l, m-lp, size_reduction_start=m-l)
+            lll_(m-l, m-l, m-lp)
 
         self.update_gso(self.ll, self.r)
 
