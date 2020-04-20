@@ -11,7 +11,6 @@ import re
 import time
 import pickle as pickler
 
-
 from collections import OrderedDict
 
 from fpylll import BKZ as BKZ_FPYLLL, GSO, IntegerMatrix
