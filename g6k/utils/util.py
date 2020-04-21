@@ -328,11 +328,6 @@ def print_stats(fmt, stats, keys, extractf=None):
 
         logging.info(fmt.format(name=params, n=n, **kv))
 
-        try:
-            L = sum([node["final_profile"] for node in stat])/len(stat)
-            r += [[params]+list(L)]
-        except KeyError:
-            pass
     return r
 
 
