@@ -463,10 +463,9 @@ void Siever::best_lifts(long* vecs, double* lens)
     std::fill(lens, &lens[l+1], 0.);
     if (!params.otf_lift)
     {
-        for (CompressedEntry& ce : cdb)
-        {
-            lift_and_compare(db[ce.i]);
-        }
+        apply_to_all_entries([this](Entry &e) {
+            lift_and_compare(e);
+        }); 
     }
     for (size_t i = 0; i < l+1; ++i)
     {
