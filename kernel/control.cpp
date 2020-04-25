@@ -479,9 +479,27 @@ void Siever::best_lifts(long* vecs, double* lens)
     }
 }
 
+void Siever::shrink_db_task(size_t const start, size_t const end, 
+                                std::vector<IT>& to_save, std::vector<IT>& to_kill) 
+{
+    for (size_t i = start; i < end; ++i)
+    {
+        size_t kill_i = cdb[to_kill[i]].i;
+        size_t save_i = cdb[to_save[i]].i;
+        uid_hash_table.erase_uid(db[kill_i].uid);
+        db[kill_i] = db[save_i];
+        cdb[to_save[i]].i = kill_i;
+    }    
+}
+
 // sorts cdb and only keeps the best N vectors.
 void Siever::shrink_db(unsigned long N)
 {
+    struct timespec start, finish;
+    double elapsed;
+
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
     CPUCOUNT(207);
     switch_mode_to(SieveStatus::plain);
     assert(N <= cdb.size());
@@ -496,32 +514,41 @@ void Siever::shrink_db(unsigned long N)
     }
 
     parallel_sort_cdb();
+    clock_t begin = clock();
 
-    std::vector<IT> db_to_cdb(db.size());
-    for (size_t i = 0; i < cdb.size(); ++i)
-        db_to_cdb[cdb[i].i] = i;
-    // reorder db in place according to cdb
-    // backwards! only down to position N. Note N > 0.
-    for (size_t i = db.size()-1; i >= N; --i)
-    {
-        if (cdb[i].i == i)
-            continue;
-        // db[j] should be at db[i]
-        size_t j = cdb[i].i;
-        // swap db[i] and db[j]
-        std::swap(db[i], db[j]);
-        std::swap(db_to_cdb[i], db_to_cdb[j]);
-        // update both cdb[].i
-        cdb[db_to_cdb[i]].i = i;
-        cdb[db_to_cdb[j]].i = j;
+    std::vector<IT> to_save;
+    std::vector<IT> to_kill;
+
+    to_save.reserve(cdb.size() - N);
+    to_kill.reserve(cdb.size() - N);
+
+    for (size_t i = 0; i < N; ++i){
+        if (cdb[i].i >= N) to_save.push_back(i);
     }
-    for (size_t i = N; i < cdb.size(); ++i)
-        uid_hash_table.erase_uid(db[cdb[i].i].uid);
+
+    for (size_t i = N; i < cdb.size(); ++i){
+        if (cdb[i].i < N) to_kill.push_back(i);
+    }
+
+    size_t swaps = to_save.size();
+    assert(to_kill.size() == swaps);
+
+    size_t const th_n = std::min(params.threads, static_cast<size_t>(1 + swaps / MIN_ENTRY_PER_THREAD));
+    for (size_t c = 0; c < th_n; ++c)
+    {
+        threadpool.push( [this, th_n, swaps, c, &to_save, &to_kill]()
+            { this->shrink_db_task( (c*swaps)/th_n, ((c+1)*swaps)/th_n, to_save, to_kill); }
+          );
+    }
+    threadpool.wait_work();
+
     cdb.resize(N);
     db.resize(N);
     status_data.plain_data.sorted_until = N;
     invalidate_histo();
+
 }
+
 
 
 // Load an external database of size N -- untested! Might not work.

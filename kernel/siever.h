@@ -468,7 +468,8 @@ public:
     // TODO: Document parameter large
     void grow_db(unsigned long N, unsigned int large = 0); // implemented in control.cpp
 
-    // Sorts and shrink the database, keeping only the N best vectors
+    void shrink_db_task(size_t const start, size_t const end, std::vector<IT>& to_save, std::vector<IT>& to_kill);
+     // Sorts and shrink the database, keeping only the N best vectors
     void shrink_db(unsigned long N); // implemented in control.cpp
 
     // Debug-only function. This makes a self-check of various invariants.
