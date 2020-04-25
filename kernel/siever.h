@@ -699,7 +699,7 @@ private:
     inline Entry sample(unsigned int large=0); // in db.inl
 
     // worker task for grow_db
-    void grow_db_task(unsigned long Nt, unsigned int large, std::vector<Entry> &ve); // in control.cpp
+    void grow_db_task(size_t start, size_t end, unsigned int large);
 
 /**
     Various functions to insert / replace elements in db / cdb. They are optimized for various

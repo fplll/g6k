@@ -699,15 +699,33 @@ void Siever::parallel_sort_cdb()
     else assert(false);
 }
 
-void Siever::grow_db_task(unsigned long Nt, unsigned int large, std::vector<Entry> &ve)
+void Siever::grow_db_task(size_t start, size_t end, unsigned int large)
 {
-    ve.clear();
-    ve.reserve(Nt);
-    for (size_t i = 0; i < Nt; ++i)
+    for (size_t i = start; i < end; ++i)
     {
-        ve.push_back(sample(large));
-        if (!uid_hash_table.insert_uid(ve.back().uid))
-            ve.pop_back();
+        int la = large;
+        for (; la < 64; ++la)
+        {
+            // std::cerr << la << " ";
+            Entry e = sample(la);
+
+            if (!uid_hash_table.insert_uid(e.uid)) continue;
+            histo[histo_index(e.len)] ++;
+            db[i] = e;
+            
+            CompressedEntry ce;
+            ce.len = e.len;
+            ce.c = e.c;
+            ce.i = i;
+            cdb[i] = ce;
+            break;            
+        }
+        // std::cerr << std::endl;
+        if (la >= 64)
+        {
+            std::cerr << "Error : All new sample collide. Oversaturated ?" << std::endl;
+            exit(1);
+        }
     }
 }
 
@@ -717,46 +735,19 @@ void Siever::grow_db(unsigned long N, unsigned int large)
 
     assert(N >= cdb.size());
     unsigned long const Nt = N - cdb.size();
+    unsigned long const S = cdb.size();
     reserve(N);
+    cdb.resize(N);
+    db.resize(N);
 
-    size_t const th_n = std::min(params.threads, static_cast<size_t>(1 + cdb.size() / (10 * MIN_ENTRY_PER_THREAD)));
+    size_t const th_n = std::min(params.threads, static_cast<size_t>(1 + Nt / MIN_ENTRY_PER_THREAD));
 
-    std::vector<std::vector<Entry>> vve;
-    vve.resize(th_n);
-    // vve[c] is the database of Entries to be added to the database that was constructed by thread #c.
-    // We first let every thread populate vve[c] with such vectors and already add their uid.
-    // We then merge all vve[c]'s into db in a non-threaded fashion.
-    // perform a bounded number of iterations (counted by it), where in each iteration, we try to actually sample enough vectors to reach the
-    // desired size if no collisions occured. This way, we can adjust the sampler when the it counter gets too large, which indicates too many collisions.
-    for (int it = 0; it < 12; ++it)
+    for (size_t c = 0; c < th_n; ++c)
     {
-        for (size_t batch = 0; batch < Nt; batch += 100*th_n)
-        {
-            for (size_t c = 0; c < th_n; ++c)
-            {
-                threadpool.push([this,c,large, &vve](){this->grow_db_task(100, large, vve[c]);});
-            }
-            threadpool.wait_work();
-            for (size_t c = 0; c < th_n; ++c)
-            {
-                for (auto& v : vve[c])
-                {
-                    if (cdb.size() < N)
-                        insert_in_db(std::move(v));
-                    else
-                        uid_hash_table.erase_uid(v.uid);
-                }
-            }
-            if (cdb.size() >= N)
-                return;
-        }
-        if (it > 3) large++;
+        threadpool.push([this,c,large, Nt, S, th_n](){this->grow_db_task( S+(c*Nt)/th_n, S+((c+1)*Nt)/th_n, large);});
     }
-    // did not reach size N after 12 iterations: We log a warning and continue with a smaller db size than requested.
-    {
-        std::cerr << "[sieving.cpp] Warning : All new sample collide. Oversaturated ?" << std::endl;
-        std::cerr << n << " " << cdb.size() << "/" << N << std::endl;
-    }
+    threadpool.wait_work();
+
     // Note :   Validity of histo is unaffected.
     //          Validity of sorting is also unaffected(!) in the sense that sorted_until's remain valid.
 }
