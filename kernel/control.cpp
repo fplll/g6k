@@ -513,7 +513,7 @@ void Siever::shrink_db(unsigned long N)
         return;
     }
 
-    __gnu_parallel::nth_element(cdb.begin(), cdb.end(), cdb.begin()+N, &compare_CE);;
+    __gnu_parallel::sort(cdb.begin(), cdb.end(), &compare_CE);;
 
     std::vector<IT> to_save;
     std::vector<IT> to_kill;
@@ -602,22 +602,8 @@ void Siever::grow_db(unsigned long N, unsigned int large)
 }
 
 
-void Siever::db_stats(double* min_av_max, long* cumul_histo)
+void Siever::db_stats(long* cumul_histo)
 {
-	// __gnu_parallel::sort(cdb.begin(), cdb.end(), &compare_CE);
-    
-    min_av_max[0] = 0;
-    min_av_max[1] = 0;
-    min_av_max[2] = 0;
-    
-    // min_av_max[0] = cdb[0].len;
-    // min_av_max[2] = cdb[cdb.size()-1].len;
-    // for (int i = 0; i < cdb.size(); ++i)
-    // {
-    //     min_av_max[1] += cdb[i].len;
-    // }
-    // min_av_max[1] /= cdb.size();
-
     recompute_histo();
 
     for (size_t i = 0; i < size_of_histo; ++i)

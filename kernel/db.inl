@@ -221,10 +221,33 @@ inline void Siever::recompute_histo()
     histo_valid = true;
     // could be done more efficiently using the sorting of cdb, but this function does not
     // matter much anyway.
+    size_t const N = cdb.size();
+    size_t const th_n = std::min(params.threads, static_cast<size_t>(1 + N / (40 * MIN_ENTRY_PER_THREAD)));
+
+    std::vector<std::vector<size_t> > part_histos(th_n);
+
+
+    for (size_t c = 0; c < th_n; ++c)
+    {
+        threadpool.push([this, c, N, th_n, &part_histos]()
+            {
+                part_histos[c].resize(histo.size());
+                std::fill(part_histos[c].begin(), part_histos[c].end(), 0);
+                
+                for (size_t i = (c*N)/th_n; i < ((c+1)*N)/th_n; ++i)
+                    ++part_histos[c][histo_index(cdb[i].len)];
+            });
+    }
+    threadpool.wait_work();
+
     std::fill(histo.begin(), histo.end(), 0);
-    for (size_t i = 0; i < db_size(); ++i)
-        ++histo[histo_index(cdb[i].len)];
-    return;
+    for (size_t c = 0; c < th_n; ++c)
+    {
+        for (int i = 0; i < histo.size(); ++i)
+        {
+            histo[i] += part_histos[c][i];            
+        }
+    }
 }
 
 
