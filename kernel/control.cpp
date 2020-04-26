@@ -1,6 +1,7 @@
 #include <thread>
 #include <mutex>
 #include "siever.h"
+#include <parallel/algorithm>
 
 // reserves size for db and cdb. If called with a larger size than the current capacities, does nothing
 void Siever::reserve(size_t const reserved_db_size)
@@ -593,110 +594,114 @@ void Siever::save_db(unsigned int N, long* db_)
 void Siever::parallel_sort_cdb()
 {
     CPUCOUNT(209);
-    static_assert(static_cast<int>(SieveStatus::LAST) == 4, "Need to update this function");
-    if(sieve_status == SieveStatus::plain || sieve_status == SieveStatus::bgj1)
-    {
-        StatusData::Plain_Data &data = status_data.plain_data;
-        assert(data.sorted_until <= cdb.size());
-        assert(std::is_sorted(cdb.cbegin(), cdb.cbegin() + data.sorted_until, &compare_CE  ));
-        if(data.sorted_until == cdb.size())
-        {
-            return; // nothing to do. We do not increase the statistics counter.
-        }
+    omp_set_dynamic(false);
+  	omp_set_num_threads(params.threads);
+  	__gnu_parallel::sort(cdb.begin(), cdb.end(), &compare_CE);
 
-        // size of the unsorted part of cdb.
-        size_t const size_left = cdb.size() - data.sorted_until;
-        auto const start_unsorted = cdb.begin() + data.sorted_until;
+    // static_assert(static_cast<int>(SieveStatus::LAST) == 4, "Need to update this function");
+    // if(sieve_status == SieveStatus::plain || sieve_status == SieveStatus::bgj1)
+    // {
+    //     StatusData::Plain_Data &data = status_data.plain_data;
+    //     assert(data.sorted_until <= cdb.size());
+    //     assert(std::is_sorted(cdb.cbegin(), cdb.cbegin() + data.sorted_until, &compare_CE  ));
+    //     if(data.sorted_until == cdb.size())
+    //     {
+    //         return; // nothing to do. We do not increase the statistics counter.
+    //     }
 
-        // number of threads we wish to have.
-        size_t const th_n = std::min( params.threads, static_cast<size_t>(1 + size_left / (10 * MIN_ENTRY_PER_THREAD)));
+    //     // size of the unsorted part of cdb.
+    //     size_t const size_left = cdb.size() - data.sorted_until;
+    //     auto const start_unsorted = cdb.begin() + data.sorted_until;
 
-        for (size_t c = 0; c < th_n; ++c)
-        {
-            size_t N0 = (size_left * c) / th_n;
-            size_t N1 = (size_left * (c+1)) / th_n;
-            assert( (c < th_n) || (N1 == size_left) );
-            if (c+1 < th_n) std::nth_element(start_unsorted+N0, start_unsorted+N1, cdb.end(), &compare_CE);
-            threadpool.push([N0,N1,start_unsorted](){ std::sort(start_unsorted+N0, start_unsorted+N1, &compare_CE) ;});
-        }
-        threadpool.wait_work();
-        std::inplace_merge(cdb.begin(), start_unsorted, cdb.end(), &compare_CE);
-        data.sorted_until = cdb.size();
-        assert(std::is_sorted(cdb.cbegin(), cdb.cend(), &compare_CE ));
-        // TODO: statistics.inc_stats_sorting_overhead();
-        return;
-    }
-    else if(sieve_status == SieveStatus::gauss || sieve_status == SieveStatus::triple_mt)
-    {
-        StatusData::Gauss_Data &data = status_data.gauss_data;
-        assert(data.list_sorted_until <= data.queue_start);
-        assert(data.queue_start <= data.queue_sorted_until);
-        assert(data.queue_sorted_until <= cdb.size());
-        assert(std::is_sorted(cdb.cbegin(), cdb.cbegin()+ data.list_sorted_until, &compare_CE )  );
-        assert(std::is_sorted(cdb.cbegin()+ data.queue_start, cdb.cbegin() + data.queue_sorted_until, &compare_CE ));
-        size_t const unsorted_list_left = data.queue_start - data.list_sorted_until;
-        size_t const unsorted_queue_left = cdb.size() - data.queue_sorted_until;
-        if ( (unsorted_list_left == 0) && (unsorted_queue_left == 0))
-        {
-            return; // nothing to do.
-        }
-        assert(unsorted_list_left + unsorted_queue_left > 0);
-        size_t max_threads_list  = (params.threads * unsorted_list_left + unsorted_list_left + unsorted_queue_left - 1) / (unsorted_list_left + unsorted_queue_left);
-        size_t max_threads_queue = params.threads - max_threads_list;
-        if (unsorted_list_left > 0 && max_threads_list == 0)
-            max_threads_list = 1;
-        if (unsorted_queue_left > 0 && max_threads_queue == 0)
-            max_threads_queue = 1;
+    //     // number of threads we wish to have.
+    //     size_t const th_n = std::min( params.threads, static_cast<size_t>(1 + size_left / (10 * MIN_ENTRY_PER_THREAD)));
 
-        if(unsorted_list_left > 0)
-        {
-            auto const start_unsorted = cdb.begin() + data.list_sorted_until;
-            auto const end_unsorted   = cdb.begin() + data.queue_start;
-            size_t const th_n_list = std::min(max_threads_list, static_cast<size_t>(1+ unsorted_list_left / (10* MIN_ENTRY_PER_THREAD)));
-            for(size_t c = 0; c < th_n_list; ++c)
-            {
-                size_t const N0 = (unsorted_list_left * c) / th_n_list;
-                size_t const N1 = (unsorted_list_left * (c+1)) / th_n_list;
-                assert( (c < th_n_list) || (N1 == unsorted_list_left) );
-                if( c + 1 < th_n_list) std::nth_element(start_unsorted + N0, start_unsorted + N1, end_unsorted, &compare_CE);
-                threadpool.push([N0,N1,start_unsorted](){ std::sort(start_unsorted+N0, start_unsorted+N1, &compare_CE) ;});
-            }
-            if(params.threads == 1 && unsorted_queue_left > 0)
-                threadpool.wait_work();
-        }
-        if(unsorted_queue_left > 0)
-        {
-            auto const start_unsorted = cdb.begin() + data.queue_sorted_until; // start of range to sort
-            auto const end_unsorted   = cdb.end(); // end of range to sort
-            size_t const th_n_queue = std::min(max_threads_queue, static_cast<size_t>(1 + unsorted_queue_left / (10 * MIN_ENTRY_PER_THREAD )));
-            for(size_t c = 0; c < th_n_queue; ++c)
-            {
-                size_t const N0 = (unsorted_queue_left * c) / th_n_queue;
-                size_t const N1 = (unsorted_queue_left  * (c+1)) / th_n_queue;
-                assert( (c < th_n_queue) || (N1 == unsorted_queue_left) );
-                if ( c + 1 < th_n_queue) std::nth_element(start_unsorted + N0, start_unsorted + N1, end_unsorted, &compare_CE);
-                threadpool.push([N0, N1, start_unsorted]() {std::sort(start_unsorted+N0, start_unsorted+N1, &compare_CE); } );
-            }
-        }
-        threadpool.wait_work();
-        if(data.list_sorted_until > 0)
-        {
-            threadpool.push([this, &data]{std::inplace_merge(cdb.begin(), cdb.begin() + data.list_sorted_until, cdb.begin() + data.queue_start, &compare_CE); }  );
-            if(params.threads == 1)
-                threadpool.wait_work();
-        }
-        if(data.queue_sorted_until >  data.queue_start)
-        {
-            threadpool.push([this, &data]{std::inplace_merge(cdb.begin()+ data.queue_start, cdb.begin() + data.queue_sorted_until, cdb.end(), &compare_CE);}  );
-        }
-        threadpool.wait_work();
-        assert(std::is_sorted(cdb.cbegin(), cdb.cbegin() + data.queue_start, &compare_CE  ));
-        assert(std::is_sorted(cdb.cbegin()+ data.queue_start, cdb.cend(), &compare_CE  ));
-        data.list_sorted_until = data.queue_start;
-        data.queue_sorted_until = cdb.size();
-        return;
-    }
-    else assert(false);
+    //     for (size_t c = 0; c < th_n; ++c)
+    //     {
+    //         size_t N0 = (size_left * c) / th_n;
+    //         size_t N1 = (size_left * (c+1)) / th_n;
+    //         assert( (c < th_n) || (N1 == size_left) );
+    //         if (c+1 < th_n) std::nth_element(start_unsorted+N0, start_unsorted+N1, cdb.end(), &compare_CE);
+    //         threadpool.push([N0,N1,start_unsorted](){ std::sort(start_unsorted+N0, start_unsorted+N1, &compare_CE) ;});
+    //     }
+    //     threadpool.wait_work();
+    //     std::inplace_merge(cdb.begin(), start_unsorted, cdb.end(), &compare_CE);
+    //     data.sorted_until = cdb.size();
+    //     assert(std::is_sorted(cdb.cbegin(), cdb.cend(), &compare_CE ));
+    //     // TODO: statistics.inc_stats_sorting_overhead();
+    //     return;
+    // }
+    // else if(sieve_status == SieveStatus::gauss || sieve_status == SieveStatus::triple_mt)
+    // {
+    //     StatusData::Gauss_Data &data = status_data.gauss_data;
+    //     assert(data.list_sorted_until <= data.queue_start);
+    //     assert(data.queue_start <= data.queue_sorted_until);
+    //     assert(data.queue_sorted_until <= cdb.size());
+    //     assert(std::is_sorted(cdb.cbegin(), cdb.cbegin()+ data.list_sorted_until, &compare_CE )  );
+    //     assert(std::is_sorted(cdb.cbegin()+ data.queue_start, cdb.cbegin() + data.queue_sorted_until, &compare_CE ));
+    //     size_t const unsorted_list_left = data.queue_start - data.list_sorted_until;
+    //     size_t const unsorted_queue_left = cdb.size() - data.queue_sorted_until;
+    //     if ( (unsorted_list_left == 0) && (unsorted_queue_left == 0))
+    //     {
+    //         return; // nothing to do.
+    //     }
+    //     assert(unsorted_list_left + unsorted_queue_left > 0);
+    //     size_t max_threads_list  = (params.threads * unsorted_list_left + unsorted_list_left + unsorted_queue_left - 1) / (unsorted_list_left + unsorted_queue_left);
+    //     size_t max_threads_queue = params.threads - max_threads_list;
+    //     if (unsorted_list_left > 0 && max_threads_list == 0)
+    //         max_threads_list = 1;
+    //     if (unsorted_queue_left > 0 && max_threads_queue == 0)
+    //         max_threads_queue = 1;
+
+    //     if(unsorted_list_left > 0)
+    //     {
+    //         auto const start_unsorted = cdb.begin() + data.list_sorted_until;
+    //         auto const end_unsorted   = cdb.begin() + data.queue_start;
+    //         size_t const th_n_list = std::min(max_threads_list, static_cast<size_t>(1+ unsorted_list_left / (10* MIN_ENTRY_PER_THREAD)));
+    //         for(size_t c = 0; c < th_n_list; ++c)
+    //         {
+    //             size_t const N0 = (unsorted_list_left * c) / th_n_list;
+    //             size_t const N1 = (unsorted_list_left * (c+1)) / th_n_list;
+    //             assert( (c < th_n_list) || (N1 == unsorted_list_left) );
+    //             if( c + 1 < th_n_list) std::nth_element(start_unsorted + N0, start_unsorted + N1, end_unsorted, &compare_CE);
+    //             threadpool.push([N0,N1,start_unsorted](){ std::sort(start_unsorted+N0, start_unsorted+N1, &compare_CE) ;});
+    //         }
+    //         if(params.threads == 1 && unsorted_queue_left > 0)
+    //             threadpool.wait_work();
+    //     }
+    //     if(unsorted_queue_left > 0)
+    //     {
+    //         auto const start_unsorted = cdb.begin() + data.queue_sorted_until; // start of range to sort
+    //         auto const end_unsorted   = cdb.end(); // end of range to sort
+    //         size_t const th_n_queue = std::min(max_threads_queue, static_cast<size_t>(1 + unsorted_queue_left / (10 * MIN_ENTRY_PER_THREAD )));
+    //         for(size_t c = 0; c < th_n_queue; ++c)
+    //         {
+    //             size_t const N0 = (unsorted_queue_left * c) / th_n_queue;
+    //             size_t const N1 = (unsorted_queue_left  * (c+1)) / th_n_queue;
+    //             assert( (c < th_n_queue) || (N1 == unsorted_queue_left) );
+    //             if ( c + 1 < th_n_queue) std::nth_element(start_unsorted + N0, start_unsorted + N1, end_unsorted, &compare_CE);
+    //             threadpool.push([N0, N1, start_unsorted]() {std::sort(start_unsorted+N0, start_unsorted+N1, &compare_CE); } );
+    //         }
+    //     }
+    //     threadpool.wait_work();
+    //     if(data.list_sorted_until > 0)
+    //     {
+    //         threadpool.push([this, &data]{std::inplace_merge(cdb.begin(), cdb.begin() + data.list_sorted_until, cdb.begin() + data.queue_start, &compare_CE); }  );
+    //         if(params.threads == 1)
+    //             threadpool.wait_work();
+    //     }
+    //     if(data.queue_sorted_until >  data.queue_start)
+    //     {
+    //         threadpool.push([this, &data]{std::inplace_merge(cdb.begin()+ data.queue_start, cdb.begin() + data.queue_sorted_until, cdb.end(), &compare_CE);}  );
+    //     }
+    //     threadpool.wait_work();
+    //     assert(std::is_sorted(cdb.cbegin(), cdb.cbegin() + data.queue_start, &compare_CE  ));
+    //     assert(std::is_sorted(cdb.cbegin()+ data.queue_start, cdb.cend(), &compare_CE  ));
+    //     data.list_sorted_until = data.queue_start;
+    //     data.queue_sorted_until = cdb.size();
+    //     return;
+    // }
+    // else assert(false);
 }
 
 void Siever::grow_db_task(size_t start, size_t end, unsigned int large)
