@@ -112,6 +112,8 @@ void Siever::set_threads(unsigned int nr)
 {
     assert(nr >= 1);
     threadpool.resize(nr-1);
+    omp_set_dynamic(false);
+  	omp_set_num_threads(nr);
 }
 
 // Loads (full) gso of size full_n. The GSO matrix is passed as an one-dim C-Array.
@@ -514,8 +516,7 @@ void Siever::shrink_db(unsigned long N)
         return;
     }
 
-    parallel_sort_cdb();
-    clock_t begin = clock();
+    __gnu_parallel::nth_element(cdb.begin(), cdb.end(), cdb.begin()+N, &compare_CE);;
 
     std::vector<IT> to_save;
     std::vector<IT> to_kill;
@@ -594,8 +595,6 @@ void Siever::save_db(unsigned int N, long* db_)
 void Siever::parallel_sort_cdb()
 {
     CPUCOUNT(209);
-    omp_set_dynamic(false);
-  	omp_set_num_threads(params.threads);
   	__gnu_parallel::sort(cdb.begin(), cdb.end(), &compare_CE);
 
     // static_assert(static_cast<int>(SieveStatus::LAST) == 4, "Need to update this function");
@@ -760,7 +759,6 @@ void Siever::grow_db(unsigned long N, unsigned int large)
 
 void Siever::db_stats(double* min_av_max, long* cumul_histo)
 {
-    parallel_sort_cdb();
     min_av_max[0] = cdb[0].len;
     min_av_max[1] = 0;
     min_av_max[2] = cdb[cdb.size()-1].len;
