@@ -2,6 +2,7 @@
 #include <mutex>
 #include "siever.h"
 #include <string>
+#include <parallel/algorithm>
 
 /**
     Multi-threaded Gauss - triple sieve.
@@ -311,7 +312,7 @@ void Siever::gauss_triple_mt(double alpha)
 
     assert(status_data.gauss_data.queue_start <= db_size);
 
-    parallel_sort_cdb();
+    __gnu_parallel::sort(cdb.begin(), cdb.end(), &compare_CE);
     invalidate_histo(); // we do not keep hist updated during the algorithm, so we invalidate it.
     statistics.inc_stats_sorting_sieve();
     auto &already_searched = status_data.gauss_data.queue_start;

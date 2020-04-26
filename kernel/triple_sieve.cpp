@@ -5,6 +5,7 @@
 #include <atomic>
 #include <thread>
 #include <mutex>
+#include <parallel/algorithm>
 
 
 // reduce x1 which has maximal length
@@ -200,7 +201,7 @@ void Siever::gauss_triple_sieve_st(size_t max_db_size)
     // have already been performed. The end of cdb consists of elements which may still participate in reductions. We need to only compare elements from the beginning part with those from the end part.
     // To change the status of an element wrt this distinction, we perform a swap in cdb.
     size_t queue_begin = status_data.gauss_data.queue_start; // We are guaranteed that all elements cdb[0],...,cdb[queue_begin-1] are already reduced wrt each other.
-    parallel_sort_cdb();
+    __gnu_parallel::sort(cdb.begin(), cdb.end(), &compare_CE);
 
 
     // termination condition outer loop

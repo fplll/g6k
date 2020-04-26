@@ -5,7 +5,7 @@
 #include <atomic>
 #include <thread>
 #include <mutex>
-
+#include <parallel/algorithm>
 
 // Sieve the current database
 // The 'queue' is stored at the end of the main list
@@ -13,7 +13,7 @@ void Siever::gauss_sieve(size_t max_db_size)
 {
     CPUCOUNT(301);
     switch_mode_to(SieveStatus::gauss);
-    parallel_sort_cdb();
+    __gnu_parallel::sort(cdb.begin(), cdb.end(), &compare_CE);
     statistics.inc_stats_sorting_sieve();
     recompute_histo();
     if (max_db_size==0)
@@ -113,7 +113,7 @@ start_over:
         status_data.gauss_data.list_sorted_until = 0;
         status_data.gauss_data.queue_start = cdb.size();
         status_data.gauss_data.queue_sorted_until = cdb.size();
-        parallel_sort_cdb();
+        __gnu_parallel::sort(cdb.begin(), cdb.end(), &compare_CE);
         statistics.inc_stats_sorting_sieve();
         status_data.gauss_data.reducedness = 2;
         size_t imin = histo_index(params.saturation_radius);
@@ -134,7 +134,7 @@ bool Siever::nv_sieve()
 {
     CPUCOUNT(304);
     switch_mode_to(SieveStatus::plain);
-    parallel_sort_cdb();
+    __gnu_parallel::sort(cdb.begin(), cdb.end(), &compare_CE);
     size_t const S = cdb.size();
     CompressedEntry* const fast_cdb = cdb.data();
     recompute_histo();

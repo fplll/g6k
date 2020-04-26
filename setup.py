@@ -39,7 +39,7 @@ extra_compile_args += os.environ.get('EXTRAFLAGS', "").split()
 kwds = {
     "language": "c++",
     "extra_compile_args": extra_compile_args,
-    "extra_link_args": objects,
+    "extra_link_args": objects+["-fopenmp"],
     "libraries": ["gmp", "pthread"],
     "include_dirs": [numpy.get_include()],
 }
