@@ -98,6 +98,7 @@ void Siever::bgj1_sieve(double alpha)
     invalidate_sorting();
     statistics.inc_stats_sorting_sieve();
 
+    status_data.plain_data.sorted_until = 0;
     // we set histo for statistical purposes
     recompute_histo(); // TODO: Remove?
     return;

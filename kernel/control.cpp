@@ -604,15 +604,19 @@ void Siever::grow_db(unsigned long N, unsigned int large)
 
 void Siever::db_stats(double* min_av_max, long* cumul_histo)
 {
-	__gnu_parallel::sort(cdb.begin(), cdb.end(), &compare_CE);
-    min_av_max[0] = cdb[0].len;
+	// __gnu_parallel::sort(cdb.begin(), cdb.end(), &compare_CE);
+    
+    min_av_max[0] = 0;
     min_av_max[1] = 0;
-    min_av_max[2] = cdb[cdb.size()-1].len;
-    for (int i = 0; i < cdb.size(); ++i)
-    {
-        min_av_max[1] += cdb[i].len;
-    }
-    min_av_max[1] /= cdb.size();
+    min_av_max[2] = 0;
+    
+    // min_av_max[0] = cdb[0].len;
+    // min_av_max[2] = cdb[cdb.size()-1].len;
+    // for (int i = 0; i < cdb.size(); ++i)
+    // {
+    //     min_av_max[1] += cdb[i].len;
+    // }
+    // min_av_max[1] /= cdb.size();
 
     recompute_histo();
 
