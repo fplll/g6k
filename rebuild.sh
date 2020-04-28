@@ -5,7 +5,7 @@ enable_stats=0
 enable_ndebug=0
 maxsievingdim=128
 enable_ggdb=0
-enable_jobs=0
+enable_jobs=4
 enable_templated_dim=0
 
 while [[ $# -gt 0 ]]; do
@@ -15,7 +15,8 @@ while [[ $# -gt 0 ]]; do
 			shift
 			;;
 		-j|--jobs)
-			enable_jobs=1
+			jobs=$2
+			shift
 			;;
 		-g|--ggdb)
 			enable_ggdb=1
@@ -82,18 +83,9 @@ if [ "$sieve_threshold" != "" ]; then
 fi
 export EXTRAFLAGS
 
-if [ ${enable_jobs} -eq 0 ]; then
-	make -C kernel clean || exit 1
-	make -C kernel
-fi
-
-if [ ${enable_jobs} -eq 1 ]; then
-	make -C kernel clean || exit 1
-	make -j -C kernel
-fi
-
-
+make -C kernel clean || exit 1
+make -C kernel -j ${jobs}
 
 rm g6k/siever.so `find g6k -name "*.pyc"`
 python setup.py clean
-python setup.py build_ext --inplace || exit 1
+python setup.py build_ext -j ${jobs} --inplace || exit 1
