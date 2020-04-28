@@ -5,8 +5,8 @@ enable_stats=0
 enable_ndebug=0
 maxsievingdim=128
 enable_ggdb=0
-enable_jobs=4
 enable_templated_dim=0
+jobs=4
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
