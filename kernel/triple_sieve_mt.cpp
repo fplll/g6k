@@ -3,7 +3,6 @@
 #include "siever.h"
 #include <string>
 
-
 /**
     Multi-threaded Gauss - triple sieve.
 

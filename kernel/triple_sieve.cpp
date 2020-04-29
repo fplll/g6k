@@ -7,7 +7,6 @@
 #include <mutex>
 
 
-
 // reduce x1 which has maximal length
 // xixj = <xi, xj>
 // if new_l < x1->len, replaces x1 in db and cdb by a shorter vector
