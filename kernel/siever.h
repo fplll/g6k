@@ -508,7 +508,7 @@ public:
     // - TODO : TREAT THIS TASK for the otf_lift=False case
     void best_lifts(long* vecs, double* lens); // in control.cpp
 
-    void db_stats(double* min_av_max, long* cumul_histo); // in control.cpp
+    void db_stats(long* cumul_histo); // in control.cpp
 
     // collects various statistics about the sieve. Details about statistics collection are in statistics.hpp
     CACHELINE_VARIABLE(SieveStatistics, statistics);

@@ -711,7 +711,7 @@ void Siever::grow_db(unsigned long N, unsigned int large)
 }
 
 
-void Siever::db_stats(double* min_av_max, long* cumul_histo)
+void Siever::db_stats(long* cumul_histo)
 {
     recompute_histo();
     for (size_t i = 0; i < size_of_histo; ++i)
