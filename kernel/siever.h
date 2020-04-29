@@ -508,7 +508,7 @@ public:
     // - TODO : TREAT THIS TASK for the otf_lift=False case
     void best_lifts(long* vecs, double* lens); // in control.cpp
 
-    void db_stats(long* cumul_histo); // in control.cpp
+    void db_stats(double* min_av_max, long* cumul_histo); // in control.cpp
 
     // collects various statistics about the sieve. Details about statistics collection are in statistics.hpp
     CACHELINE_VARIABLE(SieveStatistics, statistics);
@@ -669,6 +669,8 @@ private:
     // Worker function for gso_update_postprocessing.
     template<int tn>
     void gso_update_postprocessing_task(size_t const start, size_t const end, int const n_old, std::vector<std::array<ZT,MAX_SIEVING_DIM>> const &MT); // in control.cpp
+
+    void parallel_sort_cdb(); // in control.cpp
 
     // Lift an entry e to all possible positions 0<i<r, and store the result in
     // best_list_so_far[i] when it is improving its length

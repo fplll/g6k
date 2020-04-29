@@ -241,7 +241,7 @@ cdef extern from "../kernel/siever.h" nogil:
         void gauss_triple_mt(double alpha)
 
         void best_lifts(long* vecs, double* lens)
-        void db_stats(long* cumul_histo)
+        void db_stats(double* min_av_max, long* cumul_histo)
 
         # statistics and histo:
         SieveStatistics statistics
