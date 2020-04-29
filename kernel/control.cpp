@@ -1,7 +1,6 @@
 #include <thread>
 #include <mutex>
 #include "siever.h"
-#include <parallel/algorithm>
 
 // reserves size for db and cdb. If called with a larger size than the current capacities, does nothing
 void Siever::reserve(size_t const reserved_db_size)

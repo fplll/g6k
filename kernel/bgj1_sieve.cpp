@@ -5,7 +5,7 @@
 #include <atomic>
 #include <thread>
 #include <mutex>
-#include <parallel/algorithm>
+
 
 /**
     Threaded Bucketed NV Sieve
@@ -43,7 +43,7 @@ void Siever::bgj1_sieve(double alpha)
 
     size_t const S = cdb.size();
     if(S == 0) return;
-    __gnu_parallel::sort(cdb.begin(), cdb.end(), &compare_CE);
+    parallel_sort_cdb();
     statistics.inc_stats_sorting_sieve();
 
     // initialize global variables: GBL_replace_pos is where newly found elements are inserted.
