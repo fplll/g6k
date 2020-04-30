@@ -7,6 +7,7 @@ $(SUBDIRS):
 
 clean:
 	for dir in "${SUBDIRS}"; do make -C "$${dir}" clean; done
+	-rm -f g6k/*.so
 	-rm -rf build
 	-rm -f g6k/siever.cpp
 	-rm -f g6k/siever.so

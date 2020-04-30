@@ -453,11 +453,6 @@ public:
     void extend_right(unsigned int rp); // implemented in control.cpp
 
 
-    // Unused functions ? Do these even work?
-    // Loads an external database of size N. It is appended to the current db (which is presumably empty).
-    void load_db(unsigned int N, long const* db_);  // implemented in control.cpp
-    // Saves the current N shortest vectors to an external db (pointed at by db). Note that it sorts before saving.
-    void save_db(unsigned int N, long* db_); // implemented in control.cpp
 
     // Increase the db size by sampling many new entries (threaded)
     // The new vectors are appended to the current db, leaving the current db elements untouched. Does not sort.
@@ -468,7 +463,8 @@ public:
     // TODO: Document parameter large
     void grow_db(unsigned long N, unsigned int large = 0); // implemented in control.cpp
 
-    // Sorts and shrink the database, keeping only the N best vectors
+    void shrink_db_task(size_t const start, size_t const end, std::vector<IT>& to_save, std::vector<IT>& to_kill);
+     // Sorts and shrink the database, keeping only the N best vectors
     void shrink_db(unsigned long N); // implemented in control.cpp
 
     // Debug-only function. This makes a self-check of various invariants.
@@ -512,7 +508,7 @@ public:
     // - TODO : TREAT THIS TASK for the otf_lift=False case
     void best_lifts(long* vecs, double* lens); // in control.cpp
 
-    void db_stats(double* min_av_max, long* cumul_histo); // in control.cpp
+    void db_stats(long* cumul_histo); // in control.cpp
 
     // collects various statistics about the sieve. Details about statistics collection are in statistics.hpp
     CACHELINE_VARIABLE(SieveStatistics, statistics);
@@ -698,7 +694,7 @@ private:
     inline Entry sample(unsigned int large=0); // in db.inl
 
     // worker task for grow_db
-    void grow_db_task(unsigned long Nt, unsigned int large, std::vector<Entry> &ve); // in control.cpp
+    void grow_db_task(size_t start, size_t end, unsigned int large);
 
 /**
     Various functions to insert / replace elements in db / cdb. They are optimized for various
