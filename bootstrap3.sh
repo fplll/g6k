@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
 
-jobs="-j 4 "
-if [ "$1" = "-j" ]; then
-   jobs="-j $2 "
-fi
-
 # Create Virtual Environment
+alias python=/usr/bin/python3
+alias pip=/usr/bin/pip3
 
 rm -rf g6k-env
 virtualenv g6k-env
@@ -48,7 +45,7 @@ cd g6k-fplll || exit
 ./autogen.sh
 ./configure --prefix="$VIRTUAL_ENV" $CONFIGURE_FLAGS
 make clean
-make $jobs
+make -j 4
 make install
 cd ..
 
@@ -59,14 +56,13 @@ pip install Cython
 pip install -r requirements.txt
 pip install -r suggestions.txt
 python setup.py clean
-python setup.py build_ext $jobs
+python setup.py build_ext
 python setup.py install
 cd ..
 
 pip install -r requirements.txt
 python setup.py clean
-python setup.py build_ext $jobs --inplace
+python setup.py build_ext --inplace
 
-echo " "
 echo "Don't forget to activate environment each time:"
 echo " source ./activate"
