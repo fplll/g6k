@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 # Create Virtual Environment
+alias python=/usr/bin/python3
+alias pip=/usr/bin/pip3
 
 rm -rf g6k-env
 virtualenv g6k-env
