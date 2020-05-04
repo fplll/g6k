@@ -510,7 +510,6 @@ void Siever::shrink_db(unsigned long N)
     }
 
     parallel_sort_cdb();
-    clock_t begin = clock();
 
     std::vector<IT> to_save;
     std::vector<IT> to_kill;
