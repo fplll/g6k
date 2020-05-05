@@ -1037,7 +1037,7 @@ cdef class Siever(object):
 
     # For debugging purposes
     # def print_histo(self):
-    #     _, histo = self.db_stats()
+    #     histo = self.db_stats()
     #     for (r, c) in histo[30:40:2]:
     #         print "%.2f:%.2f "%(r,c),
     #     print
@@ -1128,7 +1128,7 @@ cdef class Siever(object):
         if self.n < min_n:
             return
 
-        _, histo = self.db_stats()
+        histo = self.db_stats()
         i = self.histo_index(self.params.saturation_radius)
         sat = max(histo[i:])
 
@@ -1656,17 +1656,14 @@ cdef class Siever(object):
         if not len(self):
             raise ValueError("Database is empty.")
 
-        cdef np.ndarray tmp_min_av_max = zeros(3, dtype=float64)
         cdef np.ndarray tmp_histo = zeros(self._core.size_of_histo, dtype=int64)
 
-        self._core.db_stats(<double*>tmp_min_av_max.data, <long*>tmp_histo.data)
+        self._core.db_stats(<long*>tmp_histo.data)
 
         if absolute_histo:
-            return ((tmp_min_av_max[0], tmp_min_av_max[1], tmp_min_av_max[2]),
-                    [(tmp_histo[i]) for i in range(self._core.size_of_histo)])
+            return [(tmp_histo[i]) for i in range(self._core.size_of_histo)]
         else:
-            return ((tmp_min_av_max[0], tmp_min_av_max[1], tmp_min_av_max[2]),
-                    [(2 * tmp_histo[i] / (1+i*(1./self._core.size_of_histo))**(self.n/2.)) for i in range(self._core.size_of_histo)])
+            return [(2 * tmp_histo[i] / (1+i*(1./self._core.size_of_histo))**(self.n/2.)) for i in range(self._core.size_of_histo)]
 
 
 # For backward compatibility with old pickles

@@ -96,9 +96,9 @@ void Siever::bgj1_sieve(double alpha)
     threadpool.wait_work();
 
     invalidate_sorting();
-    parallel_sort_cdb(); // TODO: Remove?
     statistics.inc_stats_sorting_sieve();
 
+    status_data.plain_data.sorted_until = 0;
     // we set histo for statistical purposes
     recompute_histo(); // TODO: Remove?
     return;

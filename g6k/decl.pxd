@@ -222,8 +222,6 @@ cdef extern from "../kernel/siever.h" nogil:
         void extend_left(unsigned int lp)
         void shrink_left(unsigned int lp)
         void extend_right(unsigned int rp)
-        void load_db(unsigned int N, long* db_)
-        void save_db(unsigned int N, long* db_)
         void grow_db(unsigned long N, unsigned int large)
         void shrink_db(unsigned long N)
 
@@ -243,7 +241,7 @@ cdef extern from "../kernel/siever.h" nogil:
         void gauss_triple_mt(double alpha)
 
         void best_lifts(long* vecs, double* lens)
-        void db_stats(double* min_av_max, long* cumul_histo)
+        void db_stats(long* cumul_histo)
 
         # statistics and histo:
         SieveStatistics statistics
