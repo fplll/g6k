@@ -117,7 +117,7 @@ def pump(g6k, tracer, kappa, blocksize, dim4free, down_sieve=False,             
     if down_stop is None:
         down_stop = dim4free
 
-    with tracer.context(("pump", "kappa:%d beta:%d f:%d" % (kappa, blocksize, dim4free))):
+    with tracer.context(("pump", "beta:%d f:%d" % (blocksize, dim4free))):
         with g6k.temp_params(reserved_n=pump.r-pump.l):
             pump.phase = "init"
             wrapped_sieve(pump)  # The first initializing Sieve should always be Gauss to avoid rank-loss
@@ -125,13 +125,12 @@ def pump(g6k, tracer, kappa, blocksize, dim4free, down_sieve=False,             
             pump.phase = "up"
             # Pump Up
             while (g6k.l > pump.l):
-                with tracer.context(("pump-step-up", "l:%d r:%d n:%d" % (g6k.l, g6k.r, g6k.n))):
-                    g6k.extend_left(1)
+                g6k.extend_left(1)
 
-                    if verbose:
-                        print_pump_state(pump)
-                    if not wrapped_sieve(pump):
-                        break
+                if verbose:
+                    print_pump_state(pump)
+                if not wrapped_sieve(pump):
+                    break
 
             if goal_r0 is not None and (g6k.M.get_r(kappa, kappa) <= goal_r0):
                 return
@@ -139,23 +138,21 @@ def pump(g6k, tracer, kappa, blocksize, dim4free, down_sieve=False,             
             # Pump Down
             pump.phase = "down"
             while (g6k.n > 1) and (pump.insert_left_bound <= kappa+down_stop):
-                with tracer.context(("pump-step-down", "l:%d r:%d n:%d" % (g6k.l, g6k.r, g6k.n))):
+                # (try to) Insert
+                ii = g6k.insert_best_lift(scoring_down, aux=pump)
+                if ii is not None and increasing_insert_index:
+                    pump.insert_left_bound = ii + 1
 
-                    # (try to) Insert
-                    ii = g6k.insert_best_lift(scoring_down, aux=pump)
-                    if ii is not None and increasing_insert_index:
-                        pump.insert_left_bound = ii + 1
+                else:
+                    g6k.shrink_left(1)
 
-                    else:
-                        g6k.shrink_left(1)
+                if goal_r0 is not None and (g6k.M.get_r(kappa, kappa) <= goal_r0):
+                    break
 
-                    if goal_r0 is not None and (g6k.M.get_r(kappa, kappa) <= goal_r0):
-                        break
-
-                    # Sieve (or Shrink db)
-                    if verbose:
-                        print_pump_state(pump)
-                    if not pump.down_sieve:
-                        g6k.resize_db(max(500, g6k.db_size() / g6k.params.db_size_base))
-                    elif not wrapped_sieve(pump):
-                        break
+                # Sieve (or Shrink db)
+                if verbose:
+                    print_pump_state(pump)
+                if not pump.down_sieve:
+                    g6k.resize_db(max(500, g6k.db_size() / g6k.params.db_size_base))
+                elif not wrapped_sieve(pump):
+                    break

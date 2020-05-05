@@ -48,7 +48,7 @@ def workout(g6k, tracer, kappa, blocksize, dim4free_min=0,              # Main p
     if "verbose" not in pump_params:
         pump_params["verbose"] = verbose
 
-    with tracer.context(("workout", "kappa:%d beta:%d f:%d" % (kappa, blocksize, dim4free_min))):
+    with tracer.context(("workout", "beta:%d f:%d" % (blocksize, dim4free_min))):
         for f in fs:
             flast = f
             timestart = time.time()
