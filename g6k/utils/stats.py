@@ -11,11 +11,10 @@ from fpylll.tools.quality import basis_quality
 from g6k.siever import Siever
 import time
 try:
-   from time import process_time # Python 3
+    from time import process_time  # Python 3
 except ImportError:
-  from time import clock as process_time  # Python 2
+    from time import clock as process_time  # Python 2
 import logging
-import numpy as np
 
 
 class SieveTreeTracer(Tracer):
@@ -120,7 +119,7 @@ class SieveTreeTracer(Tracer):
             else:
                 node.data[k] = Accumulator(v, repr="min")
 
-        if kwds.get("dump_gso", False):
+        if kwds.get("dump_gso", node.level() == 1):
             node.data["r"] =  node.data.get("r", []) + [self.instance.M.r()]
 
         verbose_labels = ["tour", "prog_tour"]

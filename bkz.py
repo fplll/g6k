@@ -116,7 +116,7 @@ def bkz_kernel(arg0, params=None, seed=None):
     for blocksize in blocksizes:
 
         for t in range(tours):
-            with tracer.context("tour", t):
+            with tracer.context("tour", t, dump_gso=True):
                 if algbkz == "fpylll":
                     par = BKZ_FPYLLL.Param(blocksize,
                                            strategies=BKZ_FPYLLL.DEFAULT_STRATEGY,
