@@ -20,16 +20,20 @@ def pump(g6k, kappa, blocksize, dim4free):
     g6k.lll(kappa, r)
     # Set up G6K, with an initial sieve context of dim 20, and a lift context up to kappa
     g6k.initialize_local(kappa, max(r-20, l), r)
-    g6k.sieve()
 
-    # Pump up
+    # Sieve
+    g6k()
+
+    # Pump up (Progressive Sieve)
     while g6k.l > l:
+        # Extend the lift context to the left
         g6k.extend_left(1)
-        g6k.sieve()
+        # Sieve
+        g6k()
 
     # pump down
     aux = kappa
-    while g6k.l < r+20:
+    while g6k.l < r-20:
         # Insert the leftmost candidate if we have one
         ii = g6k.insert_best_lift(scoring, aux)
         # If no insertion happened
