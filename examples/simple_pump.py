@@ -6,7 +6,7 @@ def scoring(i, nlen, olen, aux):
 
 # A simple implementation of the pump, with minimal amount of parameters.
 # Significant loss of performances to be expected compared to the one from
-# ../g6k/algorithms/pump.p
+# ../g6k/algorithms/pump.py
 
 def pump(g6k, kappa, blocksize, dim4free):
     # The right end of the sieve context (constant through the pump)

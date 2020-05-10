@@ -225,3 +225,4 @@ To test the answer we compute:
     >>> sum(v_**2 for v_ in v) == l
     True
 
+More examples can be found in the folder  ``examples``.
