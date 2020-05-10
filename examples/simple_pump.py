@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python
 
 # A simple insertion policy: choose the leftmost candidate, no further than aux.
 def scoring(i, nlen, olen, aux):
