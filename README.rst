@@ -24,7 +24,7 @@ You will need the current master of FPyLLL. See ``bootstrap.sh`` for creating (a
     source ./activate             # for every new shell: activates local python env
     ./rebuild.sh -f               # whenever you want to rebuild G6K
 
-On systems with co-existing python2 and 3, you can force python3 installation using ``./boostrap3.sh`` instead.
+On systems with co-existing python2 and 3, you can force a specific version installation using ``PYTHON=<pythoncmd> ./boostrap.sh`` instead.
 
 Otherwise, you will need fplll and fpylll already installed and build the G6K Cython extension **in place** like so:
 
@@ -65,7 +65,7 @@ To recreate Figure 2, run (if you have 26 threads, otherwise change ``--threads`
 
 .. code-block:: bash
 
-    ./full_sieve.py 100 --sieve gauss_triple_mt --seed 23 --trials 2 --threads 26 --db_size_base 1.140174986570044 1.1414898159861084 1.1428031326523391 1.1441149417781413 1.14542524854309 1.146734058097168 1.1480413755610026 1.1493472060 1.153255825912013 1.154555758722808 1.1547005383
+    python ./full_sieve.py 100 --sieve gauss_triple_mt --seed 23 --trials 2 --threads 26 --db_size_base 1.140174986570044 1.1414898159861084 1.1428031326523391 1.1441149417781413 1.14542524854309 1.146734058097168 1.1480413755610026 1.1493472060 1.153255825912013 1.154555758722808 1.1547005383
 
 The whole experiment took ~15 h. If you do not want to wait that long, decrease the dimension.
 
@@ -78,7 +78,7 @@ so on 3 lattices in each dimensions d ∈ {50, 52, 54, 56, 58}:
 
 .. code-block:: bash
 
-  ./svp_exact_find_norm.py 50 -u 60 --workers 4 --challenge-seed 0 1 2
+  python ./svp_exact_find_norm.py 50 -u 60 --workers 4 --challenge-seed 0 1 2
 
 This will run 4 independent tasks in parrallel, and takes about 1 minute. Challenges will be
 downloaded from https://www.latticechallenge.org/ if not already present.
@@ -87,13 +87,13 @@ Then, run and obtain averaged timing:
 
 .. code-block:: bash
 
-    ./svp_exact.py 50 -u 60 --workers 3 --challenge-seed 0 1 2
+    python ./svp_exact.py 50 -u 60 --workers 3 --challenge-seed 0 1 2
 
 Which will take around 10 seconds. To compare several algorithms, and average over 5 trials on each of the 3 lattices for d=50, you can run:
 
 .. code-block:: bash
 
-    ./svp_exact.py 50 --workers 3 --trials 5 --challenge-seed 0 1 2 --sieve gauss bgj1 enum
+    python ./svp_exact.py 50 --workers 3 --trials 5 --challenge-seed 0 1 2 --sieve gauss bgj1 enum
 
 
 SVP-challenge (Sec 6.2)
@@ -103,7 +103,7 @@ You can here run a single instance on multiple cores, for example:
 
 .. code-block:: bash
 
-    ./svp_challenge.py 100 --threads 4
+    python ./svp_challenge.py 100 --threads 4
 
 The above may take between half a minute and 10 minutes depending on how lucky you are
 
