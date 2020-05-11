@@ -42,6 +42,14 @@ alias python=$PYTHON
 alias pip="$PYTHON -m pip"
 EOF
 
+if [ ! -d g6k-env ]; then
+	echo "Failed to create virtual environment in 'g6k-env' !"
+	echo "Is '$PYTHON -m virtualenv' working?"
+	echo "Try '$PYTHON -m pip install virtualenv' otherwise."
+	exit 1
+fi
+
+
 ln -s g6k-env/bin/activate ./
 source ./activate
 
@@ -66,7 +74,7 @@ source ./activate
 git clone https://github.com/fplll/fplll g6k-fplll
 cd g6k-fplll || exit
 ./autogen.sh
-./configure --prefix="$VIRTUAL_ENV" $CONFIGURE_FLAGS
+./configure --prefix="$VIRTUAL_ENV" --with-max-parallel-enum-dim=0 $CONFIGURE_FLAGS
 make clean
 make $jobs
 make install
