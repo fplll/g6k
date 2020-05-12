@@ -5,6 +5,9 @@
 #error Do not include siever.inl directly
 #endif
 
+#include "parallel_algorithms.hpp"
+namespace pa = parallel_algorithms;
+
 // a += c*b
 template <typename Container, typename Container2>
 inline void Siever::addmul_vec(Container &a, Container2 const &b, const typename Container::value_type c, int num)
@@ -62,31 +65,23 @@ inline size_t Siever::histo_index(double l) const
 template<class Functor>
 void Siever::apply_to_all_entries(Functor const &functor)
 {
-    size_t th_n = 1 + db.size() / MIN_ENTRY_PER_THREAD;
-    th_n = th_n > this->params.threads ? this->params.threads : th_n;
-
+    int th_n = std::min<int>(this->params.threads, 1 + db.size()/MIN_ENTRY_PER_THREAD);
     threadpool.run([this,functor](int th_i, int th_n)
-    {
-        size_t i = (th_i*this->db.size()) / th_n;
-        size_t const e = ((th_i+1)*this->db.size()) / th_n;
-        for (; i < e; ++i)
-            functor(this->db[i]);
-    }, th_n);
+        {
+	    for (auto i : pa::subrange(db.size(), th_i, th_n))
+		functor(this->db[i]);
+        }, th_n);
 }
 
 template<class Functor>
 void Siever::apply_to_all_compressed_entries(Functor const &functor)
 {
-    size_t th_n = 1 + cdb.size() / MIN_ENTRY_PER_THREAD;
-    th_n = th_n > this->params.threads ? this->params.threads : th_n;
-
+    int th_n = std::min<int>(this->params.threads, 1 + cdb.size()/MIN_ENTRY_PER_THREAD);
     threadpool.run([this,functor](int th_i, int th_n)
-    {
-        size_t i = (th_i*this->cdb.size()) / th_n;
-        size_t const e = ((th_i+1)*this->cdb.size()) / th_n;
-        for (; i < e; ++i)
-            functor(this->cdb[i]);
-    }, th_n);
+        {
+	    for (auto i : pa::subrange(cdb.size(), th_i, th_n))
+		functor(this->cdb[i]);
+        }, th_n);
 }
 
 template<unsigned int THRESHOLD>

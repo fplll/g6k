@@ -447,8 +447,8 @@ void Siever::gauss_triple_mt(double alpha)
     status_data.gauss_data.queue_start = TS_start_queue_original;
     status_data.gauss_data.list_sorted_until = TS_start_queue_original;
     status_data.gauss_data.queue_sorted_until = cdb.size();
-    assert(std::is_sorted(cdb.cbegin(), cdb.cbegin() + TS_start_queue_original, &compare_CE ));
-    assert(std::is_sorted(cdb.cbegin() + TS_start_queue_original, cdb.cend(), &compare_CE));
+    assert(std::is_sorted(cdb.cbegin(), cdb.cbegin() + TS_start_queue_original, compare_CE() ));
+    assert(std::is_sorted(cdb.cbegin() + TS_start_queue_original, cdb.cend(), compare_CE() ));
     recompute_histo();
 
 ENABLE_IF_STATS_MEMORY
@@ -960,14 +960,14 @@ void Siever::gauss_triple_mt_resort(MAYBE_UNUSED unsigned int const id)
     assert(start_new_cdb_overwritten_queue >= start_new_cdb_overwritten_list);
     assert(start_old_cdb_processed_queue - start_old_cdb_overwritten_list == start_new_cdb_overwritten_queue - start_new_cdb_overwritten_list);
     std::partial_sort_copy( start_old_cdb_overwritten_list, start_old_cdb_processed_queue,
-                            start_new_cdb_overwritten_list, start_new_cdb_overwritten_queue, compare_CE);
+                            start_new_cdb_overwritten_list, start_new_cdb_overwritten_queue, compare_CE());
 
     // copy & sort V
     assert(end_old_cdb >= start_old_cdb_overwritten_queue);
     assert(end_new_cdb >= start_new_cdb_overwritten_queue);
     assert(end_old_cdb - start_old_cdb_overwritten_queue == end_new_cdb - start_new_cdb_overwritten_queue);
     std::partial_sort_copy(start_old_cdb_overwritten_queue, end_old_cdb,
-                           start_new_cdb_overwritten_queue, end_new_cdb, compare_CE);
+                           start_new_cdb_overwritten_queue, end_new_cdb, compare_CE());
 
     // We now have reordered I-II-III-IV-V into I-III-IV-II-V and sorted each indidivual piece.
     // Furthermore (III-IV) is still sorted as a whole
@@ -975,7 +975,7 @@ void Siever::gauss_triple_mt_resort(MAYBE_UNUSED unsigned int const id)
     // Merge-sort II and V
     assert(start_new_cdb_overwritten_list <= start_new_cdb_overwritten_queue);
     assert(start_new_cdb_overwritten_queue <= end_new_cdb);
-    std::inplace_merge(start_new_cdb_overwritten_list, start_new_cdb_overwritten_queue, end_new_cdb, compare_CE);
+    std::inplace_merge(start_new_cdb_overwritten_list, start_new_cdb_overwritten_queue, end_new_cdb, compare_CE());
 
     // separate III from IV, this requires another lock
     { // scope for lock_guard
@@ -999,10 +999,10 @@ void Siever::gauss_triple_mt_resort(MAYBE_UNUSED unsigned int const id)
 
         assert(start_new_cdb_untouched_list <= start_new_cdb_processed_queue);
         assert(start_new_cdb_processed_queue <= start_new_cdb_unprocessed_queue);
-        std::inplace_merge(start_new_cdb_untouched_list, start_new_cdb_processed_queue, start_new_cdb_unprocessed_queue, compare_CE);
+        std::inplace_merge(start_new_cdb_untouched_list, start_new_cdb_processed_queue, start_new_cdb_unprocessed_queue, compare_CE());
         assert(start_new_cdb_unprocessed_queue <= start_new_cdb_overwritten_list);
         assert(start_new_cdb_overwritten_list <= end_new_cdb);
-        std::inplace_merge(start_new_cdb_unprocessed_queue, start_new_cdb_overwritten_list, end_new_cdb, compare_CE);
+        std::inplace_merge(start_new_cdb_unprocessed_queue, start_new_cdb_overwritten_list, end_new_cdb, compare_CE());
 
         // finished creating the data of the new snapshot. We now set up the metadata:
         assert(new_list_size <= db_size);

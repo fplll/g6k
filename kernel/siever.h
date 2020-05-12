@@ -289,7 +289,10 @@ struct CompressedEntry {
 };
 
 // Define an ordering for sorting Compressed Entries, used for sorting.
-inline bool compare_CE(CompressedEntry const& lhs, CompressedEntry const& rhs) { return lhs.len < rhs.len; }
+struct compare_CE
+{
+    bool operator()(const CompressedEntry& lhs, const CompressedEntry& rhs) const { return lhs.len < rhs.len; }
+};
 
 /**
     An elements in the filtered_list (only used in single-threaded triple sieve)
@@ -463,9 +466,8 @@ public:
     // TODO: Document parameter large
     void grow_db(unsigned long N, unsigned int large = 0); // implemented in control.cpp
 
-    void shrink_db_task(size_t const start, size_t const end, std::vector<IT>& to_save, std::vector<IT>& to_kill);
      // Sorts and shrink the database, keeping only the N best vectors
-    void shrink_db(unsigned long N); // implemented in control.cpp
+    void shrink_db(unsigned long N, bool erase_uid = true); // implemented in control.cpp
 
     // Debug-only function. This makes a self-check of various invariants.
     // Should always return true. Will print (at least) the first problem that was found to std::cerr.

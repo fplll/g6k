@@ -117,6 +117,14 @@ namespace parallel_algorithms {
 		template<typename RandIt, typename Threadpool>
 		void sort(RandIt first, RandIt last, Threadpool& threadpool, const std::size_t chunksize = PA_SORT_CHUNKSIZE);
 	*/
+	/*
+		// behaves as std::copy(first, last, dest) in a parallel implementation using a given threadpool
+		template<typename RandIt, typename OutputIt, typename Threadpool>
+		OutputIt copy(RandIt first, RandIt last, OutputIt dest, Threadpool& threadpool);
+		// behave as std::move(first, last, dest) in a parallel implementation using a given threadpool
+		template<typename RandIt, typename OutputIt, typename Threadpool>
+		OutputIt move(RandIt first, RandIt last, OutputIt dest, Threadpool& threadpool);
+	*/
 
 
 	// basic iterator: an std::size_t integer that behaves as an iterator
@@ -135,9 +143,9 @@ namespace parallel_algorithms {
 		bool operator>  (const range_iterator& r) const { return _i >  r._i; }
 		bool operator>= (const range_iterator& r) const { return _i >= r._i; }
 		
-		const std::size_t operator*() const { return _i; }
+		std::size_t operator*() const { return _i; }
 		const std::size_t* operator->() const { return &_i; }
-		const std::size_t operator[](std::size_t n) const { return _i + n; }
+		std::size_t operator[](std::size_t n) const { return _i + n; }
 		
 		range_iterator& operator++() { ++_i; return *this; }
 		range_iterator& operator--() { --_i; return *this; }
@@ -181,12 +189,9 @@ namespace parallel_algorithms {
 	template<typename RandIt, typename Pred, typename Threadpool>
 	RandIt partition(RandIt first, RandIt last, Pred pred, Threadpool& threadpool, const std::size_t chunksize = PA_PARTITION_CHUNKSIZE)
 	{
-		typedef typename std::iterator_traits<RandIt>::difference_type difference_type;
-		typedef typename std::iterator_traits<RandIt>::value_type value_type;
-
 		const std::size_t dist = last-first;
 
-		unsigned nr_threads = std::min(threadpool.size()+1, dist/(chunksize*2) );
+		int nr_threads = std::min<int>(threadpool.size()+1, dist/(chunksize*2) );
 		if (nr_threads <= 2)
 			return std::partition(first, last, pred);
 
@@ -207,7 +212,6 @@ namespace parallel_algorithms {
 				std::size_t mylow = thi*chunksize, myhigh = dist-(thi+1)*chunksize;
 				auto lowfirst=first+mylow, lowlast=lowfirst+chunksize, lowit=lowfirst;
 				auto highfirst=first+myhigh, highlast=highfirst+chunksize, highit=highfirst;
-				value_type tmp;
 
 				while (true)
 				{
@@ -439,7 +443,7 @@ namespace parallel_algorithms {
 						}
 					}
 				}
-			});
+			}, threads);
 		return dest+(size1+size2);
 	}
 
@@ -456,7 +460,6 @@ namespace parallel_algorithms {
 	template<typename RandIt, typename Compare, typename Threadpool>
 	void sort2(RandIt first, RandIt last, Compare cf, Threadpool& threadpool, const std::size_t chunksize = PA_SORT_CHUNKSIZE)
 	{
-		typedef typename std::iterator_traits<RandIt>::value_type value_type;
 		typedef thread_pool::barrier barrier;
 
 		const std::size_t dist = last-first;
@@ -467,7 +470,6 @@ namespace parallel_algorithms {
 			return;
 		}
 
-		typedef std::pair<std::size_t,std::size_t> size_pair;
 		std::vector<subrange> thrange(nr_threads);
 		for (size_t i = 0; i < nr_threads; ++i)
 			thrange[i] = subrange(dist, i, nr_threads);
@@ -521,7 +523,6 @@ namespace parallel_algorithms {
 	void sort3(RandIt first, RandIt last, Compare cf, Threadpool& threadpool, const std::size_t chunksize = PA_SORT_CHUNKSIZE)
 	{
 		typedef typename std::iterator_traits<RandIt>::value_type value_type;
-		typedef thread_pool::barrier barrier;
 
 		const std::size_t dist = last-first;
 		std::size_t nr_threads = std::min(threadpool.size()+1, dist/chunksize);
@@ -568,7 +569,7 @@ namespace parallel_algorithms {
 		}
 
 		threadpool.run(
-			[=](int thi, int thn)
+			[=](int thi)
 			{
 				std::sort(first + ranges[thi].first, first + (ranges[thi].first+ranges[thi].second), cf);
 /* // attempt to more evenly divide the sorting space
@@ -600,6 +601,40 @@ namespace parallel_algorithms {
 	{
 		typedef typename std::iterator_traits<RandIt>::value_type value_type;
 		sort3(first, last, std::less<value_type>(), threadpool, chunksize);
+	}
+
+	// behaves as std::copy(first, last, dest) in a parallel implementation using a given threadpool
+	template<typename RandIt, typename OutputIt, typename Threadpool>
+	OutputIt copy(RandIt first, RandIt last, OutputIt dest, Threadpool& threadpool)
+	{
+		const std::size_t dist = last-first;
+		if (dist < 8192)
+			return std::copy(first, last, dest);
+
+		int nr_threads = std::min<int>(threadpool.size()+1, dist/2048);
+		threadpool.run( [=](int thi, int thn)
+			{
+				subrange sr(dist, thi, thn);
+				std::copy(first+sr.first(), first+sr.last(), dest+sr.first());
+			}, nr_threads);
+		return dest + dist;
+	}
+
+	// behave as std::move(first, last, dest) in a parallel implementation using a given threadpool
+	template<typename RandIt, typename OutputIt, typename Threadpool>
+	OutputIt move(RandIt first, RandIt last, OutputIt dest, Threadpool& threadpool)
+	{
+		const std::size_t dist = last-first;
+		if (dist < 8192)
+			return std::move(first, last, dest);
+
+		int nr_threads = std::min<int>(threadpool.size()+1, dist/2048);
+		threadpool.run( [=](int thi, int thn)
+			{
+				subrange sr(dist, thi, thn);
+				std::move(first+sr.first(), first+sr.last(), dest+sr.first());
+			}, nr_threads);
+		return dest + dist;
 	}
 
 } // namespace parallel_algorithms
