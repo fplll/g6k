@@ -672,7 +672,6 @@ void Siever::parallel_sort_cdb()
                 cdb.swap(bgj1_cdb_copy);
             }
         }
-        assert(1==0);
 //        assert(std::is_sorted(cdb.cbegin(), cdb.cbegin() + data.queue_start, compare_CE()  ));
 //        assert(std::is_sorted(cdb.cbegin()+ data.queue_start, cdb.cend(), compare_CE()  ));
         data.list_sorted_until = data.queue_start;
