@@ -208,7 +208,8 @@ namespace parallel_algorithms {
 		// each thread processes on a 'low' and a 'high' chunk, obtaining a new chunk whenever one is fully processed.
 		threadpool.run([&,first,last,dist,pred,chunksize,availablechunks](int thi, int thn)
 			{
-				assert(thn == nr_threads);
+				if (thn != nr_threads)
+					throw std::runtime_error("thn != nr_threads");
 				std::size_t mylow = thi*chunksize, myhigh = dist-(thi+1)*chunksize;
 				auto lowfirst=first+mylow, lowlast=lowfirst+chunksize, lowit=lowfirst;
 				auto highfirst=first+myhigh, highlast=highfirst+chunksize, highit=highfirst;
@@ -398,7 +399,7 @@ namespace parallel_algorithms {
 		const std::size_t minchunksize = 4096;
 
 		difference_type size1 = last1-first1, size2=last2-first2;
-		if (size1+size2 < 2*minchunksize)
+		if (size1+size2 < difference_type(2*minchunksize))
 			return std::merge(first1, last1, first2, last2, dest, cf);
 		if (size1 < size2)
 			return merge(first2, last2, first1, last1, dest, cf, threadpool);
