@@ -531,8 +531,8 @@ void Siever::shrink_db(unsigned long N, bool erase_uid)
                 if (h_it == h_end)
                     break;
                 if (erase_uid)
-                    uid_hash_table.erase_uid(db[l_it->i].uid);
-                db[l_it->i] = db[h_it->i];
+                    uid_hash_table.erase_uid(db[h_it->i].uid);
+                db[h_it->i] = db[l_it->i];
                 std::swap(l_it->i, h_it->i);
                 ++h_it;
             }
@@ -544,8 +544,8 @@ void Siever::shrink_db(unsigned long N, bool erase_uid)
                     continue;
                 tmpbuf.emplace_back(l_it - this->cdb.begin());
             }
-            size_t w_idx = to_kill_size.fetch_add(tmpbuf.size());
-            std::copy(tmpbuf.begin(), tmpbuf.end(), to_kill.begin()+w_idx);
+            size_t w_idx = to_save_size.fetch_add(tmpbuf.size());
+            std::copy(tmpbuf.begin(), tmpbuf.end(), to_save.begin()+w_idx);
             tmpbuf.clear();
 
             for (; h_it != h_end; ++h_it)
@@ -558,8 +558,8 @@ void Siever::shrink_db(unsigned long N, bool erase_uid)
                 }
                 tmpbuf.emplace_back(h_it - this->cdb.begin());
             }
-            w_idx = to_save_size.fetch_add(tmpbuf.size());
-            std::copy(tmpbuf.begin(), tmpbuf.end(), to_save.begin()+w_idx);
+            w_idx = to_kill_size.fetch_add(tmpbuf.size());
+            std::copy(tmpbuf.begin(), tmpbuf.end(), to_kill.begin()+w_idx);
             tmpbuf.clear();
         });
     assert(to_kill_size == to_save_size);
@@ -579,6 +579,7 @@ void Siever::shrink_db(unsigned long N, bool erase_uid)
 
     cdb.resize(N);
     db.resize(N);
+    assert(std::is_sorted(cdb.begin(), cdb.end(), compare_CE()));
     status_data.plain_data.sorted_until = N;
     invalidate_histo();
 
@@ -672,8 +673,8 @@ void Siever::parallel_sort_cdb()
                 cdb.swap(bgj1_cdb_copy);
             }
         }
-//        assert(std::is_sorted(cdb.cbegin(), cdb.cbegin() + data.queue_start, compare_CE()  ));
-//        assert(std::is_sorted(cdb.cbegin()+ data.queue_start, cdb.cend(), compare_CE()  ));
+        assert(std::is_sorted(cdb.cbegin(), cdb.cbegin() + data.queue_start, compare_CE()  ));
+        assert(std::is_sorted(cdb.cbegin()+ data.queue_start, cdb.cend(), compare_CE()  ));
         data.list_sorted_until = data.queue_start;
         data.queue_sorted_until = cdb.size();
         return;
