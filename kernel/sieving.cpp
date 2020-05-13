@@ -63,7 +63,7 @@ void Siever::gauss_sieve(size_t max_db_size)
         // sort the old and new part separately. Note that (except at the beginning), these also
         // correspond to the distinction explained above. The old part already is sorted: We sort
         // the 'queue'-part; shorter vectors to be processed first
-        std::sort(cdb.begin() + old_S, cdb.end(),  &compare_CE);
+        pa::sort(cdb.begin() + old_S, cdb.end(), compare_CE(), threadpool);
         //CompressedEntry* const fast_cdb = &(cdb.front());
         CompressedEntry* const fast_cdb = cdb.data();
         // while there is no elements in the 'queue'-part of the list
@@ -159,7 +159,7 @@ bool Siever::nv_sieve()
             if (kk < .5 * S) break;
         }
 
-        std::sort(cdb.begin(), cdb.end(), &compare_CE);
+        pa::sort(cdb.begin(), cdb.end(), compare_CE(), threadpool);
         status_data.plain_data.sorted_until = cdb.size();
 
         if (kk > .8 *S) return false;
@@ -172,7 +172,7 @@ bool Siever::nv_sieve()
             cumul += histo[i];
             if (i>=imin && 1.99 * cumul > std::pow(1. + i* (1./size_of_histo), n/2.) * params.saturation_ratio)
             {
-                assert(std::is_sorted(cdb.cbegin(),cdb.cend(), &compare_CE  ));
+                assert(std::is_sorted(cdb.cbegin(),cdb.cend(), compare_CE()  ));
                 return true;
             }
         }

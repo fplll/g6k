@@ -209,7 +209,7 @@ void Siever::gauss_triple_sieve_st(size_t max_db_size)
         size_t const old_S = status_data.gauss_data.queue_start;
         if (iter) grow_db(cdb.size()*1.02 + 10);
         ++iter;
-        std::sort(cdb.begin() + old_S, cdb.end(), &compare_CE);
+        pa::sort(cdb.begin() + old_S, cdb.end(), compare_CE(), threadpool);
 
         CompressedEntry* const fast_cdb = cdb.data();
 
@@ -360,7 +360,7 @@ start_over:
 
         } // while (queue_begin < cdb.size())
 
-        std::sort(cdb.begin(), cdb.end(), &compare_CE);
+        pa::sort(cdb.begin(), cdb.end(), compare_CE(), threadpool);
         status_data.gauss_data.list_sorted_until = cdb.size();
         status_data.gauss_data.queue_start = cdb.size();
         status_data.gauss_data.queue_sorted_until = cdb.size();

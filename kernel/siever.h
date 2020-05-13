@@ -289,7 +289,10 @@ struct CompressedEntry {
 };
 
 // Define an ordering for sorting Compressed Entries, used for sorting.
-inline bool compare_CE(CompressedEntry const& lhs, CompressedEntry const& rhs) { return lhs.len < rhs.len; }
+struct compare_CE
+{
+    bool operator()(const CompressedEntry& lhs, const CompressedEntry& rhs) const { return lhs.len < rhs.len; }
+};
 
 /**
     An elements in the filtered_list (only used in single-threaded triple sieve)
@@ -463,9 +466,8 @@ public:
     // TODO: Document parameter large
     void grow_db(unsigned long N, unsigned int large = 0); // implemented in control.cpp
 
-    void shrink_db_task(size_t const start, size_t const end, std::vector<IT>& to_save, std::vector<IT>& to_kill);
      // Sorts and shrink the database, keeping only the N best vectors
-    void shrink_db(unsigned long N); // implemented in control.cpp
+    void shrink_db(unsigned long N, bool erase_uid = true); // implemented in control.cpp
 
     // Debug-only function. This makes a self-check of various invariants.
     // Should always return true. Will print (at least) the first problem that was found to std::cerr.
@@ -602,7 +604,7 @@ private:
 
     bool histo_valid = false;
 
-    CACHELINE_VARIABLE(std::vector<CompressedEntry>, bgj1_cdb_copy);   // temporary copy for sorting without affecting other threads
+    CACHELINE_VARIABLE(std::vector<CompressedEntry>, cdb_tmp_copy);   // temporary copy for sorting without affecting other threads
 
     CACHELINE_VARIABLE(std::vector<LiftEntry>, best_lifts_so_far); // vector of size r, containing good (i.e. short) vectors lifts so far.
                                           // More precisely, best_lifts_so_far[i] is an "Entry" of size r, whose GSO-projection onto
@@ -652,7 +654,7 @@ private:
     // consider renaming
     void set_lift_bounds(); // in control.cpp
 
-    // pre-allocate db_size slots for db and cdb (and bgj1_cdb_copy ???)
+    // pre-allocate db_size slots for db and cdb (and cdb_tmp_copy ???)
     void reserve(size_t reserve_db_size); // in control.cpp
 
     // Sets the number of threads used. Note that the threadpool uses nr-1 threads. It is intended
@@ -1054,7 +1056,7 @@ private:
     long GBL_max_trial; // maximum number of buckets bgj1 will consider between resorting before it gives up.
     CACHELINE_VARIABLE(std::atomic<std::int64_t>, GBL_remaining_trial);
     CACHELINE_VARIABLE(std::mutex, GBL_db_mutex);
-    CACHELINE_VARIABLE(std::atomic<CompressedEntry*>, GBL_start_of_cdb_ptr); // point always either to the start of cdb or to bgj1_cdb_copy (due to for sorting)
+    CACHELINE_VARIABLE(std::atomic<CompressedEntry*>, GBL_start_of_cdb_ptr); // point always either to the start of cdb or to cdb_tmp_copy (due to for sorting)
 
     // saturation stop conditions
     double GBL_saturation_histo_bound[Siever::size_of_histo]; // used by gauss sieve & triple sieve

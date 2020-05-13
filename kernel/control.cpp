@@ -2,14 +2,19 @@
 #include <mutex>
 #include "siever.h"
 
+#include "parallel_algorithms.hpp"
+namespace pa = parallel_algorithms;
+
 // reserves size for db and cdb. If called with a larger size than the current capacities, does nothing
 void Siever::reserve(size_t const reserved_db_size)
 {
     CPUCOUNT(216);
     db.reserve(reserved_db_size);
     cdb.reserve(reserved_db_size);
-    // bgj1_cdb_copy is only needed for bgj1. We delay the reservation until we need it.
-    if( sieve_status == SieveStatus::bgj1 ) bgj1_cdb_copy.reserve(reserved_db_size);
+    // old: cdb_tmp_copy is only needed for bgj1. We delay the reservation until we need it.
+    // old: if( sieve_status == SieveStatus::bgj1 )
+    // new: cdb_tmp_copy is also used in parallel_sort_cdb and other functions
+    cdb_tmp_copy.reserve(reserved_db_size);
 }
 
 // switches the current sieve_status to the new one and updates internal data accordingly.
@@ -23,11 +28,14 @@ bool Siever::switch_mode_to(Siever::SieveStatus new_sieve_status)
     {
         return false;
     }
+    cdb_tmp_copy.reserve(db.capacity());
+    cdb.reserve(db.capacity());
     switch(new_sieve_status)
     {
         case SieveStatus::bgj1 :
-            bgj1_cdb_copy.reserve(db.capacity());
+            cdb_tmp_copy.reserve(db.capacity());
             [[fallthrough]];
+
         case SieveStatus::plain :
             if(sieve_status == SieveStatus::gauss || sieve_status == SieveStatus::triple_mt)
             {
@@ -36,11 +44,15 @@ bool Siever::switch_mode_to(Siever::SieveStatus new_sieve_status)
                 assert(data.list_sorted_until <= data.queue_start);
                 assert(data.queue_start       <= data.queue_sorted_until);
                 assert(data.queue_sorted_until<= db_size() );
-                assert(std::is_sorted(cdb.cbegin(),cdb.cbegin()+data.list_sorted_until, &compare_CE  ) );
-                assert(std::is_sorted(cdb.cbegin()+data.queue_start, cdb.cbegin() + data.queue_sorted_until , &compare_CE  ));
+                assert(std::is_sorted(cdb.cbegin(),cdb.cbegin()+data.list_sorted_until, compare_CE()  ) );
+                assert(std::is_sorted(cdb.cbegin()+data.queue_start, cdb.cbegin() + data.queue_sorted_until , compare_CE()  ));
+
                 if(data.list_sorted_until == data.queue_start)
                 {
-                    std::inplace_merge(cdb.begin(), cdb.begin()+ data.queue_start, cdb.begin()+ data.queue_sorted_until, &compare_CE);
+                    cdb_tmp_copy.resize(cdb.size());
+                    pa::merge(cdb.begin(), cdb.begin()+data.queue_start, cdb.begin()+data.queue_start, cdb.begin()+data.queue_sorted_until, cdb_tmp_copy.begin(), compare_CE(), threadpool);
+                    pa::copy(cdb.begin()+data.queue_sorted_until, cdb.end(), cdb_tmp_copy.begin()+data.queue_sorted_until, threadpool);
+                    cdb.swap(cdb_tmp_copy);
                     new_status_data.plain_data.sorted_until =  data.queue_sorted_until;
                 }
                 else
@@ -52,6 +64,7 @@ bool Siever::switch_mode_to(Siever::SieveStatus new_sieve_status)
             // switching between bgj1 and plain does nothing, essentially.
             sieve_status = new_sieve_status;
             break;
+
         // switching from gauss to triple_mt and vice-versa is ill-supported (it works, but it throws away work)
         case SieveStatus::gauss :
             [[fallthrough]];
@@ -60,7 +73,7 @@ bool Siever::switch_mode_to(Siever::SieveStatus new_sieve_status)
             {
                 StatusData::Plain_Data &data = status_data.plain_data;
                 assert(data.sorted_until <= cdb.size());
-                assert(std::is_sorted(cdb.cbegin(), cdb.cbegin() + data.sorted_until, &compare_CE ));
+                assert(std::is_sorted(cdb.cbegin(), cdb.cbegin() + data.sorted_until, compare_CE() ));
                 StatusData new_status_data;
                 new_status_data.gauss_data.list_sorted_until = 0;
                 new_status_data.gauss_data.queue_start = 0;
@@ -326,7 +339,7 @@ void Siever::gso_update_postprocessing_task(size_t const start, size_t const end
     assert(n_old == (tnold < 0 ? n_old : tnold));
     std::array<ZT,MAX_SIEVING_DIM> x_new; // create one copy on the stack to avoid reallocating memory inside the loop.
 
-    for(size_t i = start; i < end; ++i)
+    for (size_t i = start; i < end; ++i)
     {
         std::fill(x_new.begin(), x_new.end(), 0);
         for(unsigned int j = 0; j < n; ++j)
@@ -382,14 +395,12 @@ void Siever::gso_update_postprocessing(const unsigned int l_, const unsigned int
     UNTEMPLATE_DIM(&Siever::gso_update_postprocessing_task, task, n_old);
 
     size_t const th_n = std::min(params.threads, static_cast<size_t>(1 + db.size() / MIN_ENTRY_PER_THREAD));
-
-    for (size_t c = 0; c < th_n; ++c)
-    {
-        threadpool.push( [this, th_n, task, c, &MT, n_old]()
-            { ((*this).*task)( (c*this->db.size())/th_n, ((c+1)*this->db.size())/th_n, n_old, MT); }
-          );
-    }
-    threadpool.wait_work();
+    threadpool.run(
+        [this, task, MT, n_old](int th_i, int th_n)
+        {
+            pa::subrange subrange(this->db.size(), th_i, th_n);
+            ((*this).*task)(subrange.first(), subrange.last(), n_old, MT);
+        }, th_n);
     invalidate_sorting();
     invalidate_histo();
     refresh_db_collision_checks();
@@ -479,21 +490,8 @@ void Siever::best_lifts(long* vecs, double* lens)
     }
 }
 
-void Siever::shrink_db_task(size_t const start, size_t const end, 
-                                std::vector<IT>& to_save, std::vector<IT>& to_kill) 
-{
-    for (size_t i = start; i < end; ++i)
-    {
-        size_t kill_i = cdb[to_kill[i]].i;
-        size_t save_i = cdb[to_save[i]].i;
-        uid_hash_table.erase_uid(db[kill_i].uid);
-        db[kill_i] = db[save_i];
-        cdb[to_save[i]].i = kill_i;
-    }    
-}
-
 // sorts cdb and only keeps the best N vectors.
-void Siever::shrink_db(unsigned long N)
+void Siever::shrink_db(unsigned long N, bool erase_uid)
 {
 
     CPUCOUNT(207);
@@ -513,32 +511,75 @@ void Siever::shrink_db(unsigned long N)
 
     std::vector<IT> to_save;
     std::vector<IT> to_kill;
+    to_save.resize(cdb.size()-N);
+    to_kill.resize(cdb.size()-N);
+    std::atomic_size_t to_save_size(0), to_kill_size(0);
 
-    to_save.reserve(cdb.size() - N);
-    to_kill.reserve(cdb.size() - N);
+    threadpool.run([this,N,&to_save,&to_kill,&to_save_size,&to_kill_size,erase_uid]
+        (int th_i, int th_n)
+        {
+            pa::subrange lowrange(0, N, th_i, th_n), highrange(N, cdb.size(), th_i, th_n);
+            auto l_it = this->cdb.begin() + lowrange.first(), l_end = this->cdb.begin() + lowrange.last();
+            auto h_it = this->cdb.begin() + highrange.first(), h_end = this->cdb.begin() + highrange.last();
+            // scan ranges and performs swaps on the fly
+            for (; l_it != l_end; ++l_it)
+            {
+                if (l_it->i < N)
+                    continue;
+                for (; h_it != h_end && h_it->i >= N; ++h_it)
+                    ;
+                if (h_it == h_end)
+                    break;
+                if (erase_uid)
+                    uid_hash_table.erase_uid(db[h_it->i].uid);
+                db[h_it->i] = db[l_it->i];
+                std::swap(l_it->i, h_it->i);
+                ++h_it;
+            }
+            // remaining parts have to be saved
+            std::vector<IT> tmpbuf;
+            for (; l_it != l_end; ++l_it)
+            {
+                if (l_it->i < N)
+                    continue;
+                tmpbuf.emplace_back(l_it - this->cdb.begin());
+            }
+            size_t w_idx = to_save_size.fetch_add(tmpbuf.size());
+            std::copy(tmpbuf.begin(), tmpbuf.end(), to_save.begin()+w_idx);
+            tmpbuf.clear();
 
-    for (size_t i = 0; i < N; ++i){
-        if (cdb[i].i >= N) to_save.push_back(i);
-    }
-
-    for (size_t i = N; i < cdb.size(); ++i){
-        if (cdb[i].i < N) to_kill.push_back(i);
-    }
-
-    size_t swaps = to_save.size();
-    assert(to_kill.size() == swaps);
-
-    size_t const th_n = std::min(params.threads, static_cast<size_t>(1 + swaps / MIN_ENTRY_PER_THREAD));
-    for (size_t c = 0; c < th_n; ++c)
-    {
-        threadpool.push( [this, th_n, swaps, c, &to_save, &to_kill]()
-            { this->shrink_db_task( (c*swaps)/th_n, ((c+1)*swaps)/th_n, to_save, to_kill); }
-          );
-    }
-    threadpool.wait_work();
+            for (; h_it != h_end; ++h_it)
+            {
+                if (h_it->i >= N)
+                {
+                    if (erase_uid)
+                        uid_hash_table.erase_uid(db[h_it->i].uid);
+                    continue;
+                }
+                tmpbuf.emplace_back(h_it - this->cdb.begin());
+            }
+            w_idx = to_kill_size.fetch_add(tmpbuf.size());
+            std::copy(tmpbuf.begin(), tmpbuf.end(), to_kill.begin()+w_idx);
+            tmpbuf.clear();
+        });
+    assert(to_kill_size == to_save_size);
+    threadpool.run([this,&to_save,&to_kill,&to_save_size,&to_kill_size,erase_uid](int th_i, int th_n)
+        {
+            std::size_t size = to_save_size;
+            pa::subrange subrange(size, th_i, th_n);
+            for (auto j : subrange)
+            {
+                std::size_t k = to_kill[j], s = to_save[j];
+                if (erase_uid)
+                    uid_hash_table.erase_uid( db[ cdb[k].i ].uid );
+                db[ cdb[k].i ] = db[ cdb[s].i ];
+                std::swap(cdb[k].i, cdb[s].i);
+            }
+        });
 
     cdb.resize(N);
     db.resize(N);
+    assert(std::is_sorted(cdb.begin(), cdb.end(), compare_CE()));
     status_data.plain_data.sorted_until = N;
     invalidate_histo();
 
@@ -555,31 +596,18 @@ void Siever::parallel_sort_cdb()
     {
         StatusData::Plain_Data &data = status_data.plain_data;
         assert(data.sorted_until <= cdb.size());
-        assert(std::is_sorted(cdb.cbegin(), cdb.cbegin() + data.sorted_until, &compare_CE  ));
+        assert(std::is_sorted(cdb.cbegin(), cdb.cbegin() + data.sorted_until, compare_CE()  ));
         if(data.sorted_until == cdb.size())
         {
             return; // nothing to do. We do not increase the statistics counter.
         }
 
-        // size of the unsorted part of cdb.
-        size_t const size_left = cdb.size() - data.sorted_until;
-        auto const start_unsorted = cdb.begin() + data.sorted_until;
-
-        // number of threads we wish to have.
-        size_t const th_n = std::min( params.threads, static_cast<size_t>(1 + size_left / (10 * MIN_ENTRY_PER_THREAD)));
-
-        for (size_t c = 0; c < th_n; ++c)
-        {
-            size_t N0 = (size_left * c) / th_n;
-            size_t N1 = (size_left * (c+1)) / th_n;
-            assert( (c < th_n) || (N1 == size_left) );
-            if (c+1 < th_n) std::nth_element(start_unsorted+N0, start_unsorted+N1, cdb.end(), &compare_CE);
-            threadpool.push([N0,N1,start_unsorted](){ std::sort(start_unsorted+N0, start_unsorted+N1, &compare_CE) ;});
-        }
-        threadpool.wait_work();
-        std::inplace_merge(cdb.begin(), start_unsorted, cdb.end(), &compare_CE);
+        pa::sort(cdb.begin()+data.sorted_until, cdb.end(), compare_CE(), threadpool);
+        cdb_tmp_copy.resize(cdb.size());
+        pa::merge(cdb.begin(), cdb.begin()+data.sorted_until, cdb.begin()+data.sorted_until, cdb.end(), cdb_tmp_copy.begin(), compare_CE(), threadpool);
+        cdb.swap(cdb_tmp_copy);
         data.sorted_until = cdb.size();
-        assert(std::is_sorted(cdb.cbegin(), cdb.cend(), &compare_CE ));
+        assert(std::is_sorted(cdb.cbegin(), cdb.cend(), compare_CE() ));
         // TODO: statistics.inc_stats_sorting_overhead();
         return;
     }
@@ -589,8 +617,8 @@ void Siever::parallel_sort_cdb()
         assert(data.list_sorted_until <= data.queue_start);
         assert(data.queue_start <= data.queue_sorted_until);
         assert(data.queue_sorted_until <= cdb.size());
-        assert(std::is_sorted(cdb.cbegin(), cdb.cbegin()+ data.list_sorted_until, &compare_CE )  );
-        assert(std::is_sorted(cdb.cbegin()+ data.queue_start, cdb.cbegin() + data.queue_sorted_until, &compare_CE ));
+        assert(std::is_sorted(cdb.cbegin(), cdb.cbegin()+ data.list_sorted_until, compare_CE() )  );
+        assert(std::is_sorted(cdb.cbegin()+ data.queue_start, cdb.cbegin() + data.queue_sorted_until, compare_CE() ));
         size_t const unsorted_list_left = data.queue_start - data.list_sorted_until;
         size_t const unsorted_queue_left = cdb.size() - data.queue_sorted_until;
         if ( (unsorted_list_left == 0) && (unsorted_queue_left == 0))
@@ -605,50 +633,48 @@ void Siever::parallel_sort_cdb()
         if (unsorted_queue_left > 0 && max_threads_queue == 0)
             max_threads_queue = 1;
 
-        if(unsorted_list_left > 0)
+        if (unsorted_list_left > 0 && unsorted_queue_left > 0)
         {
-            auto const start_unsorted = cdb.begin() + data.list_sorted_until;
-            auto const end_unsorted   = cdb.begin() + data.queue_start;
-            size_t const th_n_list = std::min(max_threads_list, static_cast<size_t>(1+ unsorted_list_left / (10* MIN_ENTRY_PER_THREAD)));
-            for(size_t c = 0; c < th_n_list; ++c)
-            {
-                size_t const N0 = (unsorted_list_left * c) / th_n_list;
-                size_t const N1 = (unsorted_list_left * (c+1)) / th_n_list;
-                assert( (c < th_n_list) || (N1 == unsorted_list_left) );
-                if( c + 1 < th_n_list) std::nth_element(start_unsorted + N0, start_unsorted + N1, end_unsorted, &compare_CE);
-                threadpool.push([N0,N1,start_unsorted](){ std::sort(start_unsorted+N0, start_unsorted+N1, &compare_CE) ;});
-            }
-            if(params.threads == 1 && unsorted_queue_left > 0)
-                threadpool.wait_work();
+            // list range : [0, data.queue_start) of which [0, data.list_sorted_until) is sorted
+            cdb_tmp_copy.resize(cdb.size());
+            pa::sort(cdb.begin() + data.list_sorted_until, cdb.begin() + data.queue_start, compare_CE(), threadpool);
+            pa::merge(cdb.begin(), cdb.begin() + data.list_sorted_until, cdb.begin() + data.list_sorted_until, cdb.begin() + data.queue_start, cdb_tmp_copy.begin(), compare_CE(), threadpool);
+            // queue range: [data.queue_start, end) of which [data.queue_start, data.queue_sorted_until) is sorted
+            pa::sort(cdb.begin() + data.queue_sorted_until, cdb.end(), compare_CE(), threadpool);
+            pa::merge(cdb.begin() + data.queue_start, cdb.begin() + data.queue_sorted_until, cdb.begin() + data.queue_sorted_until, cdb.end(), cdb_tmp_copy.begin()+data.queue_start, compare_CE(), threadpool);
+            cdb.swap(cdb_tmp_copy);
         }
-        if(unsorted_queue_left > 0)
+        else if (unsorted_list_left > 0)
         {
-            auto const start_unsorted = cdb.begin() + data.queue_sorted_until; // start of range to sort
-            auto const end_unsorted   = cdb.end(); // end of range to sort
-            size_t const th_n_queue = std::min(max_threads_queue, static_cast<size_t>(1 + unsorted_queue_left / (10 * MIN_ENTRY_PER_THREAD )));
-            for(size_t c = 0; c < th_n_queue; ++c)
+            // list range : [0, data.queue_start) of which [0, data.list_sorted_until) is sorted
+            cdb_tmp_copy.resize(cdb.size());
+            pa::sort(cdb.begin() + data.list_sorted_until, cdb.begin() + data.queue_start, compare_CE(), threadpool);
+            pa::merge(cdb.begin(), cdb.begin() + data.list_sorted_until, cdb.begin() + data.list_sorted_until, cdb.begin() + data.queue_start, cdb_tmp_copy.begin(), compare_CE(), threadpool);
+            if (data.queue_start < cdb.size()/2)
+                pa::copy(cdb_tmp_copy.begin(), cdb_tmp_copy.begin()+data.queue_start, cdb.begin(), threadpool);
+            else
             {
-                size_t const N0 = (unsorted_queue_left * c) / th_n_queue;
-                size_t const N1 = (unsorted_queue_left  * (c+1)) / th_n_queue;
-                assert( (c < th_n_queue) || (N1 == unsorted_queue_left) );
-                if ( c + 1 < th_n_queue) std::nth_element(start_unsorted + N0, start_unsorted + N1, end_unsorted, &compare_CE);
-                threadpool.push([N0, N1, start_unsorted]() {std::sort(start_unsorted+N0, start_unsorted+N1, &compare_CE); } );
+                pa::copy(cdb.begin()+data.queue_start, cdb.end(), cdb_tmp_copy.begin()+data.queue_start, threadpool);
+                cdb.swap(cdb_tmp_copy);
             }
         }
-        threadpool.wait_work();
-        if(data.list_sorted_until > 0)
+        else if (unsorted_queue_left > 0)
         {
-            threadpool.push([this, &data]{std::inplace_merge(cdb.begin(), cdb.begin() + data.list_sorted_until, cdb.begin() + data.queue_start, &compare_CE); }  );
-            if(params.threads == 1)
-                threadpool.wait_work();
+            // list range : [0, data.queue_start) of which [0, data.list_sorted_until) is sorted
+            cdb_tmp_copy.resize(cdb.size());
+            // queue range: [data.queue_start, end) of which [data.queue_start, data.queue_sorted_until) is sorted
+            pa::sort(cdb.begin() + data.queue_sorted_until, cdb.end(), compare_CE(), threadpool);
+            pa::merge(cdb.begin() + data.queue_start, cdb.begin() + data.queue_sorted_until, cdb.begin() + data.queue_sorted_until, cdb.end(), cdb_tmp_copy.begin()+data.queue_start, compare_CE(), threadpool);
+            if (data.queue_start > cdb.size()/2)
+                pa::copy(cdb_tmp_copy.begin() + data.queue_start, cdb_tmp_copy.end() + data.queue_start, cdb.begin()+data.queue_start, threadpool);
+            else
+            {
+                pa::copy(cdb.begin(), cdb.begin()+data.queue_start, cdb_tmp_copy.begin(), threadpool);
+                cdb.swap(cdb_tmp_copy);
+            }
         }
-        if(data.queue_sorted_until >  data.queue_start)
-        {
-            threadpool.push([this, &data]{std::inplace_merge(cdb.begin()+ data.queue_start, cdb.begin() + data.queue_sorted_until, cdb.end(), &compare_CE);}  );
-        }
-        threadpool.wait_work();
-        assert(std::is_sorted(cdb.cbegin(), cdb.cbegin() + data.queue_start, &compare_CE  ));
-        assert(std::is_sorted(cdb.cbegin()+ data.queue_start, cdb.cend(), &compare_CE  ));
+        assert(std::is_sorted(cdb.cbegin(), cdb.cbegin() + data.queue_start, compare_CE()  ));
+        assert(std::is_sorted(cdb.cbegin()+ data.queue_start, cdb.cend(), compare_CE()  ));
         data.list_sorted_until = data.queue_start;
         data.queue_sorted_until = cdb.size();
         return;
