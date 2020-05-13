@@ -7,8 +7,21 @@ fi
 
 # Create Virtual Environment
 
+if [ "$PYTHON" = "" ]; then PYTHON=python; export PYTHON; fi
+PIP="$PYTHON -m pip"
+
+PYVER=$($PYTHON --version | cut -d' ' -f2)
+echo "Usage:"
+echo "   ./bootstrap.sh [ -j <#jobs> ]  (uses system's python)"
+echo "   PYTHON=python2 ./bootstrap.sh  (uses python2)"
+echo "   PYTHON=python3 ./bootstrap.sh  (uses python3)"
+echo " "
+echo "Using python version: $PYVER"
+echo "Using $jobs"
+sleep 1
+
 rm -rf g6k-env
-virtualenv g6k-env
+$PYTHON -m virtualenv g6k-env
 cat <<EOF >>g6k-env/bin/activate
 ### LD_LIBRARY_HACK
 _OLD_LD_LIBRARY_PATH="\$LD_LIBRARY_PATH"
@@ -21,14 +34,28 @@ _OLD_PKG_CONFIG_PATH="\$PKG_CONFIG_PATH"
 PKG_CONFIG_PATH="\$VIRTUAL_ENV/lib/pkgconfig:\$PKG_CONFIG_PATH"
 export PKG_CONFIG_PATH
 ### END_PKG_CONFIG_HACK
+PYTHON="$PYTHON"
+export PYTHON
+unalias python 2>/dev/null
+unalias pip 2>/dev/null
+alias python=$PYTHON
+alias pip="$PYTHON -m pip"
 EOF
+
+if [ ! -d g6k-env ]; then
+	echo "Failed to create virtual environment in 'g6k-env' !"
+	echo "Is '$PYTHON -m virtualenv' working?"
+	echo "Try '$PYTHON -m pip install virtualenv' otherwise."
+	exit 1
+fi
+
 
 ln -s g6k-env/bin/activate ./
 source ./activate
 
-pip install -U pip
-pip install Cython
-pip install cysignals
+$PIP install -U pip
+$PIP install Cython
+$PIP install cysignals
 
 
 cat <<EOF >>g6k-env/bin/activate
@@ -38,6 +65,7 @@ export CFLAGS
 export CXXFLAGS
 EOF
 
+deactivate
 source ./activate
 
 
@@ -55,18 +83,21 @@ cd ..
 # Install FPyLLL
 git clone https://github.com/fplll/fpylll g6k-fpylll
 cd g6k-fpylll || exit
-pip install Cython
-pip install -r requirements.txt
-pip install -r suggestions.txt
-python setup.py clean
-python setup.py build_ext $jobs
-python setup.py install
+$PIP install Cython
+$PIP install -r requirements.txt
+$PIP install -r suggestions.txt
+$PYTHON setup.py clean
+$PYTHON setup.py build_ext $jobs || $PYTHON setup.py build_ext
+$PYTHON setup.py install
 cd ..
 
-pip install -r requirements.txt
-python setup.py clean
-python setup.py build_ext $jobs --inplace
+$PIP install -r requirements.txt
+$PYTHON setup.py clean
+$PYTHON setup.py build_ext $jobs --inplace || $PYTHON setup.py build_ext --inplace
 
 echo " "
 echo "Don't forget to activate environment each time:"
 echo " source ./activate"
+echo "This will also add the following aliases:"
+grep "^alias" activate
+

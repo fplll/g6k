@@ -84,8 +84,8 @@ fi
 export EXTRAFLAGS
 
 make -C kernel clean || exit 1
-make -C kernel -j ${jobs}
+make -C kernel -j ${jobs} || exit 1
 
-rm g6k/siever.so `find g6k -name "*.pyc"`
+rm -r build g6k/*.so `find g6k -name "*.pyc"`
 python setup.py clean
-python setup.py build_ext -j ${jobs} --inplace || exit 1
+python setup.py build_ext -j ${jobs} --inplace || python setup.py build_ext --inplace
