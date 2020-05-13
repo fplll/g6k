@@ -37,6 +37,9 @@ Otherwise, you will need fplll and fpylll already installed and build the G6K Cy
 
 Remove ``-f`` option to compile faster (fewer optimisations). See ``rebuild.sh`` for more options.
 
+If building via ```./bootstrap.sh``` fails, then the script will return an error code. 
+The error codes are documented in ```bootstrap.sh.```
+
 
 Tests
 =====
