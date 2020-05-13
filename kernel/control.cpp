@@ -11,10 +11,10 @@ void Siever::reserve(size_t const reserved_db_size)
     CPUCOUNT(216);
     db.reserve(reserved_db_size);
     cdb.reserve(reserved_db_size);
-    // old: bgj1_cdb_copy is only needed for bgj1. We delay the reservation until we need it.
+    // old: cdb_tmp_copy is only needed for bgj1. We delay the reservation until we need it.
     // old: if( sieve_status == SieveStatus::bgj1 )
-    // new: bgj1_cdb_copy is also used in parallel_sort_cdb and other functions
-    bgj1_cdb_copy.reserve(reserved_db_size);
+    // new: cdb_tmp_copy is also used in parallel_sort_cdb and other functions
+    cdb_tmp_copy.reserve(reserved_db_size);
 }
 
 // switches the current sieve_status to the new one and updates internal data accordingly.
@@ -28,12 +28,12 @@ bool Siever::switch_mode_to(Siever::SieveStatus new_sieve_status)
     {
         return false;
     }
-    bgj1_cdb_copy.reserve(db.capacity());
+    cdb_tmp_copy.reserve(db.capacity());
     cdb.reserve(db.capacity());
     switch(new_sieve_status)
     {
         case SieveStatus::bgj1 :
-            bgj1_cdb_copy.reserve(db.capacity());
+            cdb_tmp_copy.reserve(db.capacity());
             [[fallthrough]];
 
         case SieveStatus::plain :
@@ -49,10 +49,10 @@ bool Siever::switch_mode_to(Siever::SieveStatus new_sieve_status)
 
                 if(data.list_sorted_until == data.queue_start)
                 {
-                    bgj1_cdb_copy.resize(cdb.size());
-                    pa::merge(cdb.begin(), cdb.begin()+data.queue_start, cdb.begin()+data.queue_start, cdb.begin()+data.queue_sorted_until, bgj1_cdb_copy.begin(), compare_CE(), threadpool);
-                    pa::copy(cdb.begin()+data.queue_sorted_until, cdb.end(), bgj1_cdb_copy.begin()+data.queue_sorted_until, threadpool);
-                    cdb.swap(bgj1_cdb_copy);
+                    cdb_tmp_copy.resize(cdb.size());
+                    pa::merge(cdb.begin(), cdb.begin()+data.queue_start, cdb.begin()+data.queue_start, cdb.begin()+data.queue_sorted_until, cdb_tmp_copy.begin(), compare_CE(), threadpool);
+                    pa::copy(cdb.begin()+data.queue_sorted_until, cdb.end(), cdb_tmp_copy.begin()+data.queue_sorted_until, threadpool);
+                    cdb.swap(cdb_tmp_copy);
                     new_status_data.plain_data.sorted_until =  data.queue_sorted_until;
                 }
                 else
@@ -603,9 +603,9 @@ void Siever::parallel_sort_cdb()
         }
 
         pa::sort(cdb.begin()+data.sorted_until, cdb.end(), compare_CE(), threadpool);
-        bgj1_cdb_copy.resize(cdb.size());
-        pa::merge(cdb.begin(), cdb.begin()+data.sorted_until, cdb.begin()+data.sorted_until, cdb.end(), bgj1_cdb_copy.begin(), compare_CE(), threadpool);
-        cdb.swap(bgj1_cdb_copy);
+        cdb_tmp_copy.resize(cdb.size());
+        pa::merge(cdb.begin(), cdb.begin()+data.sorted_until, cdb.begin()+data.sorted_until, cdb.end(), cdb_tmp_copy.begin(), compare_CE(), threadpool);
+        cdb.swap(cdb_tmp_copy);
         data.sorted_until = cdb.size();
         assert(std::is_sorted(cdb.cbegin(), cdb.cend(), compare_CE() ));
         // TODO: statistics.inc_stats_sorting_overhead();
@@ -636,41 +636,41 @@ void Siever::parallel_sort_cdb()
         if (unsorted_list_left > 0 && unsorted_queue_left > 0)
         {
             // list range : [0, data.queue_start) of which [0, data.list_sorted_until) is sorted
-            bgj1_cdb_copy.resize(cdb.size());
+            cdb_tmp_copy.resize(cdb.size());
             pa::sort(cdb.begin() + data.list_sorted_until, cdb.begin() + data.queue_start, compare_CE(), threadpool);
-            pa::merge(cdb.begin(), cdb.begin() + data.list_sorted_until, cdb.begin() + data.list_sorted_until, cdb.begin() + data.queue_start, bgj1_cdb_copy.begin(), compare_CE(), threadpool);
+            pa::merge(cdb.begin(), cdb.begin() + data.list_sorted_until, cdb.begin() + data.list_sorted_until, cdb.begin() + data.queue_start, cdb_tmp_copy.begin(), compare_CE(), threadpool);
             // queue range: [data.queue_start, end) of which [data.queue_start, data.queue_sorted_until) is sorted
             pa::sort(cdb.begin() + data.queue_sorted_until, cdb.end(), compare_CE(), threadpool);
-            pa::merge(cdb.begin() + data.queue_start, cdb.begin() + data.queue_sorted_until, cdb.begin() + data.queue_sorted_until, cdb.end(), bgj1_cdb_copy.begin()+data.queue_start, compare_CE(), threadpool);
-            cdb.swap(bgj1_cdb_copy);
+            pa::merge(cdb.begin() + data.queue_start, cdb.begin() + data.queue_sorted_until, cdb.begin() + data.queue_sorted_until, cdb.end(), cdb_tmp_copy.begin()+data.queue_start, compare_CE(), threadpool);
+            cdb.swap(cdb_tmp_copy);
         }
         else if (unsorted_list_left > 0)
         {
             // list range : [0, data.queue_start) of which [0, data.list_sorted_until) is sorted
-            bgj1_cdb_copy.resize(cdb.size());
+            cdb_tmp_copy.resize(cdb.size());
             pa::sort(cdb.begin() + data.list_sorted_until, cdb.begin() + data.queue_start, compare_CE(), threadpool);
-            pa::merge(cdb.begin(), cdb.begin() + data.list_sorted_until, cdb.begin() + data.list_sorted_until, cdb.begin() + data.queue_start, bgj1_cdb_copy.begin(), compare_CE(), threadpool);
+            pa::merge(cdb.begin(), cdb.begin() + data.list_sorted_until, cdb.begin() + data.list_sorted_until, cdb.begin() + data.queue_start, cdb_tmp_copy.begin(), compare_CE(), threadpool);
             if (data.queue_start < cdb.size()/2)
-                pa::copy(bgj1_cdb_copy.begin(), bgj1_cdb_copy.begin()+data.queue_start, cdb.begin(), threadpool);
+                pa::copy(cdb_tmp_copy.begin(), cdb_tmp_copy.begin()+data.queue_start, cdb.begin(), threadpool);
             else
             {
-                pa::copy(cdb.begin()+data.queue_start, cdb.end(), bgj1_cdb_copy.begin()+data.queue_start, threadpool);
-                cdb.swap(bgj1_cdb_copy);
+                pa::copy(cdb.begin()+data.queue_start, cdb.end(), cdb_tmp_copy.begin()+data.queue_start, threadpool);
+                cdb.swap(cdb_tmp_copy);
             }
         }
         else if (unsorted_queue_left > 0)
         {
             // list range : [0, data.queue_start) of which [0, data.list_sorted_until) is sorted
-            bgj1_cdb_copy.resize(cdb.size());
+            cdb_tmp_copy.resize(cdb.size());
             // queue range: [data.queue_start, end) of which [data.queue_start, data.queue_sorted_until) is sorted
             pa::sort(cdb.begin() + data.queue_sorted_until, cdb.end(), compare_CE(), threadpool);
-            pa::merge(cdb.begin() + data.queue_start, cdb.begin() + data.queue_sorted_until, cdb.begin() + data.queue_sorted_until, cdb.end(), bgj1_cdb_copy.begin()+data.queue_start, compare_CE(), threadpool);
+            pa::merge(cdb.begin() + data.queue_start, cdb.begin() + data.queue_sorted_until, cdb.begin() + data.queue_sorted_until, cdb.end(), cdb_tmp_copy.begin()+data.queue_start, compare_CE(), threadpool);
             if (data.queue_start > cdb.size()/2)
-                pa::copy(bgj1_cdb_copy.begin() + data.queue_start, bgj1_cdb_copy.end() + data.queue_start, cdb.begin()+data.queue_start, threadpool);
+                pa::copy(cdb_tmp_copy.begin() + data.queue_start, cdb_tmp_copy.end() + data.queue_start, cdb.begin()+data.queue_start, threadpool);
             else
             {
-                pa::copy(cdb.begin(), cdb.begin()+data.queue_start, bgj1_cdb_copy.begin(), threadpool);
-                cdb.swap(bgj1_cdb_copy);
+                pa::copy(cdb.begin(), cdb.begin()+data.queue_start, cdb_tmp_copy.begin(), threadpool);
+                cdb.swap(cdb_tmp_copy);
             }
         }
         assert(std::is_sorted(cdb.cbegin(), cdb.cbegin() + data.queue_start, compare_CE()  ));

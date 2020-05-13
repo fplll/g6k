@@ -484,10 +484,10 @@ bool Siever::bgj1_execute_delayed_replace(std::vector<Entry>& transaction_db, bo
     }
     else
     {
-        bgj1_cdb_copy=cdb;
-        std::sort(bgj1_cdb_copy.begin()+GBL_replace_pos+1, bgj1_cdb_copy.end(), compare_CE());
-        std::inplace_merge(bgj1_cdb_copy.begin(), bgj1_cdb_copy.begin()+GBL_replace_pos+1, bgj1_cdb_copy.end(), compare_CE());
-        cdb.swap(bgj1_cdb_copy);
+        cdb_tmp_copy=cdb;
+        std::sort(cdb_tmp_copy.begin()+GBL_replace_pos+1, cdb_tmp_copy.end(), compare_CE());
+        std::inplace_merge(cdb_tmp_copy.begin(), cdb_tmp_copy.begin()+GBL_replace_pos+1, cdb_tmp_copy.end(), compare_CE());
+        cdb.swap(cdb_tmp_copy);
         GBL_start_of_cdb_ptr = &(cdb.front());
     }
     statistics.inc_stats_sorting_sieve();
