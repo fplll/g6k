@@ -666,7 +666,7 @@ void Siever::parallel_sort_cdb()
             pa::sort(cdb.begin() + data.queue_sorted_until, cdb.end(), compare_CE(), threadpool);
             pa::merge(cdb.begin() + data.queue_start, cdb.begin() + data.queue_sorted_until, cdb.begin() + data.queue_sorted_until, cdb.end(), cdb_tmp_copy.begin()+data.queue_start, compare_CE(), threadpool);
             if (data.queue_start > cdb.size()/2)
-                pa::copy(cdb_tmp_copy.begin() + data.queue_start, cdb_tmp_copy.end() + data.queue_start, cdb.begin()+data.queue_start, threadpool);
+                pa::copy(cdb_tmp_copy.begin()+data.queue_start, cdb_tmp_copy.end(), cdb.begin()+data.queue_start, threadpool);
             else
             {
                 pa::copy(cdb.begin(), cdb.begin()+data.queue_start, cdb_tmp_copy.begin(), threadpool);
