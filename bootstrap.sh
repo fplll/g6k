@@ -75,9 +75,9 @@ git clone https://github.com/fplll/fplll g6k-fplll
 cd g6k-fplll || exit
 ./autogen.sh
 ./configure --prefix="$VIRTUAL_ENV" $CONFIGURE_FLAGS
-make clean || exit
-make $jobs || exit
-make install || exit
+make clean #|| exit
+make $jobs #|| exit
+make install #|| exit
 cd ..
 
 # Install FPyLLL
@@ -86,13 +86,13 @@ cd g6k-fpylll || exit
 $PIP install Cython
 $PIP install -r requirements.txt
 $PIP install -r suggestions.txt
-$PYTHON setup.py clean || exit
+$PYTHON setup.py clean
 $PYTHON setup.py build_ext $jobs || $PYTHON setup.py build_ext
-$PYTHON setup.py install || exit
+$PYTHON setup.py install
 cd ..
 
 $PIP install -r requirements.txt
-$PYTHON setup.py clean || exit
+$PYTHON setup.py clean
 $PYTHON setup.py build_ext $jobs --inplace || $PYTHON setup.py build_ext --inplace
 
 echo " "
