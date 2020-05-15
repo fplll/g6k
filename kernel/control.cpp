@@ -491,7 +491,7 @@ void Siever::best_lifts(long* vecs, double* lens)
 }
 
 // sorts cdb and only keeps the best N vectors.
-void Siever::shrink_db(unsigned long N, bool erase_uid)
+void Siever::shrink_db(unsigned long N)
 {
 
     CPUCOUNT(207);
@@ -515,7 +515,7 @@ void Siever::shrink_db(unsigned long N, bool erase_uid)
     to_kill.resize(cdb.size()-N);
     std::atomic_size_t to_save_size(0), to_kill_size(0);
 
-    threadpool.run([this,N,&to_save,&to_kill,&to_save_size,&to_kill_size,erase_uid]
+    threadpool.run([this,N,&to_save,&to_kill,&to_save_size,&to_kill_size]
         (int th_i, int th_n)
         {
             pa::subrange lowrange(0, N, th_i, th_n), highrange(N, cdb.size(), th_i, th_n);
@@ -527,11 +527,10 @@ void Siever::shrink_db(unsigned long N, bool erase_uid)
                 if (l_it->i < N)
                     continue;
                 for (; h_it != h_end && h_it->i >= N; ++h_it)
-                    ;
+                    uid_hash_table.erase_uid(db[h_it->i].uid);
                 if (h_it == h_end)
                     break;
-                if (erase_uid)
-                    uid_hash_table.erase_uid(db[h_it->i].uid);
+                uid_hash_table.erase_uid(db[h_it->i].uid);
                 db[h_it->i] = db[l_it->i];
                 std::swap(l_it->i, h_it->i);
                 ++h_it;
@@ -552,8 +551,7 @@ void Siever::shrink_db(unsigned long N, bool erase_uid)
             {
                 if (h_it->i >= N)
                 {
-                    if (erase_uid)
-                        uid_hash_table.erase_uid(db[h_it->i].uid);
+                    uid_hash_table.erase_uid(db[h_it->i].uid);
                     continue;
                 }
                 tmpbuf.emplace_back(h_it - this->cdb.begin());
@@ -563,15 +561,14 @@ void Siever::shrink_db(unsigned long N, bool erase_uid)
             tmpbuf.clear();
         });
     assert(to_kill_size == to_save_size);
-    threadpool.run([this,&to_save,&to_kill,&to_save_size,&to_kill_size,erase_uid](int th_i, int th_n)
+    threadpool.run([this,&to_save,&to_kill,&to_save_size,&to_kill_size](int th_i, int th_n)
         {
             std::size_t size = to_save_size;
             pa::subrange subrange(size, th_i, th_n);
             for (auto j : subrange)
             {
                 std::size_t k = to_kill[j], s = to_save[j];
-                if (erase_uid)
-                    uid_hash_table.erase_uid( db[ cdb[k].i ].uid );
+                uid_hash_table.erase_uid( db[ cdb[k].i ].uid );
                 db[ cdb[k].i ] = db[ cdb[s].i ];
                 std::swap(cdb[k].i, cdb[s].i);
             }

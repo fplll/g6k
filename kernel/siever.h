@@ -467,7 +467,7 @@ public:
     void grow_db(unsigned long N, unsigned int large = 0); // implemented in control.cpp
 
      // Sorts and shrink the database, keeping only the N best vectors
-    void shrink_db(unsigned long N, bool erase_uid = true); // implemented in control.cpp
+    void shrink_db(unsigned long N); // implemented in control.cpp
 
     // Debug-only function. This makes a self-check of various invariants.
     // Should always return true. Will print (at least) the first problem that was found to std::cerr.
