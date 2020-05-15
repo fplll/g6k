@@ -119,8 +119,8 @@ class SieveTreeTracer(Tracer):
             else:
                 node.data[k] = Accumulator(v, repr="min")
 
-        if kwds.get("dump_gso", node.level == 1):
-            node.data["r"] =  node.data.get("r", []) + [self.instance.M.r()]
+        if kwds.get("dump_gso", node.level <= 1):
+            node.data["r"] =  self.instance.M.r()
 
         verbose_labels = ["tour", "prog_tour"]
 
