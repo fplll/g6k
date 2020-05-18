@@ -13,8 +13,11 @@ inline void UidHashTable::reset_hash_function(Siever& siever)
     uid_coeffs.resize(n);
     for (unsigned i = 0; i < n; i++)
         uid_coeffs[i] = siever.rng.rng_nolock();
-    for (unsigned i = 0; i < DB_UID_SPLIT; ++i)
-        db_uid[i].clear();
+    siever.threadpool.run([this](int th_i, int th_n)
+    {
+        for (auto j : pa::subrange(DB_UID_SPLIT, th_i, th_n))
+            db_uid[j].clear();
+    });
     insert_uid(0);
     return;
 }
