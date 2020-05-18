@@ -410,7 +410,7 @@ inline constexpr ENUMNAME operator~(ENUMNAME const arg) \
 // MACRO for cachline padding: ensure this variable is in its own cacheline
 // this prevents unnecessary cacheline contention between CPUs
 // because several unrelated global variables are in the same cacheline
-struct cacheline_padding_t { uint64_t pad[8]; };
+struct cacheline_padding_t { uint64_t pad[16]; };
 // _ ## NOTE: added to interfere less with auto-completion of my editor
 #define CACHELINE_VARIABLE(type,name) cacheline_padding_t _ ## name ## prepad; type name; cacheline_padding_t _ ## name ## postpad;
 #define CACHELINE_VARIABLE2(type,name,init) cacheline_padding_t _ ## name ## prepad; type name init; cacheline_padding_t _ ## name ## postpad;

@@ -194,8 +194,10 @@ private:
     }
 
     // Note: The splitting is purely to allow better parallelism.
-    std::array<std::unordered_set<UidType>, DB_UID_SPLIT> db_uid;     // Sets of the uids of all vectors of the database. db_uid[i] contains only vectors with (normalized) uid % DB_UID_SPLIT == i.
-    std::array<std::mutex, DB_UID_SPLIT> db_mut; // array of mutexes. db_mut[i] protects all access to db_uid[i].
+    struct padded_map: std::unordered_set<UidType> { cacheline_padding_t pad; };
+    std::array<padded_map, DB_UID_SPLIT> db_uid;     // Sets of the uids of all vectors of the database. db_uid[i] contains only vectors with (normalized) uid % DB_UID_SPLIT == i.
+    struct padded_mutex: std::mutex { cacheline_padding_t pad; };
+    std::array<padded_mutex, DB_UID_SPLIT> db_mut; // array of mutexes. db_mut[i] protects all access to db_uid[i].    unsigned int n; // dimension of points in the domain of the hash function.
     unsigned int n; // dimension of points in the domain of the hash function.
                     // The hash function only works on vectors of this size
     std::vector<UidType> uid_coeffs;        // description of the hash function.
