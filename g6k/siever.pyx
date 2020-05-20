@@ -438,7 +438,7 @@ cdef class Siever(object):
             >>> out = db[0]; out if db[0][0] > 0 else tuple([-x for x in out])
             (1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
-        We get coordinates wrt the canonical basis
+        We get coordinates wrt the basis B
 
         .. note:: This function is mainly used for debugging purposes.
 
