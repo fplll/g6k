@@ -388,6 +388,8 @@ cdef class SieverParams(object):
             if k not in self.known_attributes:
                 yield k, v
 
+    items = iteritems
+
     def __iter__(self):
         """
         Iterate over keys::
