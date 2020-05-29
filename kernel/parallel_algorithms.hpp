@@ -421,25 +421,25 @@ namespace parallel_algorithms {
 				}
 				while (true)
 				{
-					if (cf(*iv1first,*iv2first))
+					if (cf(*iv2first, *iv1first))
 					{
-						*d = std::move(*iv1first); ++d;
-						if (++iv1first == iv1last)
+						*d = std::move(*iv2first); ++d; ++iv2first;
+						if (iv2first == iv2last)
 						{
-							if (thi<thn-1)
+							std::move(iv1first, iv1last, d);
+							return;
+						}
+					} else
+					{
+						*d = std::move(*iv1first); ++d; ++iv1first;
+						if (iv1first == iv1last)
+						{
+							if (thi+1 < thn)
 							{
 								for (; iv2first != iv2last && cf(*iv2first, *iv1last); ++iv2first,++d)
 									*d = std::move(*iv2first);
 							} else
 								std::move(iv2first, iv2last, d);
-							return;
-						}
-					} else
-					{
-						*d = std::move(*iv2first); ++d;
-						if (++iv2first == iv2last)
-						{
-							std::move(iv1first, iv1last, d);
 							return;
 						}
 					}
