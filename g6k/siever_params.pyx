@@ -166,7 +166,7 @@ cdef class SieverParams(object):
         elif key == "bgj1_transaction_bulk_size":
             self._core.bgj1_transaction_bulk_size = value
         elif key == "simhash_codes_basedir":
-            self._core.simhash_codes_basedir = value
+            self._core.simhash_codes_basedir = value.encode("utf-8") if isinstance(value, str) else value
         else:
             self._pyattr[key] = value
 
