@@ -92,7 +92,7 @@ start_over:
                             //std::cout <<" p  is reduced "<< std::endl;
                             goto start_over;
                         }
-                        else // some other point 'above' p was reduced, move it to the 'Queue'-part of the list
+                        else if(queue_begin) // some other point 'above' p was reduced, move it to the 'Queue'-part of the list
                         {
                             assert(cv2_vec_len > fast_cdb[j].len );
                             using std::swap;
