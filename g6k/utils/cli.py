@@ -132,9 +132,9 @@ def git_revisionf():
 
     for cmd in cmds:
         try:
-            r = str(subprocess.check_output(cmd).rstrip())
+            r = str(subprocess.check_output(cmd, stderr=subprocess.STDOUT).rstrip())
             git_revision.append(r)
-        except ValueError:
+        except (ValueError, subprocess.CalledProcessError):
             pass
 
     git_revision = "-".join(git_revision)
