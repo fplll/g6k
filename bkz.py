@@ -16,7 +16,7 @@ from collections import OrderedDict
 from fpylll import BKZ as BKZ_FPYLLL, GSO, IntegerMatrix
 from fpylll.tools.quality import basis_quality
 
-from g6k.algorithms.bkz import naive_bkz_tour, pump_n_jump_bkz_tour
+from g6k.algorithms.bkz import naive_bkz_tour, pump_n_jump_bkz_tour, slide_tour
 from g6k.siever import Siever
 from g6k.utils.cli import parse_args, run_all, pop_prefixed_params
 from g6k.utils.stats import SieveTreeTracer, dummy_tracer
@@ -75,6 +75,7 @@ def bkz_kernel(arg0, params=None, seed=None):
     dim4free_fun = params.pop("bkz/dim4free_fun")
     extra_dim4free = params.pop("bkz/extra_dim4free")
     jump = params.pop("bkz/jump")
+    overlap = params.pop("slide/overlap")
     pump_params = pop_prefixed_params("pump", params)
     workout_params = pop_prefixed_params("workout", params)
 
@@ -114,36 +115,43 @@ def bkz_kernel(arg0, params=None, seed=None):
 
     T0 = time.time()
     for blocksize in blocksizes:
+        with tracer.context("blocksize", blocksize, dump_gso= not dont_trace):
+            for t in range(tours):
+                with tracer.context("tour", t, dump_gso=True):
+                    if algbkz == "fpylll":
+                        par = BKZ_FPYLLL.Param(blocksize,
+                                               strategies=BKZ_FPYLLL.DEFAULT_STRATEGY,
+                                               max_loops=1)
+                        bkz(par)
 
-        for t in range(tours):
-            with tracer.context("tour", t, dump_gso=True):
-                if algbkz == "fpylll":
-                    par = BKZ_FPYLLL.Param(blocksize,
-                                           strategies=BKZ_FPYLLL.DEFAULT_STRATEGY,
-                                           max_loops=1)
-                    bkz(par)
+                    elif algbkz == "naive":
+                        naive_bkz_tour(g6k, tracer, blocksize,
+                                       extra_dim4free=extra_dim4free,
+                                       dim4free_fun=dim4free_fun,
+                                       workout_params=workout_params,
+                                       pump_params=pump_params)
 
-                elif algbkz == "naive":
-                    naive_bkz_tour(g6k, tracer, blocksize,
-                                   extra_dim4free=extra_dim4free,
+                    elif algbkz == "pump_and_jump":
+                        pump_n_jump_bkz_tour(g6k, tracer, blocksize, jump=jump,
+                                             dim4free_fun=dim4free_fun,
+                                             extra_dim4free=extra_dim4free,
+                                             pump_params=pump_params)
+                    elif algbkz == "slide":
+                        slide_tour(g6k, dummy_tracer, blocksize, overlap=overlap,
                                    dim4free_fun=dim4free_fun,
+                                   extra_dim4free=extra_dim4free,
                                    workout_params=workout_params,
                                    pump_params=pump_params)
+                    else:
+                        raise ValueError("bkz/alg=%s not recognized." % algbkz)
 
-                elif algbkz == "pump_and_jump":
-                    pump_n_jump_bkz_tour(g6k, tracer, blocksize, jump=jump,
-                                         dim4free_fun=dim4free_fun,
-                                         extra_dim4free=extra_dim4free,
-                                         pump_params=pump_params)
-                else:
-                    raise ValueError("bkz/alg=%s not recognized." % algbkz)
-
-            if verbose:
-                slope = basis_quality(M)["/"]
-                fmt = "{'alg': '%25s', 'jump':%2d, 'pds':%d, 'extra_d4f': %2d, 'beta': %2d, 'slope': %.5f, 'total walltime': %.3f}" # noqa
-                print(fmt % (algbkz + "+" + ("enum" if algbkz == "fpylll" else g6k.params.default_sieve),
-                             jump, pump_params["down_sieve"], extra_dim4free,
-                             blocksize, slope, time.time() - T0))
+                if verbose:
+                    slope = basis_quality(M)["/"]
+                    rhf = basis_quality(M)["rhf"]
+                    fmt = "{'alg': '%25s', 'jump':%2d, 'pds':%d, 'extra_d4f': %2d, 'beta': %2d, 'slope': %.5f, 'rhf': %.5f,'total walltime': %.3f}" # noqa
+                    print(fmt % (algbkz + "+" + ("enum" if algbkz == "fpylll" else g6k.params.default_sieve),
+                                 jump, pump_params["down_sieve"], extra_dim4free,
+                                 blocksize, slope, rhf, time.time() - T0))
 
     tracer.exit()
     slope = basis_quality(M)["/"]
@@ -173,6 +181,7 @@ def bkz_tour():
                                   bkz__extra_dim4free=0,
                                   bkz__jump=1,
                                   bkz__dim4free_fun="default_dim4free_fun",
+                                  slide__overlap=1,
                                   pump__down_sieve=True,
                                   challenge_seed=0,
                                   dummy_tracer=False,  # set to control memory
@@ -191,9 +200,8 @@ def bkz_tour():
     inverse_all_params = OrderedDict([(v, k) for (k, v) in six.iteritems(all_params)])
     stats = sanitize_params_names(stats, inverse_all_params)
 
-    fmt = "{name:50s} :: n: {n:2d}, cputime {cputime:7.4f}s, walltime: {walltime:7.4f}s, slope: {slope:1.5f}, |db|: 2^{avg_max:.2f}"
-    profiles = print_stats(fmt, stats, ("cputime", "walltime", "slope", "avg_max"),
-                           extractf={"avg_max": lambda n, params, stat: db_stats(stat)[0]})
+    fmt = "{name:50s} :: n: {n:2d}, cputime {cputime:7.4f}s, walltime: {walltime:7.4f}s, slope: {slope:1.5f}"
+    profiles = print_stats(fmt, stats, ("cputime", "walltime", "slope"))
 
     output_profiles(args.profile, profiles)
 
