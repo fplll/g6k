@@ -8,4 +8,4 @@ python bkz.py 170 --bkz/alg slide --slide/overlap 1 --bkz/blocksizes 85:86:1 --b
 
 for overlap and challenge_seed in [1,5,10,15] and [0,1,2,...,9], respectively.
 
-[1] The Convergence of Slide-type Reduction. Michael Walter. 2020
+[1] The Convergence of Slide-type Reduction. 2020
