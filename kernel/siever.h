@@ -1071,10 +1071,9 @@ private:
     void bdgl_bucketing(const size_t blocks, const size_t multi_hash, const size_t nr_buckets_aim, 
                         std::vector<int> &buckets, std::vector<size_t> &buckets_index);
 
-    void bdgl_process_buckets_task(const size_t threads, const size_t t_id, const std::vector<int> &buckets, 
+    void bdgl_process_buckets_task(const size_t t_id, const std::vector<int> &buckets, 
                                    const std::vector<size_t> &buckets_index, std::vector<QEntry> &t_queue);
-    double bdgl_process_buckets(thread_pool::thread_pool &pool, const size_t threads, 
-                                const std::vector<int> &buckets, const std::vector<size_t> &buckets_index,
+    double bdgl_process_buckets(const std::vector<int> &buckets, const std::vector<size_t> &buckets_index,
                                 std::vector<QEntry> &queue);
     
     void bdgl_queue_create_task( const size_t threads, const size_t t_id, const std::vector<QEntry> &queue, std::vector<Entry> &transaction_dbi, int64_t &write_index);

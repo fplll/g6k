@@ -230,7 +230,7 @@ void Siever::bdgl_bucketing(const size_t blocks, const size_t multi_hash, const 
 {
     // init hash
     const int64_t lsh_seed = rng();
-    ProductLSH lsh(n, blocks, nr_buckets_aim, multi_hash, lsh_seed, true);
+    ProductLSH lsh(n, blocks, nr_buckets_aim, multi_hash, lsh_seed, false);
     const size_t nr_buckets = lsh.codesize;
     const size_t S = cdb.size();
     size_t bsize = 2 * (S*multi_hash / double(nr_buckets));
@@ -248,13 +248,13 @@ void Siever::bdgl_bucketing(const size_t blocks, const size_t multi_hash, const 
     
     for( size_t i = 0; i < nr_buckets; ++i ) {
         if( buckets_index[i] > bsize ) {
-            //std::cerr << "Bucket too large by ratio " << i << " " <<  (buckets_index[i] / double(bsize)) << " " << buckets_index[i] << " " << bsize << std::endl;
+            std::cerr << "Bucket too large by ratio " << i << " " <<  (buckets_index[i] / double(bsize)) << " " << buckets_index[i] << " " << bsize << std::endl;
             buckets_index[i] = bsize;
         }
     }
 }
 
-void Siever::bdgl_process_buckets_task(const size_t threads, const size_t t_id, 
+void Siever::bdgl_process_buckets_task(const size_t t_id, 
     const std::vector<int> &buckets, 
     const std::vector<size_t> &buckets_index, std::vector<QEntry> &t_queue)
 {
@@ -277,7 +277,7 @@ void Siever::bdgl_process_buckets_task(const size_t threads, const size_t t_id,
     const size_t b_start = t_id;
 
     size_t B = 0;
-    for (size_t b = b_start; b < nr_buckets; b += threads)
+    for (size_t b = b_start; b < nr_buckets; b += params.threads)
     {
         const size_t i_start = bsize * b;
         const size_t i_end = bsize * b + buckets_index[b];
@@ -298,7 +298,7 @@ void Siever::bdgl_process_buckets_task(const size_t threads, const size_t t_id,
                     if( len_and_sign.first < lenbound)
                     {
                         if (kk < .1 * A) break;
-                        kk -= threads;
+                        kk -= params.threads;
                         
                         statistics.inc_stats_2redsuccess_outer();
 
@@ -317,29 +317,27 @@ void Siever::bdgl_process_buckets_task(const size_t threads, const size_t t_id,
 }
 
 // Returned queue is sorted
-double Siever::bdgl_process_buckets(thread_pool::thread_pool &pool, const size_t threads,
-    const std::vector<int> &buckets, 
-    const std::vector<size_t> &buckets_index, 
+double Siever::bdgl_process_buckets(const std::vector<int> &buckets, const std::vector<size_t> &buckets_index, 
     std::vector<QEntry> &queue)
 {
     auto start_processing = std::chrono::steady_clock::now();
 
-    std::vector<std::vector<QEntry>> t_queues(threads);
-    for (size_t t_id = 0; t_id < threads; ++t_id)
+    std::vector<std::vector<QEntry>> t_queues(params.threads);
+    for (size_t t_id = 0; t_id < params.threads; ++t_id)
     {
-        pool.push([this, threads, t_id, &buckets, &buckets_index, &t_queues](){bdgl_process_buckets_task(threads, t_id, buckets, buckets_index, t_queues[t_id]);});
+        threadpool.push([this, t_id, &buckets, &buckets_index, &t_queues](){bdgl_process_buckets_task(t_id, buckets, buckets_index, t_queues[t_id]);});
     }
-    pool.wait_work();
+    threadpool.wait_work();
 
     // TODO: parallel mergetree
     size_t Q = 0;
-    for(size_t t_id = 0; t_id < threads; ++t_id)
+    for(size_t t_id = 0; t_id < params.threads; ++t_id)
     {
         Q += t_queues[t_id].size();
     }
     queue.resize(Q);
     Q = 0;
-    for(size_t t_id = 0; t_id < threads; ++t_id)
+    for(size_t t_id = 0; t_id < params.threads; ++t_id)
     {
         std::copy(t_queues[t_id].begin(), t_queues[t_id].end(), queue.begin() + Q);
         if( t_id > 0 )
@@ -496,7 +494,7 @@ bool Siever::bdgl_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t
     while( true ) {
         bdgl_bucketing(blocks, multi_hash, nr_buckets_aim, buckets, buckets_i);
 
-        bdgl_process_buckets(threadpool, params.threads, buckets, buckets_i, queue);
+        bdgl_process_buckets(buckets, buckets_i, queue);
 
         size_t kk = bdgl_queue( threadpool, params.threads, queue, transaction_db );
 
