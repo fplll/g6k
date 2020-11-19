@@ -1083,7 +1083,7 @@ private:
                                 const std::vector<int> &buckets, const std::vector<size_t> &buckets_index,
                                 std::vector<QEntry> &queue);
     
-    size_t bdgl_queue_create_task( const size_t threads, const size_t t_id, const std::vector<QEntry> &queue, std::vector<Entry> &transaction_dbi, int64_t &write_index);
+    void bdgl_queue_create_task( const size_t threads, const size_t t_id, const std::vector<QEntry> &queue, std::vector<Entry> &transaction_dbi, int64_t &write_index);
     void bdgl_queue_dup_remove_task( const size_t threads, const size_t t_id, std::vector<QEntry> &queue);
     size_t bdgl_queue_insert_task( const size_t threads, const size_t t_id, std::vector<Entry> &transaction_dbi, int64_t write_index);
     size_t bdgl_queue( thread_pool::thread_pool &pool, const size_t threads, 

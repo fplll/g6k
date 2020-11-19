@@ -421,33 +421,25 @@ void Siever::bdgl_queue_dup_remove_task( const size_t threads, const size_t t_id
     }
 }
 
-size_t Siever::bdgl_queue_create_task( const size_t threads, const size_t t_id, const std::vector<QEntry> &queue, std::vector<Entry> &transaction_db, int64_t &write_index) {
+void Siever::bdgl_queue_create_task( const size_t threads, const size_t t_id, const std::vector<QEntry> &queue, std::vector<Entry> &transaction_db, int64_t &write_index) {
     const size_t S = cdb.size();
     const size_t Q = queue.size();
 
     const size_t insert_after = (cdb.size() != cdb.size()) ? cdb.size() : S-1-t_id-threads*write_index; 
-    size_t wrong_length = 0;
-    size_t duplicate = 0;
-    size_t replaced = 0;
     for( int index = t_id; index < Q; index += threads )  {     
         // use sign as skip marker
         if( queue[index].sign == 0 ){
             duplicate += 1;
             continue;
         }
-        int ret =bdgl_reduce_with_delayed_replace( queue[index].i, queue[index].j, 
+        bdgl_reduce_with_delayed_replace( queue[index].i, queue[index].j, 
                                                   cdb[std::min(S-1, insert_after+threads*write_index)].len / REDUCE_LEN_MARGIN,
                                                   transaction_db, write_index, queue[index].len, queue[index].sign);
-        wrong_length += (ret==-1) ? 1 : 0;
-        duplicate += (ret==0) ? 1: 0;
-        replaced += (ret==1) ? 1 : 0;
         if( write_index < 0 ){
             std::cerr << "Spilling full transaction db" << t_id << " " << Q-index << std::endl;
             break;
         }
     }
-
-    return wrong_length;
 }
 
 size_t Siever::bdgl_queue_insert_task( const size_t threads, const size_t t_id, std::vector<Entry> &transaction_db, int64_t write_index) {
