@@ -32,7 +32,6 @@ std::pair<LFT, int8_t> Siever::reduce_to_QEntry(CompressedEntry *ce1, Compressed
     LFT new_l = ce1->len + ce2->len - 2 * std::abs(inner);
     int8_t sign = (inner < 0 ) ? 1 : -1;
     return { new_l, sign };
-    // We will want to add on the fly lifting here
 }
 
 inline int Siever::bdgl_reduce_with_delayed_replace(const size_t i1, const size_t i2, LFT const lenbound, std::vector<Entry>& transaction_db, int64_t& write_index, LFT new_l, int8_t sign)
@@ -98,11 +97,6 @@ inline int Siever::bdgl_reduce_with_delayed_replace(const size_t i1, const size_
             return 0;
         }
     } 
-    else {
-        return -1;
-    }
-    /*
-    // why lift here if GPU already does this with dual hash
     else if (params.otf_lift && (new_l < params.lift_radius))
     {
         ZT x[r];
@@ -133,8 +127,8 @@ inline int Siever::bdgl_reduce_with_delayed_replace(const size_t i1, const size_
             }
         }
         lift_and_compare(x, new_l * gh, otf_helper);
-    }*/
-    return false;
+    }
+    return -1;
 }
 
 // assumed that sign is known
@@ -200,21 +194,18 @@ bool Siever::bdgl_replace_in_db(size_t cdb_index, Entry &e)
 template<bool cdb_indices=true>
 void Siever::bdgl_bucketing_task(const size_t threads, const size_t t_id,
    const size_t A, const size_t multi_hash, 
-   std::vector<int> &buckets, std::vector<size_t> &buckets_index, 
-   std::vector<int> &lift_buckets, std::vector<size_t> &lift_buckets_index, ProductLSH &lsh)
+   std::vector<int> &buckets, std::vector<size_t> &buckets_index, ProductLSH &lsh)
 {
     
     CompressedEntry* const fast_cdb = cdb.data();
 
     const int nr_buckets = buckets_index.size();
     const size_t bsize = buckets.size() / nr_buckets;
-    const size_t liftbsize = lift_buckets.size() / nr_buckets;
 
     size_t i_start = t_id;
     
     int32_t res[multi_hash];
     size_t bucket_index = 0;
-    size_t lift_bucket_index = 0;
     for (size_t i = i_start; i < A; i += threads)
     {  
         auto db_index = fast_cdb[i].i;
@@ -227,9 +218,6 @@ void Siever::bdgl_bucketing_task(const size_t threads, const size_t t_id,
             {
                 std::lock_guard<std::mutex> lockguard(bdgl_bucket_mut[ b_abs % BDGL_BUCKET_SPLIT ]);
                 bucket_index = buckets_index[b_abs]++; // mutex protected
-                if( liftbsize > 0 and j == 0 ) {
-                    lift_bucket_index = lift_buckets_index[b_abs]++;
-                }
             }
             if( bucket_index < bsize ) {
                 if( cdb_indices )
@@ -237,8 +225,6 @@ void Siever::bdgl_bucketing_task(const size_t threads, const size_t t_id,
                 else
                     buckets[bsize * b_abs + bucket_index] = (sign)?-db_index:db_index;
             }
-            if( j==0 and lift_bucket_index < liftbsize )
-                lift_buckets[liftbsize * b_abs + lift_bucket_index] = (sign)?-db_index:db_index;
         }
     }
 }
@@ -270,8 +256,7 @@ void Siever::bdgl_bucketing_sort_task(const size_t threads, const size_t t_id,
 template<bool cdb_indices=true>
 void Siever::bdgl_bucketing(thread_pool::thread_pool &pool, const size_t threads, 
     const size_t A, const size_t blocks, const size_t multi_hash, 
-    std::vector<int> &buckets, std::vector<size_t> &buckets_index,
-    std::vector<int> &lift_buckets, std::vector<size_t> &lift_buckets_index)
+    std::vector<int> &buckets, std::vector<size_t> &buckets_index)
 {
 
     // init hash
@@ -282,13 +267,14 @@ void Siever::bdgl_bucketing(thread_pool::thread_pool &pool, const size_t threads
 
     for (size_t t_id = 0; t_id < threads; ++t_id)
     {
-        pool.push([this, threads, t_id, A, multi_hash, &buckets, &buckets_index, &lift_buckets, &lift_buckets_index, &lsh](){bdgl_bucketing_task<true>(threads, t_id, A, multi_hash, buckets, buckets_index, lift_buckets, lift_buckets_index, lsh);});
+        pool.push([this, threads, t_id, A, multi_hash, &buckets, &buckets_index, &lsh](){
+            bdgl_bucketing_task<true>(threads, t_id, A, multi_hash, buckets, buckets_index, lsh);
+        });
     }
     pool.wait_work(); 
     
     // ----------------check bucketing balance--------------------------
     const size_t bsize = buckets.size() / nr_buckets;
-    const size_t liftbsize = lift_buckets.size() / nr_buckets;
     double buckets_avg = 0.;
     double buckets_min = bsize;
     double buckets_max = 0.;
@@ -302,8 +288,6 @@ void Siever::bdgl_bucketing(thread_pool::thread_pool &pool, const size_t threads
             std::cerr << "Bucket too large by ratio " << i << " " <<  (buckets_index[i] / double(bsize)) << " " << buckets_index[i] << " " << bsize << std::endl;
             buckets_index[i] = bsize;
         }
-        if( !cdb_indices and lift_buckets_index[i] > liftbsize )
-            lift_buckets_index[i] = liftbsize;
     }
     buckets_avg /= nr_buckets;
    
@@ -625,9 +609,6 @@ bool Siever::bdgl_sieve(size_t nr_buckets, const size_t blocks, const size_t mul
     std::vector<size_t> buckets_i( nr_buckets, 0);
     std::vector<QEntry> queue;
 
-    std::vector<int> lift_buckets;
-    std::vector<size_t> lift_buckets_index;
-
     size_t it = 0;
     while( true ) {
 
@@ -642,7 +623,7 @@ bool Siever::bdgl_sieve(size_t nr_buckets, const size_t blocks, const size_t mul
         
         //if( n > 60 )
             //std::cerr << it << "Start bucketing" << S << " " << blocks << " " << multi_hash << " " << nr_buckets << std::endl;
-        bdgl_bucketing<true>(threadpool, params.threads, S, blocks, multi_hash, buckets, buckets_i, lift_buckets, lift_buckets_index);
+        bdgl_bucketing<true>(threadpool, params.threads, S, blocks, multi_hash, buckets, buckets_i);
 
         //if( n > 60 )
             //std::cerr << it << "Start process" << std::endl;
