@@ -59,8 +59,6 @@ cdef class SieverParams(object):
         "db_size_factor",
         "bgj1_bucket_size_expo",
         "bgj1_bucket_size_factor",
-        "triplesieve_db_size_base",
-        "triplesieve_db_size_factor",
         "default_sieve",
         "gauss_crossover",
         "dual_mode"
@@ -98,15 +96,6 @@ cdef class SieverParams(object):
         if "bgj1_bucket_size_factor" not in kwds:
             kwds["bgj1_bucket_size_factor"] =  3.2
 
-        # TODO : remove the two following ?
-        if "triplesieve_db_size_base" not in kwds:
-            kwds["triplesieve_db_size_base"] = (1.2999)**.5 # The initial db_size for triple sieve
-                                                            # (sqrt(3) * 3/4)
-        if "triplesieve_db_size_factor" not in kwds:
-            kwds["triplesieve_db_size_factor"] = 2.5       # db_size_factor_3sieve *
-                                                           # db_size_base_3sieve**n for the next
-                                                           # iteration
-
         if "dual_mode" not in kwds:
             kwds["dual_mode"] = False                      
 
@@ -115,7 +104,7 @@ cdef class SieverParams(object):
             kwds["reserved_db_size"] = kwds["db_size_factor"] * kwds["db_size_base"]**kwds["reserved_n"] + 100
 
         if "default_sieve" not in kwds or kwds["default_sieve"] is None:
-            kwds["default_sieve"] = "gauss_triple_mt"
+            kwds["default_sieve"] = "hk3"
         if "gauss_crossover" not in kwds:
             kwds["gauss_crossover"] = 50
         if "simhash_codes_basedir" not in kwds:
