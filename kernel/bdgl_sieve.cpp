@@ -429,7 +429,6 @@ void Siever::bdgl_queue_create_task( const size_t threads, const size_t t_id, co
     for( int index = t_id; index < Q; index += threads )  {     
         // use sign as skip marker
         if( queue[index].sign == 0 ){
-            duplicate += 1;
             continue;
         }
         bdgl_reduce_with_delayed_replace( queue[index].i, queue[index].j, 
