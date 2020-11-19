@@ -1576,7 +1576,7 @@ cdef class Siever(object):
             >>> bl = g6k.best_lifts()
             >>> id, nrm, w = bl[0]
             >>> id, round(nrm)
-            (0, 194629.0)
+            (0, 194629)
             >>> sum([v**2 for v in A.multiply_left(w)])
             194629
 
