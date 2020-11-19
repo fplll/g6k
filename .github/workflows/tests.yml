@@ -48,6 +48,9 @@ jobs:
           rm -rf ./fplll
           rm -rf ./fpylll
 
+          # G6K requirements
+          pip install -r requirements.txt
+          
       - name: Compile
         run: python setup.py build_ext -j $JOBS --inplace
 
