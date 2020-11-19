@@ -1293,13 +1293,13 @@ cdef class Siever(object):
             with tracer.context("bdgl"):
                 self.bdgl_sieve(reset_stats=reset_stats)
         elif alg == "bdgl1":
-            with tracer.context("bdgl1"):
+            with tracer.context("bdgl"):
                 self.bdgl_sieve(blocks=1, reset_stats=reset_stats)
         elif alg == "bdgl2":
-            with tracer.context("bdgl2"):
+            with tracer.context("bdgl"):
                 self.bdgl_sieve(blocks=2, reset_stats=reset_stats)
         elif alg == "bdgl3":
-            with tracer.context("bdgl3"):
+            with tracer.context("bdgl"):
                 self.bdgl_sieve(blocks=3, reset_stats=reset_stats)
         elif alg == "gauss":
             with tracer.context("gauss"):

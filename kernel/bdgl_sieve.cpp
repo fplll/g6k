@@ -19,11 +19,6 @@ struct QEntry {
     int8_t sign;
 };
 
-struct lPair {
-    size_t i,j;
-    int8_t sign;
-};
-
 inline bool compare_QEntry(QEntry const& lhs, QEntry const& rhs) { return lhs.len > rhs.len; }
 
 std::pair<LFT, int8_t> Siever::reduce_to_QEntry(CompressedEntry *ce1, CompressedEntry *ce2)
