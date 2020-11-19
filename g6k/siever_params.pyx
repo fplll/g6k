@@ -59,6 +59,9 @@ cdef class SieverParams(object):
         "db_size_factor",
         "bgj1_bucket_size_expo",
         "bgj1_bucket_size_factor",
+        "bdgl_bucket_size_factor",
+        "bdgl_blocks",
+        "bdgl_multi_hash",
         "triplesieve_db_size_base",
         "triplesieve_db_size_factor",
         "default_sieve",
@@ -97,6 +100,14 @@ cdef class SieverParams(object):
             kwds["bgj1_bucket_size_expo"] = .5     # The initial bgj1_bucket_size for sieving is
         if "bgj1_bucket_size_factor" not in kwds:
             kwds["bgj1_bucket_size_factor"] =  3.2
+        if "bdgl_multi_hash" not in kwds:
+            kwds["bdgl_multi_hash"] = 1
+        if "bdgl_blocks" not in kwds:
+            kwds["bdgl_blocks"] = 3
+
+        if "bdgl_bucket_size_factor" not in kwds:
+            kwds["bdgl_bucket_size_factor"] =  1.
+
 
         # TODO : remove the two following ?
         if "triplesieve_db_size_base" not in kwds:

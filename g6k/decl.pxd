@@ -234,6 +234,7 @@ cdef extern from "../kernel/siever.h" nogil:
         void gauss_sieve() # uses default max_db_size
         bool nv_sieve()
         void bgj1_sieve(double alpha)
+        void bdgl_sieve(size_t nr_buckets, size_t blocks, size_t multi_hash)
 
         void gauss_triple_sieve_st(size_t max_db_size)
         void gauss_triple_sieve_st() # uses default max_db_size
