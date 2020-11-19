@@ -266,14 +266,11 @@ void Siever::bdgl_process_buckets_task(const size_t t_id,
     CompressedEntry* const fast_cdb = cdb.data();
     
     const size_t S = cdb.size();
-    const size_t A = cdb.size();
     
-    int64_t kk = A-1-t_id; //std::min(A-1, size_t(params.bgj1_improvement_db_ratio * (S-1)));
+    // todo: start insert earlier
+    int64_t kk = S-1-t_id;
     
     LFT lenbound = fast_cdb[kk].len / REDUCE_LEN_MARGIN;
-
-    // TODO: divide work better by looking at bucket sizes
-    // doesn't seem nec. so far
     const size_t b_start = t_id;
 
     size_t B = 0;
@@ -284,7 +281,7 @@ void Siever::bdgl_process_buckets_task(const size_t t_id,
         B +=( (i_end - i_start) * (i_end-i_start-1)) / 2;
         for( size_t i = i_start; i < i_end; ++i ) 
         {
-            if (kk < .1 * A) break;
+            if (kk < .1 * S) break;
 
             size_t bi = std::abs(fast_buckets[i]);
             CompressedEntry *pce1 = &fast_cdb[bi];
@@ -292,12 +289,12 @@ void Siever::bdgl_process_buckets_task(const size_t t_id,
             for (size_t j = i_start; j < i; ++j)
             {
                 size_t bj = std::abs(fast_buckets[j]);
-                if( is_reducible_maybe<XPC_THRESHOLD>(cv, fast_cdb[bj].c) ) // UNLIKELY OR NOT?
+                if( is_reducible_maybe<XPC_THRESHOLD>(cv, fast_cdb[bj].c) )
                 {
                     std::pair<LFT, int> len_and_sign = reduce_to_QEntry( pce1, &fast_cdb[bj] );
                     if( len_and_sign.first < lenbound)
                     {
-                        if (kk < .1 * A) break;
+                        if (kk < .1 * S) break;
                         kk -= params.threads;
                         
                         statistics.inc_stats_2redsuccess_outer();
@@ -317,11 +314,9 @@ void Siever::bdgl_process_buckets_task(const size_t t_id,
 }
 
 // Returned queue is sorted
-double Siever::bdgl_process_buckets(const std::vector<int> &buckets, const std::vector<size_t> &buckets_index, 
+void Siever::bdgl_process_buckets(const std::vector<int> &buckets, const std::vector<size_t> &buckets_index, 
     std::vector<QEntry> &queue)
 {
-    auto start_processing = std::chrono::steady_clock::now();
-
     std::vector<std::vector<QEntry>> t_queues(params.threads);
     for (size_t t_id = 0; t_id < params.threads; ++t_id)
     {
@@ -344,9 +339,7 @@ double Siever::bdgl_process_buckets(const std::vector<int> &buckets, const std::
             std::inplace_merge(queue.begin(),queue.begin() + Q, queue.begin() + Q + t_queues[t_id].size(), &compare_QEntry);
         Q += t_queues[t_id].size();
     }
-
     assert(std::is_sorted(queue.begin(), queue.end(), &compare_QEntry));
-    return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start_processing).count();
 }
 
 void Siever::bdgl_queue_dup_remove_task( const size_t threads, const size_t t_id, std::vector<QEntry> &queue) {
