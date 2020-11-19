@@ -1,0 +1,33 @@
+name: Tests
+
+on: 
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 * * 0' # weekly
+
+env:
+  JOBS: 2
+  DEPS: libgmp-dev libmpfr-dev libqd-dev libtool autoconf python3-pip python3-dev python3-flake8
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v2
+      - name: Install prerequisites
+        run: |
+          sudo DEBIAN_FRONTEND=noninteractive apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install $DEPS
+      - name: Dependencies
+        run: |
+          ./install-dependencies.sh
+          pip3 install Cython
+          pip3 install -r requirements.txt          
+      - name: Compile
+        run: python setup.py build_ext --inplace
+
+      - name: Test
+        run: LD_LIBRARY_PATH="$VIRTUAL_ENV/lib" python -m pytest
