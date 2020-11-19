@@ -30,10 +30,9 @@ jobs:
           git clone https://github.com/fplll/fplll
           cd fplll || exit
           ./autogen.sh
-          ./configure --disable-static --with-max-enum-dim=64 --with-max-parallel-enum-dim=20
-          make clean
+          ./configure --disable-static --prefix=/usr --with-max-enum-dim=64 --with-max-parallel-enum-dim=20
           make -j $JOBS
-          make install
+          sudo make install
           cd ..
 
           git clone https://github.com/fplll/fpylll
@@ -41,8 +40,7 @@ jobs:
           pip install Cython
           pip install -r requirements.txt
           pip install -r suggestions.txt
-          python setup.py clean
-          python setup.py build_ext
+          python setup.py -j $JOBS build_ext
           python setup.py install
           cd ..
 
