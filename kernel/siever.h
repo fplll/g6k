@@ -493,10 +493,6 @@ public:
     // An entry x is put into the bucket with center c if |<x,c>| > alpha * |x| * |c|
     void bgj1_sieve(double alpha); // in bgj1_sieve.cpp
 
-    // Run the gauss_triple_sieve (single threaded) on the current db
-    // Does not use updated
-    void gauss_triple_sieve_st(size_t max_db_size =0); // in triple_sieve.cpp
-
     // runs a multi-threaded gauss-triple-sieve.
     // The parameter alpha has the same meaning as in bgj1.
     void gauss_triple_mt(double alpha); // in triple_sieve_mt.cpp

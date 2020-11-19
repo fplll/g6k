@@ -1180,21 +1180,9 @@ cdef class Siever(object):
 
         self.check_saturation()
 
-    def gauss_triple_sieve_st(self, size_t max_db_size=0, reset_stats=True):
-        assert(self.initialized)
-        if reset_stats:
-            self.reset_stats()
 
-        if max_db_size==0:
-          max_db_size = 200 + 10*self.n + 2 * self.params.triplesieve_db_size_factor * self.params.triplesieve_db_size_base ** self.n
-        sig_on()
-        self._core.gauss_triple_sieve_st(max_db_size)
-        sig_off()
 
-        #self.check_saturation() TODO: make check_saturation_triplesieve
-        return self.stats
-
-    def gauss_triple_mt(self, size_t max_db_size = 0, reset_stats=True):
+    def hk3_sieve(self, size_t max_db_size = 0, reset_stats=True):
         assert(self.initialized)
         if self.n < 40:
             logging.warning("triple_mt sieve not recommended below dimension 40")
@@ -1253,12 +1241,12 @@ cdef class Siever(object):
         # choices  being overwritten by default or crossover leading to non-deterministic 
         # raise of the error
 
-        valid_sieves = ["nv", "bgj1", "gauss", "gauss_triple_st", "gauss_triple_mt"]
+        valid_sieves = ["nv", "bgj1", "gauss", "hk3"]
         if alg is not None and alg not in valid_sieves:
             raise NotImplementedError("Sieve Algorithm '%s' invalid. "%(alg) + "Please choose among "+str(valid_sieves) )
 
         if self.params.default_sieve not in valid_sieves:
-            raise NotImplementedError("Sieve Algorithm '%s' invalid. "%(alg) + "Please choose among "+str(valid_sieves) )
+            raise NotImplementedError("Sieve Algorithm '%s' invalid. "%(self.params.default_sieve) + "Please choose among "+str(valid_sieves) )
 
         if alg is None:
             if self.n < self.params.gauss_crossover:
@@ -1278,12 +1266,9 @@ cdef class Siever(object):
         elif alg == "gauss":
             with tracer.context("gauss"):
                 self.gauss_sieve(reset_stats=reset_stats)
-        elif alg == "gauss_triple_st":  #Single-threaded 3Sieve
-            with tracer.context("triple_st"):
-                self.gauss_triple_sieve_st(reset_stats=reset_stats)
-        elif alg == "gauss_triple_mt": #Multi-threaded 3Sieve, keep both for now
-            with tracer.context("triple_mt"):
-                self.gauss_triple_mt(reset_stats=reset_stats)
+        elif alg == "hk3": #Multi-threaded 3Sieve, keep both for now
+            with tracer.context("hk3"):
+                self.hk3_sieve(reset_stats=reset_stats)
         else:
             # The algorithm should have been preemptively checked
             assert(False)
