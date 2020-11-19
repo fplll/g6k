@@ -1163,7 +1163,7 @@ cdef class Siever(object):
         self.check_saturation()
         return self.stats
 
-    def bdgl_sieve(self, buckets=None, reset_stats=True, check_saturation=True):
+    def bdgl_sieve(self, blocks=None, buckets=None, reset_stats=True, check_saturation=True):
         assert(self.initialized)
         if self.n < 40:
             logging.warning("bdgl_sieve not recommended below dimension 40")
@@ -1174,7 +1174,11 @@ cdef class Siever(object):
         N = self.params.db_size_factor * self.params.db_size_base ** self.n
         self.resize_db(N)
 
-        blocks = min(int(self.n / 22), self.params.bdgl_blocks)
+        if blocks is None:
+            blocks =  self.params.bdgl_blocks
+            
+        blocks = min(int(self.n / 22), blocks)
+
         if buckets is None:
             buckets =  self.params.bdgl_multi_hash * self.params.bdgl_bucket_size_factor * ((N/float(blocks)) ** (blocks/(1.0+blocks)))
          
@@ -1288,6 +1292,15 @@ cdef class Siever(object):
         elif alg == "bdgl":
             with tracer.context("bdgl"):
                 self.bdgl_sieve(reset_stats=reset_stats)
+        elif alg == "bdgl1":
+            with tracer.context("bdgl1"):
+                self.bdgl_sieve(blocks=1, reset_stats=reset_stats)
+        elif alg == "bdgl2":
+            with tracer.context("bdgl2"):
+                self.bdgl_sieve(blocks=2, reset_stats=reset_stats)
+        elif alg == "bdgl3":
+            with tracer.context("bdgl3"):
+                self.bdgl_sieve(blocks=3, reset_stats=reset_stats)
         elif alg == "gauss":
             with tracer.context("gauss"):
                 self.gauss_sieve(reset_stats=reset_stats)
