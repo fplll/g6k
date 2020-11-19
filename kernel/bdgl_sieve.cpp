@@ -236,6 +236,7 @@ void Siever::bdgl_bucketing(const size_t blocks, const size_t multi_hash, const 
     size_t bsize = 2 * (S*multi_hash / double(nr_buckets));
     buckets.resize( nr_buckets * bsize );
     buckets_index.resize(nr_buckets);
+    std::fill( buckets_index.begin(), buckets_index.end(), 0);
 
     for (size_t t_id = 0; t_id < params.threads; ++t_id)
     {
@@ -245,23 +246,12 @@ void Siever::bdgl_bucketing(const size_t blocks, const size_t multi_hash, const 
     }
     threadpool.wait_work(); 
     
-    // // ----------------check bucketing balance--------------------------
-    // const size_t bsize = buckets.size() / nr_buckets;
-    // double buckets_avg = 0.;
-    // double buckets_min = bsize;
-    // double buckets_max = 0.;
-    // // buckets_index can have become larger than the bucket size
-    
-    // for( size_t i = 0; i < nr_buckets; ++i ) {
-    //     buckets_avg += buckets_index[i];
-    //     buckets_min = std::min( buckets_min, double(buckets_index[i]));
-    //     buckets_max = std::max( buckets_max, double(buckets_index[i]));
-    //     if( buckets_index[i] > bsize ) {
-    //         std::cerr << "Bucket too large by ratio " << i << " " <<  (buckets_index[i] / double(bsize)) << " " << buckets_index[i] << " " << bsize << std::endl;
-    //         buckets_index[i] = bsize;
-    //     }
-    // }
-    // buckets_avg /= nr_buckets;
+    for( size_t i = 0; i < nr_buckets; ++i ) {
+        if( buckets_index[i] > bsize ) {
+            //std::cerr << "Bucket too large by ratio " << i << " " <<  (buckets_index[i] / double(bsize)) << " " << buckets_index[i] << " " << bsize << std::endl;
+            buckets_index[i] = bsize;
+        }
+    }
 }
 
 void Siever::bdgl_process_buckets_task(const size_t threads, const size_t t_id, 
@@ -292,7 +282,6 @@ void Siever::bdgl_process_buckets_task(const size_t threads, const size_t t_id,
         const size_t i_start = bsize * b;
         const size_t i_end = bsize * b + buckets_index[b];
         B +=( (i_end - i_start) * (i_end-i_start-1)) / 2;
-        //std::cerr << B << " ";
         for( size_t i = i_start; i < i_end; ++i ) 
         {
             if (kk < .1 * A) break;
@@ -499,22 +488,12 @@ bool Siever::bdgl_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t
     }
     
     std::vector<std::vector<Entry>> transaction_db(params.threads, std::vector<Entry>());
-
     std::vector<int> buckets;
     std::vector<size_t> buckets_i;
     std::vector<QEntry> queue;
 
     size_t it = 0;
     while( true ) {
-
-        // bucketing
-        // TODO: make sure the bucketing function can also work directly on the cdb for cpu version
-        cdb.resize(S);
-        std::copy( cdb.begin(), cdb.begin()+S, cdb.begin());
-        
-        
-        std::fill( buckets_i.begin(), buckets_i.end(), 0);
-        
         bdgl_bucketing(blocks, multi_hash, nr_buckets_aim, buckets, buckets_i);
 
         bdgl_process_buckets(threadpool, params.threads, buckets, buckets_i, queue);
