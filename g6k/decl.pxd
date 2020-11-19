@@ -235,7 +235,7 @@ cdef extern from "../kernel/siever.h" nogil:
         bool nv_sieve()
         void bgj1_sieve(double alpha)
 
-        void gauss_triple_mt(double alpha)
+        void hk3_sieve(double alpha)
 
         void best_lifts(long* vecs, double* lens)
         void db_stats(long* cumul_histo)

@@ -1208,7 +1208,7 @@ cdef class Siever(object):
 
 
         sig_on()
-        self._core.gauss_triple_mt(alpha)
+        self._core.hk3_sieve(alpha)
         sig_off()
 
         self.check_saturation()

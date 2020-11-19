@@ -495,7 +495,7 @@ public:
 
     // runs a multi-threaded gauss-triple-sieve.
     // The parameter alpha has the same meaning as in bgj1.
-    void gauss_triple_mt(double alpha); // in triple_sieve_mt.cpp
+    void hk3_sieve(double alpha); // in triple_sieve_mt.cpp
 
 /**
     Retrieving data about the sieve:
@@ -833,7 +833,7 @@ private:
     inline void addmul_vec(Container &a, Container2 const &b, const typename Container::value_type c, int num); // defined in siever.inl
 
     /**
-        implementation details of gauss_triple_mt: Everything prefixed by TS_ or gauss_triple_mt_ belongs to it
+        implementation details of hk3_sieve: Everything prefixed by TS_ or hk3_sieve_ belongs to it
         see triple_sieve_mt.cpp for details about how the algorithm works and what the individual functions do.
         The explanations here are only very brief. Note that the algorithm does not use cdb, but rather
         our own std::vector<CompressedEntry>'s, accessed via std::shared_ptr. The pointers point to
@@ -841,7 +841,7 @@ private:
         An important consequence is that DURING THE RUN OF GAUSS_TRIPLE_MT, CDB IS INVALID.
     **/
 
-    // Everything here is implemented in gauss_triple_mt
+    // Everything here is implemented in hk3_sieve
 
 //    using TS_CDB_Snapshot_Ptr = std::shared_ptr<std::vector<CompressedEntry>>;
 
@@ -891,39 +891,39 @@ private:
         std::atomic<size_t> ref_count; // counts the number of threads that currently use it.
     };
 
-    void gauss_triple_mt_task(TS_Transaction_DB_Type &transaction_db, MAYBE_UNUSED unsigned int id, double const alpha); // Main worker function. id is the thread-nr. Used only for debugging.
-    std::pair<Entry, size_t> gauss_triple_mt_get_p(TS_CDB_Snapshot * &thread_local_snapshot, unsigned int const id, TS_Transaction_DB_Type &transaction_db, float &update_len_bound); // obtains a new point p and cdb-range to work with.
-    void gauss_triple_mt_resort(MAYBE_UNUSED unsigned int const id); // resorts the current cdb-snapshot
-    void gauss_triple_mt_init_metainfo(size_t const already_processed, CompressedEntry const * const fast_cdb); // initializes / resets some of the atomic variables. Called after resorting
-    float gauss_triple_mt_update_lenbound(CompressedEntry const * const fast_cdb); // Recomputes the bound that determines when a vector is deemed interesting for insertion.
-    size_t gauss_triple_mt_execute_delayed_insertion(TS_Transaction_DB_Type &transaction_db, float &update_len_bound, MAYBE_UNUSED unsigned int const id); // inserts pending transactions into cdb and db.
+    void hk3_sieve_task(TS_Transaction_DB_Type &transaction_db, MAYBE_UNUSED unsigned int id, double const alpha); // Main worker function. id is the thread-nr. Used only for debugging.
+    std::pair<Entry, size_t> hk3_sieve_get_p(TS_CDB_Snapshot * &thread_local_snapshot, unsigned int const id, TS_Transaction_DB_Type &transaction_db, float &update_len_bound); // obtains a new point p and cdb-range to work with.
+    void hk3_sieve_resort(MAYBE_UNUSED unsigned int const id); // resorts the current cdb-snapshot
+    void hk3_sieve_init_metainfo(size_t const already_processed, CompressedEntry const * const fast_cdb); // initializes / resets some of the atomic variables. Called after resorting
+    float hk3_sieve_update_lenbound(CompressedEntry const * const fast_cdb); // Recomputes the bound that determines when a vector is deemed interesting for insertion.
+    size_t hk3_sieve_execute_delayed_insertion(TS_Transaction_DB_Type &transaction_db, float &update_len_bound, MAYBE_UNUSED unsigned int const id); // inserts pending transactions into cdb and db.
 
     // subroutine for the inner-loop. Templated to simplify the code (we call this with >= 4 different template args)
     template<bool EnforceOrder, class SmallContainer1, class LargeContainer2, class Integer1>
-    inline void gauss_triple_mt_process_inner_batch(TS_Transaction_DB_Type &transaction_db, Entry const &p, SmallContainer1 const &block1, Integer1 const end_block1, LargeContainer2 const &block2, size_t const end_block2, float &local_len_bound, MAYBE_UNUSED unsigned int const id);
+    inline void hk3_sieve_process_inner_batch(TS_Transaction_DB_Type &transaction_db, Entry const &p, SmallContainer1 const &block1, Integer1 const end_block1, LargeContainer2 const &block2, size_t const end_block2, float &local_len_bound, MAYBE_UNUSED unsigned int const id);
 
     // these functions attempt a reduction between 2 or 3 points and put the result onto transaction db.
     // The versions differ by how we access the points and what we already know about the scalar products / signs used in the reduction.
-    bool gauss_triple_mt_delayed_red_p_db(TS_Transaction_DB_Type &transaction_db, Entry const &p, size_t const x1_index, bool const sign_flip);
-    bool gauss_triple_mt_delayed_2_red_inner(TS_Transaction_DB_Type &transaction_db, size_t const x1_db_index, bool const x1_sign_flip, size_t const x2_db_index, bool const x2_sign_flip, UidType new_uid);
-    bool gauss_triple_mt_delayed_3_red(TS_Transaction_DB_Type &transaction_db, Entry const &p, size_t const x1_index, bool const x1_sign_flip, size_t const x2_index, bool const x2_sign_flip, UidType const new_uid);
+    bool hk3_sieve_delayed_red_p_db(TS_Transaction_DB_Type &transaction_db, Entry const &p, size_t const x1_index, bool const sign_flip);
+    bool hk3_sieve_delayed_2_red_inner(TS_Transaction_DB_Type &transaction_db, size_t const x1_db_index, bool const x1_sign_flip, size_t const x2_db_index, bool const x2_sign_flip, UidType new_uid);
+    bool hk3_sieve_delayed_3_red(TS_Transaction_DB_Type &transaction_db, Entry const &p, size_t const x1_index, bool const x1_sign_flip, size_t const x2_index, bool const x2_sign_flip, UidType const new_uid);
 
     // corresponding to the reduction attempts, we attempt on-the-fly-lifts.
-    void gauss_triple_mt_otflift_p_db(Entry const &p, size_t const db_index, bool const sign_flip, double const believed_len);
-    void gauss_triple_mt_otflift_p_x1_x2(Entry const &p, size_t const x1_db_index, bool const x1_sign_flip, size_t const x2_db_index, bool const x2_sign_flip, double const believed_len);
-    void gauss_triple_mt_otflift_x1_x2(size_t const x1_db_index, bool const x1_sign_flip, size_t const x2_db_index, bool const x2_sign_flip, double const believed_len);
+    void hk3_sieve_otflift_p_db(Entry const &p, size_t const db_index, bool const sign_flip, double const believed_len);
+    void hk3_sieve_otflift_p_x1_x2(Entry const &p, size_t const x1_db_index, bool const x1_sign_flip, size_t const x2_db_index, bool const x2_sign_flip, double const believed_len);
+    void hk3_sieve_otflift_x1_x2(size_t const x1_db_index, bool const x1_sign_flip, size_t const x2_db_index, bool const x2_sign_flip, double const believed_len);
 
     // snapshot management: thread-local snapshots and TS_latest_cdb_snapshot_p must be managed by
     // these function, which take care of ref-counting. See triple_sieve_mt.cpp for more details.
-    void gauss_triple_mt_release_snapshot(TS_CDB_Snapshot * &thread_local_snapshot, MAYBE_UNUSED unsigned int const id);
-    TS_CDB_Snapshot * gauss_triple_mt_get_latest_snapshot(MAYBE_UNUSED unsigned int const id);
-    CompressedEntry * gauss_triple_mt_get_true_fast_cdb();
-    TS_CDB_Snapshot * gauss_triple_mt_get_free_snapshot(MAYBE_UNUSED unsigned int const id);
-    void gauss_triple_mt_update_latest_cdb_snapshot(TS_CDB_Snapshot * const next_cdb_snapshot_ptr, MAYBE_UNUSED unsigned int const id);
-    void gauss_triple_mt_init_snapshots();
-    void gauss_triple_mt_restore_cdb();
+    void hk3_sieve_release_snapshot(TS_CDB_Snapshot * &thread_local_snapshot, MAYBE_UNUSED unsigned int const id);
+    TS_CDB_Snapshot * hk3_sieve_get_latest_snapshot(MAYBE_UNUSED unsigned int const id);
+    CompressedEntry * hk3_sieve_get_true_fast_cdb();
+    TS_CDB_Snapshot * hk3_sieve_get_free_snapshot(MAYBE_UNUSED unsigned int const id);
+    void hk3_sieve_update_latest_cdb_snapshot(TS_CDB_Snapshot * const next_cdb_snapshot_ptr, MAYBE_UNUSED unsigned int const id);
+    void hk3_sieve_init_snapshots();
+    void hk3_sieve_restore_cdb();
 
-    // Internal data structure. The cdb-snapshots are partially ordered and separated into 5 parts. See gauss_triple_mt.cpp for documentation.
+    // Internal data structure. The cdb-snapshots are partially ordered and separated into 5 parts. See hk3_sieve.cpp for documentation.
     // This separation encodes important information for the algorithm.
     CACHELINE_PAD(Pad_queue_mutex); // We want the following to reside close
     std::mutex TS_queue_head_mutex; // protects current_queue_head and TS_unmerged_transactions.
