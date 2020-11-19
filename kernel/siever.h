@@ -1066,15 +1066,12 @@ private:
     bool bdgl_replace_in_db(size_t cdb_index, Entry &e);
 
     template<bool cdb_indices>
-    void bdgl_bucketing_task(const size_t threads, const size_t t_id, 
-                             const size_t A, const size_t multi_hash, 
+    void bdgl_bucketing_task(const size_t t_id, 
                              std::vector<int> &buckets, std::vector<size_t> &buckets_index,
                              ProductLSH &lsh);
-    void bdgl_bucketing_sort_task(const size_t threads, const size_t t_id,
-        std::vector<int> &buckets, const std::vector<size_t> &buckets_index); 
+    void bdgl_bucketing_sort_task(const size_t t_id, std::vector<int> &buckets, const std::vector<size_t> &buckets_index); 
     template<bool cdb_indices>
-    void bdgl_bucketing(thread_pool::thread_pool &pool, const size_t threads, 
-                        const size_t A, const size_t blocks, const size_t multi_hash, 
+    void bdgl_bucketing(const size_t blocks, const size_t multi_hash, const size_t nr_buckets_aim, 
                         std::vector<int> &buckets, std::vector<size_t> &buckets_index);
 
     void bdgl_process_buckets_task(const size_t threads, const size_t t_id, const std::vector<int> &buckets, 
