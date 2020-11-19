@@ -54,6 +54,7 @@ cdef class SieverParams(object):
         "bgj1_resort_ratio",
         "bgj1_transaction_bulk_size",
         "simhash_codes_basedir",
+        "bdgl_improvement_db_ratio",
         # Python
         "db_size_base",
         "db_size_factor",
@@ -104,6 +105,8 @@ cdef class SieverParams(object):
             kwds["bdgl_multi_hash"] = 1
         if "bdgl_blocks" not in kwds:
             kwds["bdgl_blocks"] = 3
+        if "bdgl_improvement_db_ratio" not in kwds:
+            kwds["bdgl_improvement_db_ratio"] = 0.8
 
         if "bdgl_bucket_size_factor" not in kwds:
             kwds["bdgl_bucket_size_factor"] =  1.
@@ -178,6 +181,8 @@ cdef class SieverParams(object):
             self._core.bgj1_transaction_bulk_size = value
         elif key == "simhash_codes_basedir":
             self._core.simhash_codes_basedir = value.encode("utf-8") if isinstance(value, str) else value
+        elif key == "bdgl_improvement_db_ratio":
+            self._core.bdgl_improvement_db_ratio = value
         else:
             self._pyattr[key] = value
 
@@ -210,6 +215,8 @@ cdef class SieverParams(object):
             return self._core.bgj1_transaction_bulk_size
         elif key == "simhash_codes_basedir":
             return self._core.simhash_codes_basedir
+        elif key == "bdgl_improvement_db_ratio":
+            return self._core.bdgl_improvement_db_ratio
         else:
             return self._pyattr[key]
 

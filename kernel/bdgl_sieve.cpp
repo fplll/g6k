@@ -265,7 +265,7 @@ void Siever::bdgl_process_buckets_task(const size_t t_id,
     // todo: start insert earlier
     int64_t kk = S-1-t_id;
     
-    LFT lenbound = fast_cdb[kk].len / REDUCE_LEN_MARGIN;
+    LFT lenbound = fast_cdb[std::min(S-1, size_t(params.bdgl_improvement_db_ratio * S))].len;
     const size_t b_start = t_id;
 
     size_t B = 0;
@@ -294,7 +294,6 @@ void Siever::bdgl_process_buckets_task(const size_t t_id,
                         
                         statistics.inc_stats_2redsuccess_outer();
 
-                        lenbound = fast_cdb[kk].len / REDUCE_LEN_MARGIN;
                         t_queue.push_back({ pce1->i, fast_cdb[bj].i, len_and_sign.first, len_and_sign.second});
                     } else if( len_and_sign.first < params.lift_radius ) {
                         // on the fly lifting

@@ -366,6 +366,8 @@ public:
                                             // execute_delayed_insert; 0 means AUTO, i.e. 10 +
                                             // 2*threads.
 
+  double bdgl_improvement_db_ratio = .8;
+
   std::string simhash_codes_basedir = "";  // directory holding spherical codes for simhash.
 };
 
