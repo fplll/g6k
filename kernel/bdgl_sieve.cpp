@@ -342,10 +342,10 @@ void Siever::bdgl_process_buckets(const std::vector<int> &buckets, const std::ve
     assert(std::is_sorted(queue.begin(), queue.end(), &compare_QEntry));
 }
 
-void Siever::bdgl_queue_dup_remove_task( const size_t threads, const size_t t_id, std::vector<QEntry> &queue) {
+void Siever::bdgl_queue_dup_remove_task( const size_t t_id, std::vector<QEntry> &queue) {
     const size_t Q = queue.size();
-    const size_t Qstart = (t_id*Q)/threads;
-    const size_t Qend = ((t_id+1)*Q)/threads;
+    const size_t Qstart = (t_id*Q)/params.threads;
+    const size_t Qend = ((t_id+1)*Q)/params.threads;
     for( size_t index = Qstart; index < Qend; index++ ) {
         size_t i1 = queue[index].i;
         size_t i2 = queue[index].j;
@@ -364,18 +364,18 @@ void Siever::bdgl_queue_dup_remove_task( const size_t threads, const size_t t_id
     }
 }
 
-void Siever::bdgl_queue_create_task( const size_t threads, const size_t t_id, const std::vector<QEntry> &queue, std::vector<Entry> &transaction_db, int64_t &write_index) {
+void Siever::bdgl_queue_create_task( const size_t t_id, const std::vector<QEntry> &queue, std::vector<Entry> &transaction_db, int64_t &write_index) {
     const size_t S = cdb.size();
     const size_t Q = queue.size();
 
-    const size_t insert_after = (cdb.size() != cdb.size()) ? cdb.size() : S-1-t_id-threads*write_index; 
-    for( int index = t_id; index < Q; index += threads )  {     
+    const size_t insert_after = (cdb.size() != cdb.size()) ? cdb.size() : S-1-t_id-params.threads*write_index; 
+    for( int index = t_id; index < Q; index += params.threads )  {     
         // use sign as skip marker
         if( queue[index].sign == 0 ){
             continue;
         }
         bdgl_reduce_with_delayed_replace( queue[index].i, queue[index].j, 
-                                                  cdb[std::min(S-1, insert_after+threads*write_index)].len / REDUCE_LEN_MARGIN,
+                                                  cdb[std::min(S-1, insert_after+params.threads*write_index)].len / REDUCE_LEN_MARGIN,
                                                   transaction_db, write_index, queue[index].len, queue[index].sign);
         if( write_index < 0 ){
             std::cerr << "Spilling full transaction db" << t_id << " " << Q-index << std::endl;
@@ -384,20 +384,19 @@ void Siever::bdgl_queue_create_task( const size_t threads, const size_t t_id, co
     }
 }
 
-size_t Siever::bdgl_queue_insert_task( const size_t threads, const size_t t_id, std::vector<Entry> &transaction_db, int64_t write_index) {
+size_t Siever::bdgl_queue_insert_task( const size_t t_id, std::vector<Entry> &transaction_db, int64_t write_index) {
     const size_t S = cdb.size();
-    const size_t insert_after = (cdb.size() != cdb.size()) ? cdb.size() : std::max(int(0), int(int(S)-1-t_id-threads*(transaction_db.size()-write_index))); 
+    const size_t insert_after = std::max(int(0), int(int(S)-1-t_id-params.threads*(transaction_db.size()-write_index))); 
     size_t kk = S-1 - t_id;
     for( int i = transaction_db.size()-1; i > write_index and kk >= insert_after; --i )  { 
             if( bdgl_replace_in_db( kk, transaction_db[i] ) ) {
-                kk -= threads;
+                kk -= params.threads;
             }
     }
-    return kk + threads;
+    return kk + params.threads;
 }
 
-size_t Siever::bdgl_queue(thread_pool::thread_pool &pool, const size_t threads, 
-  std::vector<QEntry> &queue, std::vector<std::vector<Entry>>& transaction_db ) {
+size_t Siever::bdgl_queue(std::vector<QEntry> &queue, std::vector<std::vector<Entry>>& transaction_db ) {
 
     auto queue_start = std::chrono::steady_clock::now();
 
@@ -405,12 +404,12 @@ size_t Siever::bdgl_queue(thread_pool::thread_pool &pool, const size_t threads,
         return 0;
 
     // clear duplicates read only
-    for( size_t t_id = 0; t_id < threads; ++t_id ) {
-        pool.push([this, threads, t_id, &queue, &transaction_db](){
-            bdgl_queue_dup_remove_task(threads, t_id, queue);
+    for( size_t t_id = 0; t_id < params.threads; ++t_id ) {
+        threadpool.push([this, t_id, &queue, &transaction_db](){
+            bdgl_queue_dup_remove_task(t_id, queue);
         });
     }
-    pool.wait_work();
+    threadpool.wait_work();
 
 
     const size_t S = cdb.size(); 
@@ -419,48 +418,43 @@ size_t Siever::bdgl_queue(thread_pool::thread_pool &pool, const size_t threads,
     size_t insert_after = (cdb.size() != cdb.size()) ? cdb.size() : std::max(0, int(int(S)-Q));
     
     
-    for( int i = 0; i < threads; i++ )
-        transaction_db[i].resize(std::min(S-insert_after, Q)/threads + 1);
+    for( int i = 0; i < params.threads; i++ )
+        transaction_db[i].resize(std::min(S-insert_after, Q)/params.threads + 1);
 
-    std::vector<int> write_indices(threads, transaction_db[0].size()-1);
+    std::vector<int> write_indices(params.threads, transaction_db[0].size()-1);
     // Prepare transaction DB from queue
-   for( size_t t_id = 0; t_id < threads; ++t_id ) {
-        pool.push([this, threads, t_id, &queue, &transaction_db,&write_indices](){
+   for( size_t t_id = 0; t_id < params.threads; ++t_id ) {
+        threadpool.push([this, t_id, &queue, &transaction_db,&write_indices](){
             int64_t write_index = write_indices[t_id];
-            bdgl_queue_create_task(threads, t_id, queue, transaction_db[t_id], write_index);
+            bdgl_queue_create_task(t_id, queue, transaction_db[t_id], write_index);
             write_indices[t_id] = write_index;
         });
     }
-    pool.wait_work(); 
+    threadpool.wait_work(); 
     queue.clear();
 
     size_t transaction_vecs_used = 0;
-    for( int t_id = 0; t_id < threads; t_id++ ) {
+    for( int t_id = 0; t_id < params.threads; t_id++ ) {
         transaction_vecs_used += transaction_db[t_id].size()-1 - write_indices[t_id];
     }
     queue_start = std::chrono::steady_clock::now();
 
     // Insert transaction DB
-    std::vector<size_t> kk(threads);
-    for( size_t t_id = 0; t_id < threads; ++t_id ) {
-        pool.push([this, &kk, threads, t_id, &transaction_db,&write_indices](){
-            kk[t_id] = bdgl_queue_insert_task(threads, t_id, transaction_db[t_id], write_indices[t_id]);        
+    std::vector<size_t> kk(params.threads);
+    for( size_t t_id = 0; t_id < params.threads; ++t_id ) {
+        threadpool.push([this, &kk, t_id, &transaction_db,&write_indices](){
+            kk[t_id] = bdgl_queue_insert_task(t_id, transaction_db[t_id], write_indices[t_id]);        
         });
     }
-    pool.wait_work(); 
+    threadpool.wait_work(); 
     size_t min_kk = kk[0];
     size_t inserted = 0;
-    for( int i = 0; i < threads; i++ ){
+    for( int i = 0; i < params.threads; i++ ){
         min_kk = std::min(min_kk, kk[i]);
-        inserted += (S-1-i - kk[i]-threads)/threads;
+        inserted += (S-1-i - kk[i]-params.threads)/params.threads;
     }
     status_data.plain_data.sorted_until = min_kk;
 
-    /*
-    std::cerr << "Seq Part: "
-        << double(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - queue_start).count())
-        << std::endl;
-*/
     return transaction_vecs_used;
 }
 
@@ -489,7 +483,7 @@ bool Siever::bdgl_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t
 
         bdgl_process_buckets(buckets, buckets_i, queue);
 
-        size_t kk = bdgl_queue( threadpool, params.threads, queue, transaction_db );
+        size_t kk = bdgl_queue(queue, transaction_db );
 
         parallel_sort_cdb();
 
