@@ -1248,6 +1248,18 @@ cdef class Siever(object):
 
     def __call__(self, alg=None, reset_stats=True, tracer=dummy_tracer):
         assert(self.initialized)
+
+        # Check choice of sieve algorithm preemptively, to avoid incorrect user 
+        # choices  being overwritten by default or crossover leading to non-deterministic 
+        # raise of the error
+
+        valid_sieves = ["nv", "bgj1", "gauss", "gauss_triple_st", "gauss_triple_mt"]
+        if alg is not None and alg not in valid_sieves:
+            raise NotImplementedError("Sieve Algorithm '%s' invalid. "%(alg) + "Please choose among "+str(valid_sieves) )
+
+        if self.params.default_sieve not in valid_sieves:
+            raise NotImplementedError("Sieve Algorithm '%s' invalid. "%(alg) + "Please choose among "+str(valid_sieves) )
+
         if alg is None:
             if self.n < self.params.gauss_crossover:
                 alg = "gauss"
@@ -1266,19 +1278,16 @@ cdef class Siever(object):
         elif alg == "gauss":
             with tracer.context("gauss"):
                 self.gauss_sieve(reset_stats=reset_stats)
-        elif alg == "gauss_no_upd":
-            print "--alg gauss_no_upd has been renamed into just --alg gauss. the gauss_no_upd option will be removed soon." #TODO: Remove this line. It just serves to spot issues gracefully.
-            with tracer.context("gauss"):
-                self.gauss_sieve(reset_stats=reset_stats)
         elif alg == "gauss_triple_st":  #Single-threaded 3Sieve
             with tracer.context("triple_st"):
                 self.gauss_triple_sieve_st(reset_stats=reset_stats)
         elif alg == "gauss_triple_mt": #Multi-threaded 3Sieve, keep both for now
             with tracer.context("triple_mt"):
                 self.gauss_triple_mt(reset_stats=reset_stats)
-        # NOTE : There currently is no working gauss_triple without _no_upd, gauss_triple_no_upd might be renamed into gauss_triple
         else:
-            raise NotImplementedError("Algorithm `%s` of type %s not recognized"%(alg, type(alg)))
+            # The algorithm should have been preemptively checked
+            assert(False)
+            
 
     def extend_left(self, offset=1):
         """
@@ -1574,7 +1583,7 @@ cdef class Siever(object):
 
             >>> g6k()
             >>> bl = g6k.best_lifts()
-            >>> id, nrm, w = bl[0]
+q            >>> id, nrm, w = bl[0]
             >>> id, round(nrm)
             (0, 194629)
             >>> sum([v**2 for v in A.multiply_left(w)])

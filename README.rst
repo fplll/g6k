@@ -97,7 +97,7 @@ Which will take around 10 seconds. To compare several algorithms, and average ov
 
 .. code-block:: bash
 
-    python ./svp_exact.py 50 --workers 3 --trials 5 --challenge-seed 0 1 2 --sieve gauss bgj1 enum
+    python ./svp_exact.py 50 --workers 3 --trials 5 --challenge-seed 0 1 2 --svp/alg workout enum
 
 
 SVP-challenge (Sec 6.2)

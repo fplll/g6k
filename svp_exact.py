@@ -83,7 +83,7 @@ def svp_kernel(arg0, params=None, seed=None):
         bkz_params = fplll_bkz.Param(block_size=n, max_loops=1, strategies=fplll_bkz.DEFAULT_STRATEGY,
                                      flags=fplll_bkz.GH_BND)
         svp_enum(bkz, bkz_params, goal_r0)
-        flast = -1
+        flast = 0
     elif alg == "duc18":
         assert len(workout_params) + len(pump_params) == 0
         flast = ducas18(g6k, tracer, goal=goal_r0)
