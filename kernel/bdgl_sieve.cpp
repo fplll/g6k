@@ -51,6 +51,8 @@ inline int Siever::bdgl_reduce_with_delayed_replace(const size_t i1, const size_
         }
         if (uid_hash_table.insert_uid(new_uid))
         {
+
+        	// LEO: the function is only called at one place, so I suspect that new_l and sign are always passed or never passed
             // only recompute new_l and sign if not passed
             if( new_l <= 0.0 ) {
                 LFT const inner = std::inner_product(db[i1].yr.cbegin(), db[i1].yr.cbegin()+n, db[i2].yr.cbegin(), static_cast<LFT>(0.));
@@ -99,6 +101,11 @@ inline int Siever::bdgl_reduce_with_delayed_replace(const size_t i1, const size_
         std::fill(x, x+l, 0);
         std::copy(db[i1].x.cbegin(), db[i1].x.cbegin()+n, x+l);
         std::copy(db[i1].otf_helper.cbegin(), db[i1].otf_helper.cbegin()+OTF_LIFT_HELPER_DIM, otf_helper);
+
+        // LEO: (style) the snippet below is a bit bulky, and duplicated from other sieve. Could we 
+        // factor it somewhat ?
+        //
+
         if(sign == 1)
         {
             for(unsigned int i=0; i < n; ++i)
@@ -141,6 +148,9 @@ inline void Siever::bdgl_lift(const size_t i1, const size_t i2, LFT new_l, int8_
         std::fill(x, x+l, 0);
         std::copy(db[i1].x.cbegin(), db[i1].x.cbegin()+n, x+l);
         std::copy(db[i1].otf_helper.cbegin(), db[i1].otf_helper.cbegin()+OTF_LIFT_HELPER_DIM, otf_helper);
+
+        // LEO: (style) There it is again...
+
         if(sign == 1)
         {
             for(unsigned int i=0; i < n; ++i)
@@ -167,6 +177,7 @@ inline void Siever::bdgl_lift(const size_t i1, const size_t i2, LFT new_l, int8_
         lift_and_compare(x, new_l * gh, otf_helper);
     }
 }
+
 
 // Replace the db and cdb entry pointed at by cdb[cdb_index] by e, unless
 // length is actually worse
@@ -211,6 +222,7 @@ void Siever::bdgl_bucketing_task(const size_t t_id, std::vector<int> &buckets, s
                 std::lock_guard<std::mutex> lockguard(bdgl_bucket_mut[ b_abs % BDGL_BUCKET_SPLIT ]);
                 bucket_index = buckets_index[b_abs]++; // mutex protected
                 // todo: do this without locks
+                // LEO: how so ?
             }
             if( bucket_index < bsize ) {
                 buckets[bsize * b_abs + bucket_index] = (sign)?-i:i;
@@ -487,6 +499,10 @@ bool Siever::bdgl_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t
             recompute_histo();
             return true;
         } 
+
+        // LEO: can we use something that scale reasonably here ? 
+        // The exact asymptotic may be painful, but maybe something like 
+        // N / sqrt(nr_bucket) could do ?
 
         if( it > 10000 ) {
             std::cerr << "Not saturated after 10000 iterations" << std::endl;
