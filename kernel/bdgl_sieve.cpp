@@ -31,13 +31,6 @@ std::pair<LFT, int8_t> Siever::reduce_to_QEntry(CompressedEntry *ce1, Compressed
 
 inline int Siever::bdgl_reduce_with_delayed_replace(const size_t i1, const size_t i2, LFT const lenbound, std::vector<Entry>& transaction_db, int64_t& write_index, LFT new_l, int8_t sign)
 {
-    // only recompute new_l and sign if not passed
-    if( new_l <= 0.0 and !(sign==1 or sign==-1) ) {
-        LFT const inner = std::inner_product(db[i1].yr.cbegin(), db[i1].yr.cbegin()+n, db[i2].yr.cbegin(), static_cast<LFT>(0.));
-        new_l = db[i1].len + db[i2].len - 2 * std::abs(inner);
-        sign = inner < 0 ? 1 : -1;
-    }
-
     if (new_l < lenbound)
     {
         UidType new_uid = db[i1].uid;
@@ -51,39 +44,13 @@ inline int Siever::bdgl_reduce_with_delayed_replace(const size_t i1, const size_
         }
         if (uid_hash_table.insert_uid(new_uid))
         {
-
-        	// LEO: the function is only called at one place, so I suspect that new_l and sign are always passed or never passed
-            // only recompute new_l and sign if not passed
-            if( new_l <= 0.0 ) {
-                LFT const inner = std::inner_product(db[i1].yr.cbegin(), db[i1].yr.cbegin()+n, db[i2].yr.cbegin(), static_cast<LFT>(0.));
-                if( sign != 0 )
-                    new_l = db[i1].len + db[i2].len + sign * 2 * inner;
-                else {
-                    new_l = db[i1].len + db[i2].len - 2 * std::fabs(inner);
-                    sign = (inner<0)?1:-1;
-                }
-                if( new_l >= lenbound ) {
-                    uid_hash_table.erase_uid(new_uid);
-                    return -1;
-                }
-            }
             std::array<ZT,MAX_SIEVING_DIM> new_x = db[i1].x;
             addsub_vec(new_x,  db[i2].x, static_cast<ZT>(sign));
-            
             int64_t index = write_index--; // atomic and signed!
             if( index >= 0 ) {
                 Entry& new_entry = transaction_db[index];
                 new_entry.x = new_x;
-                //std::cerr << "Lift general short: " << std::endl;
-                recompute_data_for_entry<Recompute::recompute_all_and_consider_otf_lift>(new_entry); // includes recomputing uid !
-                // don't think this can happen in this sieve:
-                if (UNLIKELY(new_entry.uid != new_uid)) // this may happen only due to data races, if the uids and the x-coos of the points we used were out-of-sync
-                {
-                    uid_hash_table.erase_uid(new_uid);
-                    transaction_db.pop_back();
-                    std::cerr << "Data race (" << index << "," << static_cast<ZT>(sign) << "," << new_uid << "," << new_entry.uid << ")" << std::endl;
-                    return 0;
-                }
+                recompute_data_for_entry<Recompute::recompute_all_and_consider_otf_lift>(new_entry);
                 return 1;
             }
             return -2; // transaction_db full
@@ -96,39 +63,7 @@ inline int Siever::bdgl_reduce_with_delayed_replace(const size_t i1, const size_
     } 
     else if (params.otf_lift && (new_l < params.lift_radius))
     {
-        ZT x[r];
-        LFT otf_helper[OTF_LIFT_HELPER_DIM];
-        std::fill(x, x+l, 0);
-        std::copy(db[i1].x.cbegin(), db[i1].x.cbegin()+n, x+l);
-        std::copy(db[i1].otf_helper.cbegin(), db[i1].otf_helper.cbegin()+OTF_LIFT_HELPER_DIM, otf_helper);
-
-        // LEO: (style) the snippet below is a bit bulky, and duplicated from other sieve. Could we 
-        // factor it somewhat ?
-        //
-
-        if(sign == 1)
-        {
-            for(unsigned int i=0; i < n; ++i)
-            {
-                x[l+i] += db[i2].x[i];
-            }
-            for(unsigned int i=0; i < OTF_LIFT_HELPER_DIM; ++i)
-            {
-                otf_helper[i] += db[i2].otf_helper[i];
-            }
-        }
-        else
-        {
-            for(unsigned int i=0; i < n; ++i)
-            {
-                x[l+i] -= db[i2].x[i];
-            }
-            for(unsigned int i=0; i < OTF_LIFT_HELPER_DIM; ++i)
-            {
-                otf_helper[i] -= db[i2].otf_helper[i];
-            }
-        }
-        lift_and_compare(x, new_l * gh, otf_helper);
+        bdgl_lift(i1, i2, new_l, sign);
     }
     return -1;
 }
@@ -136,46 +71,35 @@ inline int Siever::bdgl_reduce_with_delayed_replace(const size_t i1, const size_
 // assumed that sign is known
 inline void Siever::bdgl_lift(const size_t i1, const size_t i2, LFT new_l, int8_t sign)
 {   
-    if( new_l <= 0. ) {
-        LFT const inner = std::inner_product(db[i1].yr.cbegin(), db[i1].yr.cbegin()+n, db[i2].yr.cbegin(), static_cast<LFT>(0.));
-        new_l = db[i1].len + db[i2].len + 2 * sign * inner;
-    }
-    
-    if (params.otf_lift )
+    ZT x[r];
+    LFT otf_helper[OTF_LIFT_HELPER_DIM];
+    std::fill(x, x+l, 0);
+    std::copy(db[i1].x.cbegin(), db[i1].x.cbegin()+n, x+l);
+    std::copy(db[i1].otf_helper.cbegin(), db[i1].otf_helper.cbegin()+OTF_LIFT_HELPER_DIM, otf_helper);
+
+    if(sign == 1)
     {
-        ZT x[r];
-        LFT otf_helper[OTF_LIFT_HELPER_DIM];
-        std::fill(x, x+l, 0);
-        std::copy(db[i1].x.cbegin(), db[i1].x.cbegin()+n, x+l);
-        std::copy(db[i1].otf_helper.cbegin(), db[i1].otf_helper.cbegin()+OTF_LIFT_HELPER_DIM, otf_helper);
-
-        // LEO: (style) There it is again...
-
-        if(sign == 1)
+        for(unsigned int i=0; i < n; ++i)
         {
-            for(unsigned int i=0; i < n; ++i)
-            {
-                x[l+i] += db[i2].x[i];
-            }
-            for(unsigned int i=0; i < OTF_LIFT_HELPER_DIM; ++i)
-            {
-                otf_helper[i] += db[i2].otf_helper[i];
-            }
+            x[l+i] += db[i2].x[i];
         }
-        else
+        for(unsigned int i=0; i < OTF_LIFT_HELPER_DIM; ++i)
         {
-            for(unsigned int i=0; i < n; ++i)
-            {
-                x[l+i] -= db[i2].x[i];
-            }
-            for(unsigned int i=0; i < OTF_LIFT_HELPER_DIM; ++i)
-            {
-                otf_helper[i] -= db[i2].otf_helper[i];
-            }
+            otf_helper[i] += db[i2].otf_helper[i];
         }
-
-        lift_and_compare(x, new_l * gh, otf_helper);
     }
+    else
+    {
+        for(unsigned int i=0; i < n; ++i)
+        {
+            x[l+i] -= db[i2].x[i];
+        }
+        for(unsigned int i=0; i < OTF_LIFT_HELPER_DIM; ++i)
+        {
+            otf_helper[i] -= db[i2].otf_helper[i];
+        }
+    }
+    lift_and_compare(x, new_l * gh, otf_helper);
 }
 
 
@@ -307,7 +231,7 @@ void Siever::bdgl_process_buckets_task(const size_t t_id,
                         statistics.inc_stats_2redsuccess_outer();
 
                         t_queue.push_back({ pce1->i, fast_cdb[bj].i, len_and_sign.first, len_and_sign.second});
-                    } else if( len_and_sign.first < params.lift_radius ) {
+                    } else if( params.otf_lift and len_and_sign.first < params.lift_radius ) {
                         // on the fly lifting
                         bdgl_lift( pce1->i, fast_cdb[bj].i, len_and_sign.first, len_and_sign.second );
                     }
