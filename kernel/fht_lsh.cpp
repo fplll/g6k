@@ -633,7 +633,7 @@ void ProductLSH::hash(const float * const v, int32_t * const res)
 
     for (int i = 0; i < multi_hash; ++i)
     {
-        res[i] = 0;
+        res[i] = 1;
     }
 
     // With all of the permutations done, we apply the multi_block hash. 
