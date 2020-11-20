@@ -409,8 +409,6 @@ bool Siever::bdgl_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t
     while( true ) {
         bdgl_bucketing(blocks, multi_hash, nr_buckets_aim, buckets, buckets_i);
 
-        std::cerr << buckets_i.size() << std::endl;
-
         bdgl_process_buckets(buckets, buckets_i, queue);
 
         size_t kk = bdgl_queue(queue, transaction_db );
