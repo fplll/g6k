@@ -520,9 +520,6 @@ template<> void ProductLSH::hash_templated<2>(const float * const vv, int32_t * 
     float c0[multi_hash_block], c1[multi_hash_block];
     float c[multi_hash] = {0};
 
-    // Fill res with 1s.
-    memset(res, 1, multi_hash*sizeof(res[0]));
-
     // Now hash against the two subcode blocks.
     lshs[0].hash(&(vv[0]), c0, h0);
     lshs[1].hash(&(vv[is[1]]), c1, h1);
@@ -632,6 +629,11 @@ void ProductLSH::hash(const float * const v, int32_t * const res)
         {
             vv[i] = .125 * sign[i] * tmp[permutation[i]];
         }        
+    }
+
+    for (int i = 0; i < multi_hash; ++i)
+    {
+        res[i] = 0;
     }
 
     // With all of the permutations done, we apply the multi_block hash. 
