@@ -542,11 +542,15 @@ template<> void ProductLSH::hash_templated<1>(const float * const vv, int32_t * 
 {
     //  Hash against the single block, copy the results and return
     //  We memcpy over the results into the res array.
-    int32_t h0[multi_hash_block];
-    float c0[multi_hash_block];
+    int32_t h0[multi_hash];
+    float c0[multi_hash];
+    assert(multi_hash_block >= multi_hash);
 
     lshs[0].hash(&(vv[0]), c0, h0);    
-    memcpy(res, h0, multi_hash_block * sizeof(int32_t));
+    for (int i = 0; i < multi_hash; ++i)
+    {
+        res[i] = h0[i];
+    }
 }
 
 /**
