@@ -1,26 +1,6 @@
-// https://github.com/lducas/AVX2-BDGL-bucketer commit 62fb8bc2d882a39b9d83257dd320d904b6cbc407
+//// https://github.com/lducas/AVX2-BDGL-bucketer commit 630c2286a440fae1eddd9f90341ff2020f18b614
 
 #include "fht_lsh.h"
-
-/* m256d_hadamard8_ps.
- * This function computes a Hadamard transform on a vector of 8 single precision floats
- */
-inline __m256 m256d_hadamard8_ps(const __m256& x1)
-{
-    __m256 tmp, res = x1;
-
-    // Note that here we use a 64-bit permutation and operate on res
-    // as if it's full of ints - no harm. We do this as an explicit reinterpret_cast.
-    tmp = (__m256) _mm256_permute4x64_epi64(reinterpret_cast<__m256i>(res), 0b01001110);
-    // Negate the first 4 floats of res, add to temp & put back in res
-    res = _mm256_fmadd_ps(res, _mm256_set_ps(-1,-1,-1,-1,1,1,1,1), tmp);
-    // Then negate the even components and add, repeat and then done
-    tmp = _mm256_mul_ps(res, _mm256_set_ps(-1,1,-1,1,-1,1,-1,1));
-    res = _mm256_hadd_ps(tmp, res);
-    tmp = _mm256_mul_ps(res, _mm256_set_ps(-1,1,-1,1,-1,1,-1,1));
-    res = _mm256_hadd_ps(tmp, res);
-    return res;
-}
 
 
 /*
@@ -278,8 +258,8 @@ inline void FastHadamardLSH::insert_in_maxs_epi16(int32_t * const maxs, const in
  * hash_templated. This is the hash function for the 
  * FastHadamardLSH code that we're operating on. 
  * @param v - a pointer to the vector which is hashed
- * @param res - a pointer to receive the multihash many (coefficient, hashes) pairs
-    (pairs are written next to each other in this array of size 2*multihash)
+ * @param res - a pointer to receive the multi_hash many (coefficient, hashes) pairs
+    (pairs are written next to each other in this array of size 2*multi_hash)
  */
 template<int regs_>
 void FastHadamardLSH::hash_templated(const int16_t * const vv, int32_t * const res)
@@ -342,8 +322,8 @@ void FastHadamardLSH::hash_templated(const int16_t * const vv, int32_t * const r
  * Note that this function is separate from the different "hash_templated" functions - that's
  * because we apply some normalisation and safety checks first.
  * @param v - a pointer to the vector which is hashed
- * @param coeff - a pointer to receive the multihash many coefficient of the selected hash values
- * @param hashes - a pointer to receive the multihash many hash values
+ * @param coeff - a pointer to receive the multi_hash many coefficient of the selected hash values
+ * @param hashes - a pointer to receive the multi_hash many hash values
  */
 void FastHadamardLSH::hash(const float * const v, float * const coeff, int32_t * const hashes)
 {
@@ -520,6 +500,9 @@ template<> void ProductLSH::hash_templated<2>(const float * const vv, int32_t * 
     float c0[multi_hash_block], c1[multi_hash_block];
     float c[multi_hash] = {0};
 
+    // Fill res with 1s.
+    memset(res, 1, multi_hash*sizeof(res[0]));
+
     // Now hash against the two subcode blocks.
     lshs[0].hash(&(vv[0]), c0, h0);
     lshs[1].hash(&(vv[is[1]]), c1, h1);
@@ -572,75 +555,33 @@ template<> void ProductLSH::hash_templated<1>(const float * const vv, int32_t * 
 /**
  * hash. Accepts a vector, v, and hashes it against all of the relevant subcodes.
  * @param v - a pointer to the vector which is hashed
- * @param res - a pointer to receive the multihash many hash values
+ * @param res - a pointer to receive the multi_hash many hash values
  */
 
 void ProductLSH::hash(const float * const v, int32_t * const res)
 {
     // Firstly we apply the permutation - we apply the same permutation to every input vector.
     // The sign and permutation vectors are built in the constructor for this class.
-    float vv[n], tmp[n];
+    float vv[n];
     for (size_t i = 0; i < n; ++i) 
     {
         vv[i] = sign[i] * v[permutation[i]];
     }
 
-
-    // Now we perform the pre-Hadamard rounds. 
-    // You can think of this as applying another set of permutations to the input.
-    // This code consists of fast, floating point Hadamard code. 
-    for (int iter = 0; iter < pre_hadamards; ++iter)
-    {
-	// For all but the last 8 floats, apply the fp Hadamard and store it in the tmp array 
-        unsigned i = 0;
-        for (; i+7 < n; i+=8)
-        {
-            __m256 x = _mm256_loadu_ps(&vv[i]);
-            x = m256d_hadamard8_ps(x);
-            _mm256_storeu_ps(&tmp[i], x);
-        }
-
-	
-	// Normalise the last 8 floats
-        for (; i < n; ++i)
-        {
-            tmp[i] = vv[i] * 2.82842712474619; // sqrt(8.);
-        }
-
-	
-	// Now normalize all of Hadamard'd components
-        i = 0;
-        for (; i < n-8; ++i)
-        {
-            tmp[i] = tmp[i] * 2.82842712474619; // sqrt(8.);
-        }
-
-
-	// And finally apply the Hadamard transform to the last 8 floats
-        __m256 x = _mm256_loadu_ps(&tmp[i]);
-        x = m256d_hadamard8_ps(x);
-        _mm256_storeu_ps(&tmp[i], x);
-
-
-
-
-	// Now renormalize the components, applying the permutation as we go
-        for (size_t i = 0; i < n; ++i) 
-        {
-            vv[i] = .125 * sign[i] * tmp[permutation[i]];
-        }        
-    }
-
-    for (int i = 0; i < multi_hash; ++i)
+    for (size_t i = 0; i < multi_hash; ++i)
     {
         res[i] = 1;
     }
 
     // With all of the permutations done, we apply the multi_block hash. 
     // Note that right now we've only got support for between 1-3 blocks.
-    if      (blocks==1)  { return hash_templated<1>(vv, res); }
-    else if (blocks==2)  { return hash_templated<2>(vv, res); }
-    else if (blocks==3)  { return hash_templated<3>(vv, res); }
+    if      (blocks==1)  {hash_templated<1>(vv, res); }
+    else if (blocks==2)  {hash_templated<2>(vv, res); }
+    else if (blocks==3)  {hash_templated<3>(vv, res); }
+    else {throw std::invalid_argument( "not implemented" );}
+    for (size_t i = 0; i < multi_hash; ++i)
+    {
+        res[i] = abs(res[i]) - 1;
+    }
 
-    throw std::invalid_argument( "not implemented" );
 }

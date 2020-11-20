@@ -1,4 +1,4 @@
-// https://github.com/lducas/AVX2-BDGL-bucketer commit 62fb8bc2d882a39b9d83257dd320d904b6cbc407
+//// https://github.com/lducas/AVX2-BDGL-bucketer commit 630c2286a440fae1eddd9f90341ff2020f18b614
 
 #ifndef G6K_FHTLSH_H
 #define G6K_FHTLSH_H
@@ -221,9 +221,6 @@ class ProductLSH
             std::vector<size_t> codesizes;
             std::vector<int> ns, is;
 
-        // This contains how many rounds of pre-permutations we do before we apply the full Hadamard
-        // transforms on the integers.
-            int pre_hadamards;
             // This holds all of the different subcodes
         std::vector<FastHadamardLSH> lshs;
             
@@ -252,9 +249,9 @@ class ProductLSH
         unsigned multi_hash;
         unsigned multi_hash_block;
         explicit ProductLSH(const size_t _n,const size_t _blocks, const  int64_t _codesize, 
-                            const unsigned _multi_hash, const int64_t _seed, const int _pre_hadamards = 0) : 
+                            const unsigned _multi_hash, const int64_t _seed) : 
         permutation(_n), sign(_n),
-        codesizes(_blocks), ns(_blocks), is(_blocks), pre_hadamards(_pre_hadamards),
+        codesizes(_blocks), ns(_blocks), is(_blocks), 
         n(_n), blocks(_blocks), codesize(_codesize), multi_hash(_multi_hash)
         {
         // Set up our permutation randomness    

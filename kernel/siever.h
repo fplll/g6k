@@ -1068,14 +1068,14 @@ private:
     bool bdgl_replace_in_db(size_t cdb_index, Entry &e);
 
     void bdgl_bucketing_task(const size_t t_id, 
-                             std::vector<int> &buckets, std::vector<size_t> &buckets_index,
+                             std::vector<uint32_t> &buckets, std::vector<size_t> &buckets_index,
                              ProductLSH &lsh);
     void bdgl_bucketing(const size_t blocks, const size_t multi_hash, const size_t nr_buckets_aim, 
-                        std::vector<int> &buckets, std::vector<size_t> &buckets_index);
+                        std::vector<uint32_t> &buckets, std::vector<size_t> &buckets_index);
 
-    void bdgl_process_buckets_task(const size_t t_id, const std::vector<int> &buckets, 
+    void bdgl_process_buckets_task(const size_t t_id, const std::vector<uint32_t> &buckets, 
                                    const std::vector<size_t> &buckets_index, std::vector<QEntry> &t_queue);
-    void bdgl_process_buckets(const std::vector<int> &buckets, const std::vector<size_t> &buckets_index,
+    void bdgl_process_buckets(const std::vector<uint32_t> &buckets, const std::vector<size_t> &buckets_index,
                                 std::vector<QEntry> &queue);
     
     void bdgl_queue_create_task( const size_t t_id, const std::vector<QEntry> &queue, std::vector<Entry> &transaction_dbi, int64_t &write_index);

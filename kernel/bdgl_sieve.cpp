@@ -121,7 +121,7 @@ bool Siever::bdgl_replace_in_db(size_t cdb_index, Entry &e)
     return true;
 }
 
-void Siever::bdgl_bucketing_task(const size_t t_id, std::vector<int> &buckets, std::vector<size_t> &buckets_index, ProductLSH &lsh)
+void Siever::bdgl_bucketing_task(const size_t t_id, std::vector<uint32_t> &buckets, std::vector<size_t> &buckets_index, ProductLSH &lsh)
 {
     CompressedEntry* const fast_cdb = cdb.data();
     const size_t S = cdb.size();
@@ -130,26 +130,24 @@ void Siever::bdgl_bucketing_task(const size_t t_id, std::vector<int> &buckets, s
     const size_t bsize = buckets.size() / nr_buckets;
     const size_t threads = params.threads;
 
-    size_t i_start = t_id;
+    uint32_t i_start = t_id;
     int32_t res[multi_hash];
     size_t bucket_index = 0;
-    for (size_t i = i_start; i < S; i += threads)
+    for (uint32_t i = i_start; i < S; i += threads)
     {  
         auto db_index = fast_cdb[i].i;
         lsh.hash( db[db_index].yr.data() , res);
         for( size_t j = 0; j < multi_hash; j++ ) {
-            int32_t b = res[j];
-            size_t b_abs = std::abs(b)-1;
-            bool sign = b < 0;
+            uint32_t b = res[j];
             assert( b_abs < nr_buckets );
             {
-                std::lock_guard<std::mutex> lockguard(bdgl_bucket_mut[ b_abs % BDGL_BUCKET_SPLIT ]);
-                bucket_index = buckets_index[b_abs]++; // mutex protected
+                std::lock_guard<std::mutex> lockguard(bdgl_bucket_mut[ b % BDGL_BUCKET_SPLIT ]);
+                bucket_index = buckets_index[b]++; // mutex protected
                 // todo: do this without locks
                 // LEO: how so ?
             }
             if( bucket_index < bsize ) {
-                buckets[bsize * b_abs + bucket_index] = (sign)?-i:i;
+                buckets[bsize * b + bucket_index] = i;
             }
         }
     }
@@ -157,11 +155,11 @@ void Siever::bdgl_bucketing_task(const size_t t_id, std::vector<int> &buckets, s
 
 // assumes buckets and buckets_index are resized and resetted correctly.
 void Siever::bdgl_bucketing(const size_t blocks, const size_t multi_hash, const size_t nr_buckets_aim, 
-    std::vector<int> &buckets, std::vector<size_t> &buckets_index)
+    std::vector<uint32_t> &buckets, std::vector<size_t> &buckets_index)
 {
     // init hash
     const int64_t lsh_seed = rng();
-    ProductLSH lsh(n, blocks, nr_buckets_aim, multi_hash, lsh_seed, false);
+    ProductLSH lsh(n, blocks, nr_buckets_aim, multi_hash, lsh_seed);
     const size_t nr_buckets = lsh.codesize;
     const size_t S = cdb.size();
     size_t bsize = 2 * (S*multi_hash / double(nr_buckets));
@@ -186,14 +184,14 @@ void Siever::bdgl_bucketing(const size_t blocks, const size_t multi_hash, const 
 }
 
 void Siever::bdgl_process_buckets_task(const size_t t_id, 
-    const std::vector<int> &buckets, 
+    const std::vector<uint32_t> &buckets, 
     const std::vector<size_t> &buckets_index, std::vector<QEntry> &t_queue)
 {
 
     const size_t nr_buckets = buckets_index.size();
     const size_t bsize = buckets.size() / nr_buckets;
 
-    const int* const fast_buckets = buckets.data();
+    const uint32_t* const fast_buckets = buckets.data();
     CompressedEntry* const fast_cdb = cdb.data();
     
     const size_t S = cdb.size();
@@ -214,12 +212,12 @@ void Siever::bdgl_process_buckets_task(const size_t t_id,
         {
             if (kk < .1 * S) break;
 
-            size_t bi = std::abs(fast_buckets[i]);
+            uint32_t bi = fast_buckets[i];
             CompressedEntry *pce1 = &fast_cdb[bi];
             CompressedVector cv = pce1->c;
             for (size_t j = i_start; j < i; ++j)
             {
-                size_t bj = std::abs(fast_buckets[j]);
+                uint32_t bj = fast_buckets[j];
                 if( is_reducible_maybe<XPC_THRESHOLD>(cv, fast_cdb[bj].c) )
                 {
                     std::pair<LFT, int> len_and_sign = reduce_to_QEntry( pce1, &fast_cdb[bj] );
@@ -244,7 +242,7 @@ void Siever::bdgl_process_buckets_task(const size_t t_id,
 }
 
 // Returned queue is sorted
-void Siever::bdgl_process_buckets(const std::vector<int> &buckets, const std::vector<size_t> &buckets_index, 
+void Siever::bdgl_process_buckets(const std::vector<uint32_t> &buckets, const std::vector<size_t> &buckets_index, 
     std::vector<QEntry> &queue)
 {
     std::vector<std::vector<QEntry>> t_queues(params.threads);
@@ -403,7 +401,7 @@ bool Siever::bdgl_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t
     }
     
     std::vector<std::vector<Entry>> transaction_db(params.threads, std::vector<Entry>());
-    std::vector<int> buckets;
+    std::vector<uint32_t> buckets;
     std::vector<size_t> buckets_i;
     std::vector<QEntry> queue;
 
