@@ -500,9 +500,6 @@ template<> void ProductLSH::hash_templated<2>(const float * const vv, int32_t * 
     float c0[multi_hash_block], c1[multi_hash_block];
     float c[multi_hash] = {0};
 
-    // Fill res with 1s.
-    memset(res, 1, multi_hash*sizeof(res[0]));
-
     // Now hash against the two subcode blocks.
     lshs[0].hash(&(vv[0]), c0, h0);
     lshs[1].hash(&(vv[is[1]]), c1, h1);
