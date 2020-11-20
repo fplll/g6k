@@ -139,7 +139,7 @@ void Siever::bdgl_bucketing_task(const size_t t_id, std::vector<uint32_t> &bucke
         lsh.hash( db[db_index].yr.data() , res);
         for( size_t j = 0; j < multi_hash; j++ ) {
             uint32_t b = res[j];
-            assert( b_abs < nr_buckets );
+            assert( b < nr_buckets );
             {
                 std::lock_guard<std::mutex> lockguard(bdgl_bucket_mut[ b % BDGL_BUCKET_SPLIT ]);
                 bucket_index = buckets_index[b]++; // mutex protected
