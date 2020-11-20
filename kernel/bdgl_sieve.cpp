@@ -139,7 +139,9 @@ void Siever::bdgl_bucketing_task(const size_t t_id, std::vector<uint32_t> &bucke
         lsh.hash( db[db_index].yr.data() , res);
         for( size_t j = 0; j < multi_hash; j++ ) {
             uint32_t b = res[j];
-            assert( b_abs < nr_buckets );
+            if( b >= nr_buckets )
+                std::cerr << "err " << b << " " << nr_buckets << std::endl;
+            assert( b < nr_buckets );
             {
                 std::lock_guard<std::mutex> lockguard(bdgl_bucket_mut[ b % BDGL_BUCKET_SPLIT ]);
                 bucket_index = buckets_index[b]++; // mutex protected
@@ -405,9 +407,13 @@ bool Siever::bdgl_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t
     std::vector<size_t> buckets_i;
     std::vector<QEntry> queue;
 
+    std::cerr << nr_buckets_aim << " " << blocks << " " << multi_hash << std::endl;
+
     size_t it = 0;
     while( true ) {
         bdgl_bucketing(blocks, multi_hash, nr_buckets_aim, buckets, buckets_i);
+
+        std::cerr << buckets_i.size() << std::endl;
 
         bdgl_process_buckets(buckets, buckets_i, queue);
 
