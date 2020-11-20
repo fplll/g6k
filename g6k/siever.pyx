@@ -1177,7 +1177,7 @@ cdef class Siever(object):
         if blocks is None:
             blocks =  self.params.bdgl_blocks
             
-        blocks = min(int(self.n / 22), blocks)
+        blocks = min(int(self.n / 28), blocks)
 
         if buckets is None:
             buckets =  self.params.bdgl_multi_hash * self.params.bdgl_bucket_size_factor * ((N/float(blocks)) ** (blocks/(1.0+blocks)))

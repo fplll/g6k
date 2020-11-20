@@ -102,14 +102,13 @@ cdef class SieverParams(object):
         if "bgj1_bucket_size_factor" not in kwds:
             kwds["bgj1_bucket_size_factor"] =  3.2
         if "bdgl_multi_hash" not in kwds:
-            kwds["bdgl_multi_hash"] = 1
+            kwds["bdgl_multi_hash"] = 4
         if "bdgl_blocks" not in kwds:
-            kwds["bdgl_blocks"] = 3
+            kwds["bdgl_blocks"] = 2
         if "bdgl_improvement_db_ratio" not in kwds:
             kwds["bdgl_improvement_db_ratio"] = 0.8
-
         if "bdgl_bucket_size_factor" not in kwds:
-            kwds["bdgl_bucket_size_factor"] =  1.
+            kwds["bdgl_bucket_size_factor"] =  .25
 
 
         # TODO : remove the two following ?
