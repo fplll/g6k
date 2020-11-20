@@ -1180,8 +1180,11 @@ cdef class Siever(object):
         blocks = min(int(self.n / 28), blocks)
 
         if buckets is None:
-            buckets =  self.params.bdgl_multi_hash * self.params.bdgl_bucket_size_factor * ((N/float(blocks)) ** (blocks/(1.0+blocks)))
+            buckets = self.params.bdgl_bucket_size_factor * 2.**((blocks-1.)/(blocks+1.)) * self.params.bdgl_multi_hash**((2.*blocks)/(blocks+1.)) * (N ** (blocks/(1.0+blocks)))
          
+        # minimum vecs per bucket
+        buckets = min(buckets, self.params.bdgl_multi_hash * N / self.params.bdgl_min_bucket_size)
+
         sig_on()
         self._core.bdgl_sieve(buckets, blocks, self.params.bdgl_multi_hash)
         sig_off()

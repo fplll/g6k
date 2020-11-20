@@ -63,6 +63,7 @@ cdef class SieverParams(object):
         "bdgl_bucket_size_factor",
         "bdgl_blocks",
         "bdgl_multi_hash",
+        "bdgl_min_bucket_size",
         "triplesieve_db_size_base",
         "triplesieve_db_size_factor",
         "default_sieve",
@@ -109,6 +110,8 @@ cdef class SieverParams(object):
             kwds["bdgl_improvement_db_ratio"] = 0.8
         if "bdgl_bucket_size_factor" not in kwds:
             kwds["bdgl_bucket_size_factor"] =  .25
+        if "bdgl_min_bucket_size" not in kwds:
+            kwds["bdgl_min_bucket_size"] = 256
 
 
         # TODO : remove the two following ?
