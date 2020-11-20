@@ -1,0 +1,39 @@
+## -*- docker-image-name: "fplll/sagemath-g6k" -*-
+
+FROM sagemath/sagemath:latest
+MAINTAINER Martin Albrecht <fplll-devel@googlegroups.com>
+
+ARG JOBS=2
+ARG FPLLL_BRANCH=master
+ARG FPYLLL_BRANCH=master
+ARG G6K_BRANCH=master
+SHELL ["/bin/bash", "-c"]
+
+RUN SAGE_ROOT=`pwd`/sage && \
+    export SAGE_ROOT="$SAGE_ROOT" && \
+    source "$SAGE_ROOT/local/bin/sage-env" && \
+    sudo apt update && \
+    sudo apt install -y git pkg-config libtool libqd-dev build-essential autoconf && \
+    git clone --branch $FPLLL_BRANCH https://github.com/fplll/fplll && \
+    cd fplll && \
+    autoreconf -i && \
+    ./configure --prefix=$SAGE_LOCAL --disable-static && \
+    make -j $JOBS install && \
+    cd .. && \
+    git clone --branch $FPYLLL_BRANCH https://github.com/fplll/fpylll && \
+    cd fpylll && \
+    pip3 install Cython && \
+    pip3 install -r requirements.txt && \
+    pip3 install -r suggestions.txt && \
+    python3 setup.py build -j $JOBS && \
+    python3 setup.py -q install && \
+    cd .. && \
+    git clone --branch $G6K_BRANCH https://github.com/fplll/g6k && \
+    cd g6k && \
+    make && \
+    pip3 install -r requirements.txt && \
+    python3 setup.py build -j $JOBS && \
+    python3 setup.py -q install && \
+    cd .. && \
+    rm -rf fplll fpylll g6k
+
