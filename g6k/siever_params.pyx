@@ -109,9 +109,9 @@ cdef class SieverParams(object):
         if "bdgl_improvement_db_ratio" not in kwds:
             kwds["bdgl_improvement_db_ratio"] = 0.8
         if "bdgl_bucket_size_factor" not in kwds:
-            kwds["bdgl_bucket_size_factor"] =  .25
+            kwds["bdgl_bucket_size_factor"] =  .3
         if "bdgl_min_bucket_size" not in kwds:
-            kwds["bdgl_min_bucket_size"] = 256
+            kwds["bdgl_min_bucket_size"] = 128
 
 
         # TODO : remove the two following ?

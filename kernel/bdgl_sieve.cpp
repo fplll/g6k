@@ -177,7 +177,7 @@ void Siever::bdgl_bucketing(const size_t blocks, const size_t multi_hash, const 
     
     for( size_t i = 0; i < nr_buckets; ++i ) {
         if( buckets_index[i] > bsize ) {
-            std::cerr << "Bucket too large by ratio " << i << " " <<  (buckets_index[i] / double(bsize)) << " " << buckets_index[i] << " " << bsize << std::endl;
+            // std::cerr << "Bucket overflow: " << buckets_index[i] << "/" << bsize << std::endl;
             buckets_index[i] = bsize;
         }
     }
@@ -230,7 +230,6 @@ void Siever::bdgl_process_buckets_task(const size_t t_id,
 
                         t_queue.push_back({ pce1->i, fast_cdb[bj].i, len_and_sign.first, len_and_sign.second});
                     } else if( params.otf_lift and len_and_sign.first < params.lift_radius ) {
-                        // on the fly lifting
                         bdgl_lift( pce1->i, fast_cdb[bj].i, len_and_sign.first, len_and_sign.second );
                     }
                 }
