@@ -52,6 +52,19 @@ inline bool UidHashTable::insert_uid(UidType uid)
 }
 
 // check for presence of uid in the database.
+inline bool UidHashTable::check_uid_unsafe(UidType uid)
+{
+    normalize_uid(uid);
+    if (db_uid[uid % DB_UID_SPLIT].count(uid) != 0)
+    {
+        return true;
+    }
+    else
+        return false;
+}
+
+
+// check for presence of uid in the database.
 inline bool UidHashTable::check_uid(UidType uid)
 {
     ATOMIC_CPUCOUNT(252);

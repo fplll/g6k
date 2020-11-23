@@ -1163,6 +1163,40 @@ cdef class Siever(object):
         self.check_saturation()
         return self.stats
 
+    def bdgl_sieve(self, blocks=None, buckets=None, reset_stats=True, check_saturation=True):
+        assert(self.initialized)
+        if self.n < 40:
+            logging.warning("bdgl_sieve not recommended below dimension 40")
+
+
+        if reset_stats:
+            self.reset_stats()
+
+        N = self.params.db_size_factor * self.params.db_size_base ** self.n
+        self.resize_db(N)
+
+        if blocks is None:
+            blocks =  self.params.bdgl_blocks
+
+        if blocks not in [1,2,3]:
+            logging.warning("bdgl_sieve only supports 1, 2, or 3 blocks")
+
+        blocks = min(3, max(1, blocks))
+        blocks = min(int(self.n / 28), blocks)
+
+        if buckets is None:
+            buckets = self.params.bdgl_bucket_size_factor * 2.**((blocks-1.)/(blocks+1.)) * self.params.bdgl_multi_hash**((2.*blocks)/(blocks+1.)) * (N ** (blocks/(1.0+blocks)))
+
+        buckets = min(buckets, self.params.bdgl_multi_hash * N / self.params.bdgl_min_bucket_size)
+        buckets = max(buckets, 2**(blocks-1))
+
+        sig_on()
+        self._core.bdgl_sieve(buckets, blocks, self.params.bdgl_multi_hash)
+        sig_off()
+
+        if check_saturation:
+            self.check_saturation()
+
     def nv_sieve(self, reset_stats=True):
         assert(self.initialized)
         if self.n < 40:
@@ -1241,7 +1275,7 @@ cdef class Siever(object):
         # choices  being overwritten by default or crossover leading to non-deterministic 
         # raise of the error
 
-        valid_sieves = ["nv", "bgj1", "gauss", "hk3"]
+        valid_sieves = ["nv", "bgj1", "gauss", "hk3", "bdgl", "bdgl1", "bdgl2", "bdgl3"]
         if alg is not None and alg not in valid_sieves:
             raise NotImplementedError("Sieve Algorithm '%s' invalid. "%(alg) + "Please choose among "+str(valid_sieves) )
 
@@ -1263,6 +1297,18 @@ cdef class Siever(object):
         elif alg == "bgj1":
             with tracer.context("bgj1"):
                 self.bgj1_sieve(reset_stats=reset_stats)
+        elif alg == "bdgl":
+            with tracer.context("bdgl"):
+                self.bdgl_sieve(reset_stats=reset_stats)
+        elif alg == "bdgl1":
+            with tracer.context("bdgl"):
+                self.bdgl_sieve(blocks=1, reset_stats=reset_stats)
+        elif alg == "bdgl2":
+            with tracer.context("bdgl"):
+                self.bdgl_sieve(blocks=2, reset_stats=reset_stats)
+        elif alg == "bdgl3":
+            with tracer.context("bdgl"):
+                self.bdgl_sieve(blocks=3, reset_stats=reset_stats)
         elif alg == "gauss":
             with tracer.context("gauss"):
                 self.gauss_sieve(reset_stats=reset_stats)

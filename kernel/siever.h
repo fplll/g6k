@@ -106,10 +106,12 @@ using SimHashDescriptor = unsigned[XPC_BIT_LEN][6]; // typedef to avoid some awk
 
 // forward declarations:
 struct Entry;
+struct QEntry;
 struct CompressedEntry;
 class Siever;
 class UidHashTable;
 class SimHashes;
+class ProductLSH;
 
 using UidType = uint64_t; // Type of the hash we are using for collision detection.
 
@@ -159,6 +161,7 @@ public:
   // Compute the uid of x using the current hash function.
   inline UidType compute_uid(std::array<ZT,MAX_SIEVING_DIM> const &x) const;
 
+  inline bool check_uid_unsafe(UidType uid); // checks whether uid is present without locks. Unsafe if other threads are writing to the hash table.
   inline bool check_uid(UidType uid);   // checks whether uid is present in the table. Avoid in multi-threaded contexts.
   inline bool insert_uid(UidType uid);  // inserts uid into the hash table. Return value indicates success (i.e. returns false if uid was present beforehand)
   inline bool erase_uid(UidType uid);   // removes uid from the hash table. return value indicates success (i.e. if it was present at all)
@@ -363,6 +366,8 @@ public:
                                             // execute_delayed_insert; 0 means AUTO, i.e. 10 +
                                             // 2*threads.
 
+  double bdgl_improvement_db_ratio = .8;
+
   std::string simhash_codes_basedir = "";  // directory holding spherical codes for simhash.
 };
 
@@ -492,6 +497,8 @@ public:
     // The paramter alpha >= 0 controls when to put vectors into a bucket (bgj1 is a bucketed sieve):
     // An entry x is put into the bucket with center c if |<x,c>| > alpha * |x| * |c|
     void bgj1_sieve(double alpha); // in bgj1_sieve.cpp
+
+    bool bdgl_sieve(size_t buckets, size_t blocks, size_t multi_hash); // in bdgl_sieve.cpp
 
     // runs a multi-threaded gauss-triple-sieve.
     // The parameter alpha has the same meaning as in bgj1.
@@ -1046,6 +1053,37 @@ private:
     bool bgj1_execute_delayed_replace(std::vector<Entry>& transaction_db, bool force, bool nosort = false); // in bgj1_sieve.cpp
     template <int tn>
     void bgj1_sieve_task(double alpha); // in bgj1_sieve.cpp
+
+    /**
+      Implementation details of bdgl sieve
+    */
+    inline int bdgl_reduce_with_delayed_replace(const size_t i1, const size_t i2, LFT const lenbound, std::vector<Entry> &transaction_db, int64_t &write_index, LFT new_l = -1.0, int8_t sign = 1);
+
+    inline void bdgl_lift(const size_t i1, const size_t i2, LFT new_l, int8_t sign);
+
+    bool bdgl_replace_in_db(size_t cdb_index, Entry &e);
+
+    void bdgl_bucketing_task(const size_t t_id, 
+                             std::vector<uint32_t> &buckets, std::vector<size_t> &buckets_index,
+                             ProductLSH &lsh);
+    void bdgl_bucketing(const size_t blocks, const size_t multi_hash, const size_t nr_buckets_aim, 
+                        std::vector<uint32_t> &buckets, std::vector<size_t> &buckets_index);
+
+    void bdgl_process_buckets_task(const size_t t_id, const std::vector<uint32_t> &buckets, 
+                                   const std::vector<size_t> &buckets_index, std::vector<QEntry> &t_queue);
+    void bdgl_process_buckets(const std::vector<uint32_t> &buckets, const std::vector<size_t> &buckets_index,
+                                std::vector<std::vector<QEntry>> &t_queues);
+    
+    void bdgl_queue_create_task( const size_t t_id, const std::vector<QEntry> &queue, std::vector<Entry> &transaction_dbi, int64_t &write_index);
+    void bdgl_queue_dup_remove_task( const size_t t_id, std::vector<QEntry> &queue);
+    size_t bdgl_queue_insert_task( const size_t t_id, std::vector<Entry> &transaction_dbi, int64_t write_index);
+    size_t bdgl_queue( std::vector<std::vector<QEntry>> &t_queues, std::vector<std::vector<Entry>> &transaction_db);
+
+    std::pair<LFT, int8_t> reduce_to_QEntry(CompressedEntry *ce1, CompressedEntry *ce2);
+
+    // bdgl variables
+    static constexpr unsigned BDGL_BUCKET_SPLIT = 512;
+    std::array<std::mutex, BDGL_BUCKET_SPLIT> bdgl_bucket_mut;
 
 // previously, these were global variables. TODO: Document / refactor those.
     CACHELINE_VARIABLE(std::atomic_size_t, GBL_replace_pos);

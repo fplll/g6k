@@ -54,11 +54,16 @@ cdef class SieverParams(object):
         "bgj1_resort_ratio",
         "bgj1_transaction_bulk_size",
         "simhash_codes_basedir",
+        "bdgl_improvement_db_ratio",
         # Python
         "db_size_base",
         "db_size_factor",
         "bgj1_bucket_size_expo",
         "bgj1_bucket_size_factor",
+        "bdgl_bucket_size_factor",
+        "bdgl_blocks",
+        "bdgl_multi_hash",
+        "bdgl_min_bucket_size",
         "default_sieve",
         "gauss_crossover",
         "dual_mode"
@@ -95,6 +100,17 @@ cdef class SieverParams(object):
             kwds["bgj1_bucket_size_expo"] = .5     # The initial bgj1_bucket_size for sieving is
         if "bgj1_bucket_size_factor" not in kwds:
             kwds["bgj1_bucket_size_factor"] =  3.2
+        if "bdgl_multi_hash" not in kwds:
+            kwds["bdgl_multi_hash"] = 4
+        if "bdgl_blocks" not in kwds:
+            kwds["bdgl_blocks"] = 2
+        if "bdgl_improvement_db_ratio" not in kwds:
+            kwds["bdgl_improvement_db_ratio"] = 0.8
+        if "bdgl_bucket_size_factor" not in kwds:
+            kwds["bdgl_bucket_size_factor"] =  .3
+        if "bdgl_min_bucket_size" not in kwds:
+            kwds["bdgl_min_bucket_size"] = 128
+
 
         if "dual_mode" not in kwds:
             kwds["dual_mode"] = False                      
@@ -156,6 +172,8 @@ cdef class SieverParams(object):
             self._core.bgj1_transaction_bulk_size = value
         elif key == "simhash_codes_basedir":
             self._core.simhash_codes_basedir = value.encode("utf-8") if isinstance(value, str) else value
+        elif key == "bdgl_improvement_db_ratio":
+            self._core.bdgl_improvement_db_ratio = value
         else:
             self._pyattr[key] = value
 
@@ -188,6 +206,8 @@ cdef class SieverParams(object):
             return self._core.bgj1_transaction_bulk_size
         elif key == "simhash_codes_basedir":
             return self._core.simhash_codes_basedir
+        elif key == "bdgl_improvement_db_ratio":
+            return self._core.bdgl_improvement_db_ratio
         else:
             return self._pyattr[key]
 

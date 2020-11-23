@@ -201,6 +201,7 @@ cdef extern from "../kernel/siever.h" nogil:
         double bgj1_resort_ratio
         size_t bgj1_transaction_bulk_size
         string simhash_codes_basedir
+        double bdgl_improvement_db_ratio
 
     cdef cppclass Siever:
 
@@ -234,6 +235,7 @@ cdef extern from "../kernel/siever.h" nogil:
         void gauss_sieve() # uses default max_db_size
         bool nv_sieve()
         void bgj1_sieve(double alpha)
+        void bdgl_sieve(size_t nr_buckets, size_t blocks, size_t multi_hash)
 
         void hk3_sieve(double alpha)
 
