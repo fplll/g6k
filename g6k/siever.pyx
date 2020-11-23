@@ -1168,6 +1168,7 @@ cdef class Siever(object):
         if self.n < 40:
             logging.warning("bdgl_sieve not recommended below dimension 40")
 
+
         if reset_stats:
             self.reset_stats()
 
@@ -1176,14 +1177,18 @@ cdef class Siever(object):
 
         if blocks is None:
             blocks =  self.params.bdgl_blocks
-            
+
+        if blocks not in [1,2,3]:
+            logging.warning("bdgl_sieve only supports 1, 2, or 3 blocks")
+
+        blocks = min(3, max(1, blocks))
         blocks = min(int(self.n / 28), blocks)
 
         if buckets is None:
             buckets = self.params.bdgl_bucket_size_factor * 2.**((blocks-1.)/(blocks+1.)) * self.params.bdgl_multi_hash**((2.*blocks)/(blocks+1.)) * (N ** (blocks/(1.0+blocks)))
-         
-        # minimum vecs per bucket
+
         buckets = min(buckets, self.params.bdgl_multi_hash * N / self.params.bdgl_min_bucket_size)
+        buckets = max(buckets, 2**(blocks-1))
 
         sig_on()
         self._core.bdgl_sieve(buckets, blocks, self.params.bdgl_multi_hash)
