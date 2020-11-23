@@ -2,8 +2,8 @@
 The General Sieve Kernel (G6K)
 ******************************
 
-.. image:: https://travis-ci.org/fplll/g6k.svg?branch=master
-    :target: https://travis-ci.org/fplll/g6k
+.. image:: https://github.com/fplll/g6k/workflows/Tests/badge.svg
+    :target: https://github.com/fplll/g6k/actions?query=workflow%3ATests
 
 G6K is a C++ and Python library that implements several Sieve algorithms to be used in more advanced lattice reduction tasks. It follows the stateful machine framework from: 
 
@@ -69,9 +69,10 @@ To recreate Figure 2, run (if you have 26 threads, otherwise change ``--threads`
 
 .. code-block:: bash
 
-    python ./full_sieve.py 100 --sieve gauss_triple_mt --seed 23 --trials 2 --threads 26 --db_size_base 1.140174986570044 1.1414898159861084 1.1428031326523391 1.1441149417781413 1.14542524854309 1.146734058097168 1.1480413755610026 1.1493472060 1.153255825912013 1.154555758722808 1.1547005383
+    python ./full_sieve.py 100 --sieve hk3 --seed 23 --trials 2 --threads 26 --db_size_base 1.140174986570044 1.1414898159861084 1.1428031326523391 1.1441149417781413 1.14542524854309 1.146734058097168 1.1480413755610026 1.1493472060 1.153255825912013 1.154555758722808 1.1547005383
 
-The whole experiment took ~15 h. If you do not want to wait that long, decrease the dimension.
+The whole experiment took ~15 h. If you do not want to wait that long, decrease the dimension. 
+*Note* : Asymptotically, one would need to adjust the `saturation_radius` accordingly. However, at these dimensions, the default `db_size_factor` was large enough to accomodate saturation in practce.
 
 
 Exact-SVP (Sec 6.1)
@@ -97,7 +98,7 @@ Which will take around 10 seconds. To compare several algorithms, and average ov
 
 .. code-block:: bash
 
-    python ./svp_exact.py 50 --workers 3 --trials 5 --challenge-seed 0 1 2 --sieve gauss bgj1 enum
+    python ./svp_exact.py 50 --workers 3 --trials 5 --challenge-seed 0 1 2 --svp/alg workout enum
 
 
 SVP-challenge (Sec 6.2)

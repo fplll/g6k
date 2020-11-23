@@ -34,7 +34,7 @@ class SieveTreeTracer(Tracer):
         if start_clocks:
             self.reenter()
 
-    recognized_sieves = {"bgj1", "triple_mt", "triple_st", "gauss", "gauss_old", "nv", "bdgl"}
+    recognized_sieves = {"bgj1", "hk3", "gauss", "nv", "bdgl"}
 
     @classmethod
     def is_sieve_node(cls, label):
