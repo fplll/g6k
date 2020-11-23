@@ -10,6 +10,9 @@ Sample = 1000
 
 
 n = int(sys.argv[1])
+if n < 6:
+    print("This script only works with n > 5")
+    sys.exit(1)
 
 relative_len = False
 try:
