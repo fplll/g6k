@@ -143,8 +143,6 @@ void Siever::bdgl_bucketing_task(const size_t t_id, std::vector<uint32_t> &bucke
             {
                 std::lock_guard<std::mutex> lockguard(bdgl_bucket_mut[ b % BDGL_BUCKET_SPLIT ]);
                 bucket_index = buckets_index[b]++; // mutex protected
-                // todo: do this without locks
-                // LEO: how so ?
             }
             if( bucket_index < bsize ) {
                 buckets[bsize * b + bucket_index] = i;
@@ -176,8 +174,8 @@ void Siever::bdgl_bucketing(const size_t blocks, const size_t multi_hash, const 
     threadpool.wait_work(); 
     
     for( size_t i = 0; i < nr_buckets; ++i ) {
+        // bucket overflow
         if( buckets_index[i] > bsize ) {
-            // std::cerr << "Bucket overflow: " << buckets_index[i] << "/" << bsize << std::endl;
             buckets_index[i] = bsize;
         }
     }
@@ -392,10 +390,6 @@ bool Siever::bdgl_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t
             recompute_histo();
             return true;
         } 
-
-        // LEO: can we use something that scale reasonably here ? 
-        // The exact asymptotic may be painful, but maybe something like 
-        // N / sqrt(nr_bucket) could do ?
 
         if( it > 10000 ) {
             std::cerr << "Not saturated after 10000 iterations" << std::endl;
