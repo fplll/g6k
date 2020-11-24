@@ -537,8 +537,9 @@ void Siever::hk3_sieve_task(TS_Transaction_DB_Type &transaction_db, MAYBE_UNUSED
     // These values do not change during the algorithm.
     auto const n = this->n;
     double const alpha_square = alpha * alpha;
+#ifndef NDEBUG
     size_t const db_size = db.size();
-
+#endif
     // This contains the bucket elements of the current run. Note that we put no limit on its size.
     // (It is bounded by db_size, though). We also do not preallocate. Should we?
     std::vector<TS_FilteredCE> bucket;
@@ -1299,7 +1300,9 @@ size_t Siever::hk3_sieve_execute_delayed_insertion(TS_Transaction_DB_Type &trans
         // We will (eventually) insert into *insertion_start_ptr, ..., *insertion_end_ptr (right bound is EXCLUSIVE)
         // number of insertions is insertion_size. Note that if insertion_size == 0, the pointers are meaningless.
         // If we count from the right, we go insertion_end_ptr[-1], ..., insertion_end_ptr[-insertion_size] (inclusive)
+#ifndef NDEBUG
         CompressedEntry * insertion_start_ptr = nullptr;
+#endif
         CompressedEntry * insertion_end_ptr   = nullptr;
         bool choose_queue_to_insert; // indicates whether we insert into the list or the queue.
 
@@ -1501,7 +1504,7 @@ size_t Siever::hk3_sieve_execute_delayed_insertion(TS_Transaction_DB_Type &trans
 
                 // In this case, the new value old_queue_left - insertion_size is small, and we have to back off from
                 // some insertions and pre-reservations.
-                if(old_queue_left < static_cast<decltype(old_queue_left)> (insertion_size + TS_max_extra_queue_size))
+                if(old_queue_left < static_cast<std::remove_const<decltype(old_queue_left)>::type> (insertion_size + TS_max_extra_queue_size))
                 {
                     if(old_queue_left <= 0) // no more queue left, abort. We do not trigger sorting ourselves.
                     {
@@ -1513,7 +1516,7 @@ size_t Siever::hk3_sieve_execute_delayed_insertion(TS_Transaction_DB_Type &trans
                     assert(old_queue_left > 0);
                     assert(insertion_size > 0);
 
-                    if(old_queue_left > TS_max_extra_queue_size)
+                    if(old_queue_left > static_cast<std::remove_const<decltype(old_queue_left)>::type>(TS_max_extra_queue_size))
                     {
                         // Reduce the insertion size, such that TS_queue_left hits TS_max_extra_queue_size if we had
                         // decremented TS_queue_left by that value. We add back to TS_queue_left accordingly.
@@ -1549,7 +1552,9 @@ size_t Siever::hk3_sieve_execute_delayed_insertion(TS_Transaction_DB_Type &trans
                 // assert(TS_insert_queue == known_TS_insert_queue);
                 TS_insert_queue = insertion_start_index; // Equivalently: TS_insert_queue-= insertion_size;
 
+                #ifndef NDEBUG
                 insertion_start_ptr = true_fast_cdb + insertion_start_index;
+                #endif
                 insertion_end_ptr = true_fast_cdb + insertion_start_index + insertion_size;
 
                 // Modify TS_queue_list_imbalance:
@@ -1571,7 +1576,9 @@ size_t Siever::hk3_sieve_execute_delayed_insertion(TS_Transaction_DB_Type &trans
 //                }
                 TS_insert_list = insertion_start_index;
 
+#ifndef NDEBUG
                 insertion_start_ptr = true_fast_cdb + insertion_start_index;
+#endif
                 insertion_end_ptr   = true_fast_cdb + insertion_start_index + insertion_size;
 
 //                modify_queue_list_imbalance -= std::round(TS_queue_list_imbalance_multiplier * insertion_end_ptr[-1].len);
@@ -1591,7 +1598,8 @@ size_t Siever::hk3_sieve_execute_delayed_insertion(TS_Transaction_DB_Type &trans
         assert(insertion_start_ptr != nullptr);
         assert(insertion_end_ptr != nullptr);
         assert(insertion_start_ptr <= insertion_end_ptr);
-        assert(insertion_end_ptr - insertion_start_ptr == insertion_size);
+        // Even with the above assert this needs a cast
+        assert(static_cast<decltype(insertion_size)>(insertion_end_ptr - insertion_start_ptr) == insertion_size);
 
         // We now perform step 3: Insertion into cdb:
         // We also have exclusive write access to the reserved portion of cdb.
@@ -1609,7 +1617,9 @@ size_t Siever::hk3_sieve_execute_delayed_insertion(TS_Transaction_DB_Type &trans
             if(UNLIKELY(insertion_end_ptr[-i].len < transactions_end_it[-i].len ))
             { // What we would overwrite is shorter that what is in transaction_db.
                 insertion_size = i - 1; // number of successful insertions we actually performed.
+#ifndef NDEBUG
                 insertion_start_ptr = insertion_end_ptr - insertion_size;
+#endif
                 // TODO: If this happens when inserting into the list, take countermeasures.
                 if(choose_queue_to_insert)
                     statistics.inc_stats_replacementfailures_queue(insertion_size_copy - insertion_size);
@@ -1898,7 +1908,7 @@ void Siever::hk3_sieve_restore_cdb()
 {
     auto const find_latest_snapshot = TS_latest_cdb_snapshot_p.load(std::memory_order_relaxed) - &TS_cdb_snapshots[0];
     assert(find_latest_snapshot >=0);
-    assert(static_cast<mystd::make_unsigned_t<decltype(find_latest_snapshot)>> (find_latest_snapshot) < TS_snapshots_used);
+    assert(static_cast<std::remove_const<mystd::make_unsigned_t<decltype(find_latest_snapshot)>>::type> (find_latest_snapshot) < TS_snapshots_used);
     assert(TS_snapshots_used <= TS_max_snapshots);
 
     TS_cdb_snapshots[0].snapshot.swap(TS_cdb_snapshots[find_latest_snapshot].snapshot);
