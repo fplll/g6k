@@ -9,6 +9,7 @@ on:
 env:
   JOBS: 2
   DEPS: libgmp-dev libmpfr-dev libqd-dev libtool autoconf python3-pip python3-dev python3-flake8
+  CXXFLAGS: "-O2 -Wall -Wextra -std=c++11"
 
 jobs:
   python3:
