@@ -279,15 +279,7 @@ void FastHadamardLSH::hash_templated(const int16_t * const vv, int32_t * const r
     }
     
 
-    // Here we use some C++17 magic.
-    // If we have more than 2 registers to operate on then we apply the Hadamard transform on 32 entries at a given time
-    // However, if we've got only 2 registers to operate on then we need to use different permutations 
-    // and we only apply the Hadamard transform on 16 entries at a given time.
-    //
-    // But we don't want to use a regular if! That's slow.
-    // Thankfully, if constexpr is a thing - it will throw away the branch that we don't care about in our template - 
-    // thus it lets us write simpler code, but get the benefits we want in the end. 
-    if constexpr(regs_ > 2) {
+    if (regs_ > 2) {
     	//h0 and h1 contains the Hadamard transforms of v[0] and v[1] on each iteration respectively.
     	__m256i h0, h1;
     	// Permute the 16-bit integers in the matrix
