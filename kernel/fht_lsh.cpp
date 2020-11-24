@@ -547,7 +547,7 @@ template<> void ProductLSH::hash_templated<1>(const float * const vv, int32_t * 
     assert(multi_hash_block >= multi_hash);
 
     lshs[0].hash(&(vv[0]), c0, h0);    
-    for (int i = 0; i < multi_hash; ++i)
+    for (unsigned int i = 0; i < multi_hash; ++i)
     {
         res[i] = h0[i];
     }

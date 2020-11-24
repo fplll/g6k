@@ -172,7 +172,7 @@ void Siever::initialize_local(unsigned int ll_, unsigned int l_, unsigned int r_
 
             if (!params.lift_unitary_only) continue;
             bool unitary=false;
-            for (int i = l_; i < r_; ++i)
+            for (unsigned int i = l_; i < r_; ++i)
             {
                 unitary |= abs(bl.x[i])==1;
             }
@@ -188,12 +188,12 @@ void Siever::initialize_local(unsigned int ll_, unsigned int l_, unsigned int r_
         best_lifts_so_far.resize(l_+1);
     }
     
-    for (int i = 0; i < ll; ++i)
+    for (unsigned int i = 0; i < ll; ++i)
     {
         assert(best_lifts_so_far[i].len == 0);
     }
     
-    for (int i = ll; i < ll_; ++i)
+    for (unsigned int i = ll; i < ll_; ++i)
     {
         best_lifts_so_far[i].x.clear();
         best_lifts_so_far[i].len = 0;

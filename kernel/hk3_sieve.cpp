@@ -1621,7 +1621,7 @@ size_t Siever::hk3_sieve_execute_delayed_insertion(TS_Transaction_DB_Type &trans
             insertion_end_ptr[-i].c   = transactions_end_it[-i].c;
             auto const db_insert = insertion_end_ptr[-i].i;
             db_insertion_positions[i-1] = db_insert;
-            for(int t = 0; t < (sizeof(Entry) + 63) / 64; ++t)
+            for(unsigned int t = 0; t < (sizeof(Entry) + 63) / 64; ++t)
             {
                 PREFETCH3(reinterpret_cast<char*>(db.data()+db_insert) + 64*t, 1,0 );
             }
@@ -1710,7 +1710,7 @@ cleanup:
 // Here, p is the point among the triple that is from the queue.
 // p may have negative length, which indicates that the algorithm has finished. In this case, the size_t element is meaningless.
 // thread_local_snapshot is the latest CDB snapshot the calling thread knows about, which is also updated.
-std::pair<Entry, size_t> Siever::hk3_sieve_get_p(TS_CDB_Snapshot * &thread_local_snapshot, unsigned int const id, TS_Transaction_DB_Type &transaction_db, float &update_len_bound)
+std::pair<Entry, size_t> Siever::hk3_sieve_get_p(TS_CDB_Snapshot * &thread_local_snapshot, unsigned int const id, TS_Transaction_DB_Type &transaction_db, float &)
 {
     ATOMIC_CPUCOUNT(604);
     std::pair<Entry, size_t> return_pair; // return value

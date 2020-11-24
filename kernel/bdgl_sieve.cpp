@@ -126,7 +126,7 @@ void Siever::bdgl_bucketing_task(const size_t t_id, std::vector<uint32_t> &bucke
     CompressedEntry* const fast_cdb = cdb.data();
     const size_t S = cdb.size();
     const size_t multi_hash = lsh.multi_hash;
-    const int nr_buckets = buckets_index.size();
+    const unsigned int nr_buckets = buckets_index.size();
     const size_t bsize = buckets.size() / nr_buckets;
     const size_t threads = params.threads;
 
@@ -226,7 +226,7 @@ void Siever::bdgl_process_buckets_task(const size_t t_id,
                         
                         statistics.inc_stats_2redsuccess_outer();
 
-                        t_queue.push_back({ pce1->i, fast_cdb[bj].i, len_and_sign.first, len_and_sign.second});
+                        t_queue.push_back({ pce1->i, fast_cdb[bj].i, len_and_sign.first, (int8_t)len_and_sign.second});
                     } else if( params.otf_lift and len_and_sign.first < params.lift_radius ) {
                         bdgl_lift( pce1->i, fast_cdb[bj].i, len_and_sign.first, len_and_sign.second );
                     }
@@ -249,7 +249,7 @@ void Siever::bdgl_process_buckets(const std::vector<uint32_t> &buckets, const st
     threadpool.wait_work();
 }
 
-void Siever::bdgl_queue_dup_remove_task( const size_t t_id, std::vector<QEntry> &queue) {
+void Siever::bdgl_queue_dup_remove_task( const size_t, std::vector<QEntry> &queue) {
     const size_t Q = queue.size();
     for( size_t index = 0; index < Q; index++ ) {
         size_t i1 = queue[index].i;
@@ -274,7 +274,7 @@ void Siever::bdgl_queue_create_task( const size_t t_id, const std::vector<QEntry
     const size_t Q = queue.size();
 
     const size_t insert_after = S-1-t_id-params.threads*write_index; 
-    for( int index = 0; index < Q; index++ )  {     
+    for(unsigned int index = 0; index < Q; index++ )  {
         // use sign as skip marker
         if( queue[index].sign == 0 ){
             continue;
@@ -312,11 +312,11 @@ size_t Siever::bdgl_queue(std::vector<std::vector<QEntry>> &t_queues, std::vecto
 
     const size_t S = cdb.size(); 
     size_t Q = 0;
-    for( int i = 0; i < params.threads; i++)
+    for(unsigned int i = 0; i < params.threads; i++)
         Q += t_queues[i].size();
     size_t insert_after = std::max(0, int(int(S)-Q));
     
-    for( int i = 0; i < params.threads; i++ )
+    for(unsigned int i = 0; i < params.threads; i++ )
         transaction_db[i].resize(std::min(S-insert_after, Q)/params.threads + 1);
 
     std::vector<int> write_indices(params.threads, transaction_db[0].size()-1);
@@ -332,7 +332,7 @@ size_t Siever::bdgl_queue(std::vector<std::vector<QEntry>> &t_queues, std::vecto
     threadpool.wait_work(); 
 
     size_t transaction_vecs_used = 0;
-    for( int t_id = 0; t_id < params.threads; t_id++ ) {
+    for(unsigned int t_id = 0; t_id < params.threads; t_id++ ) {
         transaction_vecs_used += transaction_db[t_id].size()-1 - write_indices[t_id];
     }
 
@@ -346,7 +346,7 @@ size_t Siever::bdgl_queue(std::vector<std::vector<QEntry>> &t_queues, std::vecto
     threadpool.wait_work(); 
     size_t min_kk = kk[0];
     size_t inserted = 0;
-    for( int i = 0; i < params.threads; i++ ){
+    for(unsigned int i = 0; i < params.threads; i++ ){
         min_kk = std::min(min_kk, kk[i]);
         inserted += (S-1-i - kk[i]-params.threads)/params.threads;
     }
@@ -380,7 +380,7 @@ bool Siever::bdgl_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t
 
         bdgl_process_buckets(buckets, buckets_i, t_queues);
 
-        size_t kk = bdgl_queue(t_queues, transaction_db );
+        bdgl_queue(t_queues, transaction_db );
 
         parallel_sort_cdb();
 
