@@ -76,8 +76,9 @@ void Siever::gauss_sieve(size_t max_db_size)
 start_over:
             for (size_t j = 0; j < p_index; ++j) // WHY IS IT p_index NOT queue_begin???
             {
+#ifndef NDEBUG
                 LFT cv2_vec_len = fast_cdb[j].len;
-
+#endif
                 if( UNLIKELY(is_reducible_maybe<XPC_THRESHOLD>(cv,&(fast_cdb[j].c.front()) )))
                 {
                     #if COLLECT_STATISTICS_XORPOPCNT_PASS || COLLECT_STATISTICS_FULLSCPRODS
