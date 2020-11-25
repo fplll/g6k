@@ -301,7 +301,7 @@ size_t Siever::bdgl_queue_insert_task( const size_t t_id, std::vector<Entry> &tr
     return kk + params.threads;
 }
 
-size_t Siever::bdgl_queue(std::vector<std::vector<QEntry>> &t_queues, std::vector<std::vector<Entry>>& transaction_db ) {
+void Siever::bdgl_queue(std::vector<std::vector<QEntry>> &t_queues, std::vector<std::vector<Entry>>& transaction_db ) {
     // clear duplicates read only
     for( size_t t_id = 0; t_id < params.threads; ++t_id ) {
         threadpool.push([this, t_id, &t_queues](){
@@ -331,11 +331,6 @@ size_t Siever::bdgl_queue(std::vector<std::vector<QEntry>> &t_queues, std::vecto
     }
     threadpool.wait_work(); 
 
-    size_t transaction_vecs_used = 0;
-    for(unsigned int t_id = 0; t_id < params.threads; t_id++ ) {
-        transaction_vecs_used += transaction_db[t_id].size()-1 - write_indices[t_id];
-    }
-
     // Insert transaction DB
     std::vector<size_t> kk(params.threads);
     for( size_t t_id = 0; t_id < params.threads; ++t_id ) {
@@ -351,8 +346,6 @@ size_t Siever::bdgl_queue(std::vector<std::vector<QEntry>> &t_queues, std::vecto
         inserted += (S-1-i - kk[i]-params.threads)/params.threads;
     }
     status_data.plain_data.sorted_until = min_kk;
-
-    return transaction_vecs_used;
 }
 
 bool Siever::bdgl_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t multi_hash) {

@@ -1075,9 +1075,9 @@ private:
                                 std::vector<std::vector<QEntry>> &t_queues);
     
     void bdgl_queue_create_task( const size_t t_id, const std::vector<QEntry> &queue, std::vector<Entry> &transaction_dbi, int64_t &write_index);
-    void bdgl_queue_dup_remove_task( const size_t t_id, std::vector<QEntry> &queue);
+    void bdgl_queue_dup_remove_task( std::vector<QEntry> &queue);
     size_t bdgl_queue_insert_task( const size_t t_id, std::vector<Entry> &transaction_dbi, int64_t write_index);
-    size_t bdgl_queue( std::vector<std::vector<QEntry>> &t_queues, std::vector<std::vector<Entry>> &transaction_db);
+    void bdgl_queue( std::vector<std::vector<QEntry>> &t_queues, std::vector<std::vector<Entry>> &transaction_db);
 
     std::pair<LFT, int8_t> reduce_to_QEntry(CompressedEntry *ce1, CompressedEntry *ce2);
 
