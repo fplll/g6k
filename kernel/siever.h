@@ -108,6 +108,7 @@ using SimHashDescriptor = unsigned[XPC_BIT_LEN][6]; // typedef to avoid some awk
 struct Entry;
 struct QEntry;
 struct CompressedEntry;
+struct atomic_size_t_wrapper;
 class Siever;
 class UidHashTable;
 class SimHashes;
@@ -1064,14 +1065,14 @@ private:
     bool bdgl_replace_in_db(size_t cdb_index, Entry &e);
 
     void bdgl_bucketing_task(const size_t t_id, 
-                             std::vector<uint32_t> &buckets, std::vector<size_t> &buckets_index,
+                             std::vector<uint32_t> &buckets, std::vector<atomic_size_t_wrapper> &buckets_index,
                              ProductLSH &lsh);
     void bdgl_bucketing(const size_t blocks, const size_t multi_hash, const size_t nr_buckets_aim, 
-                        std::vector<uint32_t> &buckets, std::vector<size_t> &buckets_index);
+                        std::vector<uint32_t> &buckets, std::vector<atomic_size_t_wrapper> &buckets_index);
 
     void bdgl_process_buckets_task(const size_t t_id, const std::vector<uint32_t> &buckets, 
-                                   const std::vector<size_t> &buckets_index, std::vector<QEntry> &t_queue);
-    void bdgl_process_buckets(const std::vector<uint32_t> &buckets, const std::vector<size_t> &buckets_index,
+                                   const std::vector<atomic_size_t_wrapper> &buckets_index, std::vector<QEntry> &t_queue);
+    void bdgl_process_buckets(const std::vector<uint32_t> &buckets, const std::vector<atomic_size_t_wrapper> &buckets_index,
                                 std::vector<std::vector<QEntry>> &t_queues);
     
     void bdgl_queue_create_task( const size_t t_id, const std::vector<QEntry> &queue, std::vector<Entry> &transaction_dbi, int64_t &write_index);
@@ -1080,10 +1081,6 @@ private:
     void bdgl_queue( std::vector<std::vector<QEntry>> &t_queues, std::vector<std::vector<Entry>> &transaction_db);
 
     std::pair<LFT, int8_t> reduce_to_QEntry(CompressedEntry *ce1, CompressedEntry *ce2);
-
-    // bdgl variables
-    static constexpr unsigned BDGL_BUCKET_SPLIT = 512;
-    std::array<std::mutex, BDGL_BUCKET_SPLIT> bdgl_bucket_mut;
 
 // previously, these were global variables. TODO: Document / refactor those.
     CACHELINE_VARIABLE(std::atomic_size_t, GBL_replace_pos);
