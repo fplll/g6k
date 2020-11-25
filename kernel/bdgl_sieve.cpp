@@ -249,7 +249,7 @@ void Siever::bdgl_process_buckets(const std::vector<uint32_t> &buckets, const st
     threadpool.wait_work();
 }
 
-void Siever::bdgl_queue_dup_remove_task( const size_t, std::vector<QEntry> &queue) {
+void Siever::bdgl_queue_dup_remove_task( std::vector<QEntry> &queue) {
     const size_t Q = queue.size();
     for( size_t index = 0; index < Q; index++ ) {
         size_t i1 = queue[index].i;
@@ -304,8 +304,8 @@ size_t Siever::bdgl_queue_insert_task( const size_t t_id, std::vector<Entry> &tr
 size_t Siever::bdgl_queue(std::vector<std::vector<QEntry>> &t_queues, std::vector<std::vector<Entry>>& transaction_db ) {
     // clear duplicates read only
     for( size_t t_id = 0; t_id < params.threads; ++t_id ) {
-        threadpool.push([this, t_id, &t_queues, &transaction_db](){
-            bdgl_queue_dup_remove_task(t_id, t_queues[t_id]);
+        threadpool.push([this, t_id, &t_queues](){
+            bdgl_queue_dup_remove_task(t_queues[t_id]);
         });
     }
     threadpool.wait_work();
