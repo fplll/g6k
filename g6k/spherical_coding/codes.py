@@ -10,6 +10,9 @@ Sample = 1000
 
 
 n = int(sys.argv[1])
+if n < 6:
+    print("This script only works with n > 5")
+    sys.exit(1)
 
 relative_len = False
 try:
@@ -17,16 +20,16 @@ try:
     XPC_bitlen_string = str(XPC_bitlen)
 except:
     XPC_bitlen_rel = float(sys.argv[2])
-    XPC_bitlen_string = str(XPC_bitlen_rel)+"n"
-    XPC_bitlen = int(ceil(2**(XPC_bitlen_rel * n)))
+    XPC_bitlen_string = str(XPC_bitlen_rel) + "n"
+    XPC_bitlen = int(ceil(2 ** (XPC_bitlen_rel * n)))
 
-R = sqrt(4./3)
+R = sqrt(4.0 / 3)
 
 
 def rand_unif_sphere(r=1.0):
-    v = array([random.gauss(0, 1.) for i in range(n)], dtype=np.float64)
+    v = array([random.gauss(0, 1.0) for i in range(n)], dtype=np.float64)
     l = v.dot(v)
-    return (r / sqrt(l))*v
+    return (r / sqrt(l)) * v
 
 
 def random_pair():
@@ -36,31 +39,33 @@ def random_pair():
 def good_pair():
     v = rand_unif_sphere(R)
     w = rand_unif_sphere()
-    w -= (w.dot(v)/R**2) * v
-    w *= (1. / sqrt(w.dot(w)))
-    w += .5 * v
+    w -= (w.dot(v) / R ** 2) * v
+    w *= 1.0 / sqrt(w.dot(w))
+    w += 0.5 * v
     return v, w
 
 
 def random_sparse_code(c, s=6):
     M = zeros((c, n), dtype=np.int64)
     for v in M:
-        for rep in xrange(s):
+        for rep in list(range(s)):
             while True:
-                a = random.randint(0, n-1)
-                if v[a]==0:
+                a = random.randint(0, n - 1)
+                if v[a] == 0:
                     v[a] = 2 * (rep % 2) - 1
                     break
     return M
 
+
 def compress(M, u):
     return M.dot(u) > 0
 
+
 def mesure_XPC_quality(M, S=Sample):
     l = len(M)
-    hist_good = zeros(l+1, dtype=np.int64)
-    hist_bad = zeros(l+1, dtype=np.int64)
-    for a in xrange(S):
+    hist_good = zeros(l + 1, dtype=np.int64)
+    hist_bad = zeros(l + 1, dtype=np.int64)
+    for a in range(S):
         v, w = random_pair()
         x = sum(compress(M, v) ^ compress(M, w))
         hist_bad[x] += 1
@@ -70,8 +75,8 @@ def mesure_XPC_quality(M, S=Sample):
         hist_good[x] += 1
 
     for i in range(l):
-        hist_good[i+1] += hist_good[i]
-        hist_bad[i+1] += hist_bad[i]
+        hist_good[i + 1] += hist_good[i]
+        hist_bad[i + 1] += hist_bad[i]
 
     return hist_bad, hist_good
 
@@ -79,29 +84,29 @@ def mesure_XPC_quality(M, S=Sample):
 def line_scores(G):
     s = G[0, 0] * G[0, 0]
     n, _ = G.shape
-    v = [(sum([x*x for x in G[i]]) - s,i) for i in range(n)]
+    v = [(sum([x * x for x in G[i]]) - s, i) for i in range(n)]
     return v
 
 
 def score(G):
     s = G[0, 0] * G[0, 0]
-    v = [sum([x*x for x in v]) - s for v in G]
-    return sum([x*x for x in v])
+    v = [sum([x * x for x in v]) - s for v in G]
+    return sum([x * x for x in v])
 
 
 def update_G(M, G, i):
     l, n = M.shape
     v = M.dot(M[i].transpose())
-    for j in xrange(l):
+    for j in range(l):
         G[i, j] = v[j]
         G[j, i] = v[j]
 
 
 def perm(n):
-    L = range(n)
-    for rep in xrange(2 * n):
-        a = random.randint(0, n-1)
-        b = random.randint(0, n-1)
+    L = list(range(n))
+    for rep in range(2 * n):
+        a = random.randint(0, n - 1)
+        b = random.randint(0, n - 1)
         L[a], L[b] = L[b], L[a]
     return L
 
@@ -136,7 +141,7 @@ def improve(M):
     while True:
         a += 1
         if time() - T0 > Tlim:
-            break 
+            break
         v = line_scores(G)
         v.sort(reverse=True)
         c = 0
@@ -146,20 +151,21 @@ def improve(M):
             else:
                 c += 1
         else:
-            print "no improvement found"
+            print("no improvement found")
             break
     G = M.dot(M.transpose())
-    print "n:", n , "iter:", a, " \t" , 1.*score0, "\t ->", 1.*score(G)
+    print("n:", n, "iter:", a, " \t", 1.0 * score0, "\t ->", 1.0 * score(G))
     return M
 
 
 def get_good_code(s=6):
     M = random_sparse_code(XPC_bitlen, s=s)
-    # print mesure_XPC_quality(M)
     improve(M)
     return M
 
+
 M = get_good_code(s=6)
+
 
 def sparse_repr(v):
     Lp = []
@@ -171,13 +177,13 @@ def sparse_repr(v):
             Lm += [i]
     return Lp + Lm
 
-f = open("sc_%d_%s.def"%(n, XPC_bitlen_string), 'w')
+
+f = open("sc_%d_%s.def" % (n, XPC_bitlen_string), "w")
 
 for v in M:
     for x in sparse_repr(v):
-        print >>f, x,
-    print >>f
-
+        print(x, end=" ", file=f)
+    print("", file=f)
 f.close()
 
 
