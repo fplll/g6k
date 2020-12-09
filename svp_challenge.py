@@ -25,7 +25,7 @@ from six.moves import range
 
 
 def asvp_kernel(arg0, params=None, seed=None):
-    logger = logging.getLogger('asvp')
+    logger = logging.getLogger("asvp")
 
     # Pool.map only supports a single parameter
     if params is None and seed is None:
@@ -56,21 +56,31 @@ def asvp_kernel(arg0, params=None, seed=None):
 
     if g6k.dimension_bigger_than_msd():
         print("Warning: potentially unsafe sieving instance.")
-        print("This is because the dimension of the lattice > the maximum supported dimension.")
-        print("However, this may not be an issue for your input lattice when taking dimensions for free into account")
-        print("To fix this issue, please recompile with a higher maximum sieving dimension using rebuild.sh")
-
-
+        print(
+            "This is because the dimension of the lattice > the maximum supported dimension."
+        )
+        print(
+            "However, this may not be an issue for your input lattice when taking dimensions for free into account"
+        )
+        print(
+            "To fix this issue, please recompile with a higher maximum sieving dimension using rebuild.sh"
+        )
 
     tracer = SieveTreeTracer(g6k, root_label=("svp-challenge", n), start_clocks=True)
 
     gh = gaussian_heuristic([g6k.M.get_r(i, i) for i in range(n)])
-    goal_r0 = (1.05**2) * gh
+    goal_r0 = (1.05 ** 2) * gh
     if verbose:
-        print(("gh = %f, goal_r0/gh = %f, r0/gh = %f" % (gh, goal_r0/gh, sum([x*x for x in A[0]])/gh)))
+        print(
+            (
+                "gh = %f, goal_r0/gh = %f, r0/gh = %f"
+                % (gh, goal_r0 / gh, sum([x * x for x in A[0]]) / gh)
+            )
+        )
 
-    flast = workout(g6k, tracer, 0, n, goal_r0=goal_r0,
-                    pump_params=pump_params, **workout_params)
+    flast = workout(
+        g6k, tracer, 0, n, goal_r0=goal_r0, pump_params=pump_params, **workout_params
+    )
 
     tracer.exit()
     stat = tracer.trace
@@ -79,9 +89,9 @@ def asvp_kernel(arg0, params=None, seed=None):
     if verbose:
         logger.info("sol %d, %s" % (n, A[0]))
 
-    norm = sum([x*x for x in A[0]])
+    norm = sum([x * x for x in A[0]])
     if verbose:
-        logger.info("norm %.1f ,hf %.5f" % (norm**.5, (norm/gh)**.5))
+        logger.info("norm %.1f ,hf %.5f" % (norm ** 0.5, (norm / gh) ** 0.5))
 
     return tracer.trace
 
@@ -92,32 +102,48 @@ def asvp():
     """
     description = asvp.__doc__
 
-    args, all_params = parse_args(description,
-                                  load_matrix=None,
-                                  verbose=True,
-                                  challenge_seed=0,
-                                  workout__dim4free_dec=3)
+    args, all_params = parse_args(
+        description,
+        load_matrix=None,
+        verbose=True,
+        challenge_seed=0,
+        workout__dim4free_dec=3,
+    )
 
-    stats = run_all(asvp_kernel, list(all_params.values()),
-                    lower_bound=args.lower_bound,
-                    upper_bound=args.upper_bound,
-                    step_size=args.step_size,
-                    trials=args.trials,
-                    workers=args.workers,
-                    seed=args.seed)
+    stats = run_all(
+        asvp_kernel,
+        list(all_params.values()),
+        lower_bound=args.lower_bound,
+        upper_bound=args.upper_bound,
+        step_size=args.step_size,
+        trials=args.trials,
+        workers=args.workers,
+        seed=args.seed,
+    )
 
     inverse_all_params = OrderedDict([(v, k) for (k, v) in six.iteritems(all_params)])
     stats = sanitize_params_names(stats, inverse_all_params)
 
     fmt = "{name:50s} :: n: {n:2d}, cputime {cputime:7.4f}s, walltime: {walltime:7.4f}s, flast: {flast:3.2f}, |db|: 2^{avg_max:.2f}"
-    profiles = print_stats(fmt, stats, ("cputime", "walltime", "flast", "avg_max"),
-                           extractf={"avg_max": lambda n, params, stat: db_stats(stat)[0]})
+    profiles = print_stats(
+        fmt,
+        stats,
+        ("cputime", "walltime", "flast", "avg_max"),
+        extractf={"avg_max": lambda n, params, stat: db_stats(stat)[0]},
+    )
 
     output_profiles(args.profile, profiles)
 
     if args.pickle:
-        pickler.dump(stats, open("svp-challenge-%d-%d-%d-%d.sobj" %
-                                 (args.lower_bound, args.upper_bound, args.step_size, args.trials), "wb"))
+        pickler.dump(
+            stats,
+            open(
+                "svp-challenge-%d-%d-%d-%d.sobj"
+                % (args.lower_bound, args.upper_bound, args.step_size, args.trials),
+                "wb",
+            ),
+        )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     asvp()
