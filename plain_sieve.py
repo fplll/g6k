@@ -33,17 +33,6 @@ def plain_sieve_kernel(arg0, params=None, seed=None):
 
     A, _ = load_svpchallenge_and_randomize(n, s=0, seed=seed)
     g6k = Siever(A, params, seed=seed)
-
-    if g6k.dimension_bigger_than_msd():
-        print("Error: this is an unsafe sieving instance.")
-        print(
-            "This is because the dimension of the lattice > the maximum supported dimension."
-        )
-        print(
-            "To fix this issue, please recompile with a higher maximum sieving dimension using rebuild.sh"
-        )
-        exit()
-
     tracer = SieveTreeTracer(g6k, root_label=("plain-sieve", n), start_clocks=True)
     g6k.initialize_local(0, 0, n)
     g6k(alg=alg, tracer=tracer)

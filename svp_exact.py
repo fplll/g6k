@@ -82,19 +82,6 @@ def svp_kernel(arg0, params=None, seed=None):
     goal_r0 = 1.001 * load_svpchallenge_norm(n, s=challenge_seed)
     A, bkz = load_svpchallenge_and_randomize(n, s=challenge_seed, seed=seed)
     g6k = Siever(A, params, seed=seed)
-
-    if g6k.dimension_bigger_than_msd():
-        print("Warning: potentially unsafe sieving instance.")
-        print(
-            "This is because the dimension of the lattice > the maximum supported dimension."
-        )
-        print(
-            "However, this may not be an issue for your input lattice when taking dimensions for free into account"
-        )
-        print(
-            "To fix this issue, please recompile with a higher maximum sieving dimension using rebuild.sh"
-        )
-
     tracer = SieveTreeTracer(g6k, root_label=("svp-exact", n), start_clocks=True)
 
     if alg == "enum":

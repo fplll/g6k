@@ -100,8 +100,12 @@ cdef class Siever(object):
             seed = IntegerMatrix.random(1, "uniform", bits=32)[0, 0]
         self._core = new Siever_c(params._core, <unsigned long>seed)
         self.params = copy.copy(params)
-        
+          
         self._core.full_n = M.d
+        
+        if self._core.full_n > self.max_sieving_dim:
+            warnings.warn("Dimension of lattice is larger than maximum supported. To fix this warning, change the value of MAX_SIEVING_DIM in siever.h")
+
         self.lll(0, M.d)
         self.initialized = False
     
@@ -287,6 +291,27 @@ cdef class Siever(object):
         self._core.initialize_local(ll, l, r)
         sig_off()
         self.initialized = True
+    
+    @property
+    def max_sieving_dim(self):
+        """
+        The maximum sieving dimension that's supported in this build of G6K.
+        This value can be changed in the following ways:
+            - Manually. You can simply change the "MAX_SIEVING_DIM" macro in siever.h
+            - Automatically. You can change this value by supplying the "-m <dim>" flag to rebuild.sh,
+              where <dim> is the maximum supported dimension. For nicer support with AVX/vectorisation,
+              we recommend a multiple of 32.
+              Example:
+                ./rebuild -m 160
+        EXAMPLE::
+            >>> from fpylll import IntegerMatrix
+            >>> from g6k import Siever
+            >>> Siever(IntegerMatrix.random(50, "qary", k=25, bits=10), seed=0x1337).max_sieving_dim
+            128
+
+        """
+        return MAX_SIEVING_DIM
+
 
     @property
     def full_n(self):
@@ -454,7 +479,7 @@ cdef class Siever(object):
 
     def reset_stats(self):
         self._core.reset_stats()
-    def dimension_bigger_than_msd(self):
+    def dimension_bigger_than_maximum_sieving_dimension(self):
         return self.M.d > MAX_SIEVING_DIM
     ############# New statistics ############
 
