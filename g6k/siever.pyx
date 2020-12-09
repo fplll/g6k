@@ -479,8 +479,6 @@ cdef class Siever(object):
 
     def reset_stats(self):
         self._core.reset_stats()
-    def dimension_bigger_than_maximum_sieving_dimension(self):
-        return self.M.d > MAX_SIEVING_DIM
     ############# New statistics ############
 
     # This exports _core.statistics to python. Note that stats(self) and get_stat(self, name)
