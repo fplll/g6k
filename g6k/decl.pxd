@@ -20,6 +20,8 @@ cdef extern from "../kernel/siever.h" nogil:
     cdef const long int BGJ1_ALPHA_STEP
     cdef const long int CACHE_BLOCK
 
+    cdef const int  MAX_SIEVING_DIM
+
     ctypedef double FT
     ctypedef float  LFT
     ctypedef int16_t ZT

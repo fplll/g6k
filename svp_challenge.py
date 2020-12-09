@@ -53,6 +53,15 @@ def asvp_kernel(arg0, params=None, seed=None):
             print(("Loaded file '%s'" % load_matrix))
 
     g6k = Siever(A, params, seed=seed)
+
+    if g6k.dimension_bigger_than_msd():
+        print("Warning: potentially unsafe sieving instance.")
+        print("This is because the dimension of the lattice > the maximum supported dimension.")
+        print("However, this may not be an issue for your input lattice when taking dimensions for free into account")
+        print("To fix this issue, please recompile with a higher maximum sieving dimension using rebuild.sh")
+
+
+
     tracer = SieveTreeTracer(g6k, root_label=("svp-challenge", n), start_clocks=True)
 
     gh = gaussian_heuristic([g6k.M.get_r(i, i) for i in range(n)])

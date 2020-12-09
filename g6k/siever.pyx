@@ -24,6 +24,7 @@ from math import ceil, floor
 
 from decl cimport CompressedEntry, Entry
 from decl cimport show_cpu_stats
+from decl cimport MAX_SIEVING_DIM
 
 from scipy.special import betaincinv
 
@@ -99,11 +100,11 @@ cdef class Siever(object):
             seed = IntegerMatrix.random(1, "uniform", bits=32)[0, 0]
         self._core = new Siever_c(params._core, <unsigned long>seed)
         self.params = copy.copy(params)
-
+        
         self._core.full_n = M.d
         self.lll(0, M.d)
         self.initialized = False
-
+    
     @classmethod
     def MatGSO(cls, A, float_type="d"):
         """
@@ -453,7 +454,8 @@ cdef class Siever(object):
 
     def reset_stats(self):
         self._core.reset_stats()
-
+    def dimension_bigger_than_msd(self):
+        return self.M.d > MAX_SIEVING_DIM
     ############# New statistics ############
 
     # This exports _core.statistics to python. Note that stats(self) and get_stat(self, name)
