@@ -59,8 +59,8 @@ $PIP install cysignals
 
 
 cat <<EOF >>g6k-env/bin/activate
-CFLAGS="\$CFLAGS -O3 -march=native -Wp,-U_FORTIFY_SOURCE"
-CXXFLAGS="\$CXXFLAGS -O3 -march=native -Wp,-U_FORTIFY_SOURCE"
+CFLAGS="\$CFLAGS -O3 -Wp,-U_FORTIFY_SOURCE"
+CXXFLAGS="\$CXXFLAGS -O3 -Wp,-U_FORTIFY_SOURCE"
 export CFLAGS
 export CXXFLAGS
 EOF
