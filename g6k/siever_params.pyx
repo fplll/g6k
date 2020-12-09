@@ -149,7 +149,7 @@ cdef class SieverParams(object):
 
         if key == "reserved_n":
             if value > MAX_SIEVING_DIM:
-                warnings.warn("reserved_n is larger than maximum supported. To fix this warning, change the value of MAX_SIEVING_DIM in siever.h")
+                warnings.warn("reserved_n is larger than maximum supported. To fix this warning, change the value of MAX_SIEVING_DIM in siever.h and recompile.")
             self._core.reserved_n = value
         elif key == "reserved_db_size":
             self._core.reserved_db_size = value

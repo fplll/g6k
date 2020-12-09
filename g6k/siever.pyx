@@ -104,7 +104,7 @@ cdef class Siever(object):
         self._core.full_n = M.d
         
         if self._core.full_n > self.max_sieving_dim:
-            warnings.warn("Dimension of lattice is larger than maximum supported. To fix this warning, change the value of MAX_SIEVING_DIM in siever.h")
+            warnings.warn("Dimension of lattice is larger than maximum supported. To fix this warning, change the value of MAX_SIEVING_DIM in siever.h and recompile.")
 
         self.lll(0, M.d)
         self.initialized = False
