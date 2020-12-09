@@ -1,4 +1,4 @@
-CXXFLAGS += -fPIC -Ofast -march=native -ftree-vectorize -funroll-loops -std=c++11 -pthread -Wall -Wextra $(EXTRAFLAGS)
+CXXFLAGS += -fPIC -Ofast -mavx2 -maes -ftree-vectorize -funroll-loops -std=c++11 -pthread -Wall -Wextra $(EXTRAFLAGS)
 LDFLAGS += -shared -pthread
 LIBADD += -lpthread
 OBJ = sieving.o control.o bgj1_sieve.o bdgl_sieve.o fht_lsh.o params.o cpuperf.o hk3_sieve.o
