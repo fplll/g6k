@@ -297,7 +297,7 @@ cdef class Siever(object):
         """
         The maximum sieving dimension that's supported in this build of G6K.
         This value can be changed in the following ways:
-            - Manually. You can simply change the MAX_SIEVING_DIM macro in siever.h and then recompile.
+            - Manually. You can simply change the ``MAX_SIEVING_DIM`` macro in siever.h and then recompile.
 
             - Automatically. You can change this value by supplying the "-m <dim>" flag to rebuild.sh,
               where <dim> is the maximum supported dimension. For nicer support with AVX/vectorisation,
