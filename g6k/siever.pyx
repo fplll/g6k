@@ -24,6 +24,7 @@ from math import ceil, floor
 
 from decl cimport CompressedEntry, Entry
 from decl cimport show_cpu_stats
+from decl cimport MAX_SIEVING_DIM
 
 from scipy.special import betaincinv
 
@@ -99,11 +100,15 @@ cdef class Siever(object):
             seed = IntegerMatrix.random(1, "uniform", bits=32)[0, 0]
         self._core = new Siever_c(params._core, <unsigned long>seed)
         self.params = copy.copy(params)
-
+          
         self._core.full_n = M.d
+        
+        if self._core.full_n > self.max_sieving_dim:
+            warnings.warn("Dimension of lattice is larger than maximum supported. To fix this warning, change the value of MAX_SIEVING_DIM in siever.h and recompile.")
+
         self.lll(0, M.d)
         self.initialized = False
-
+    
     @classmethod
     def MatGSO(cls, A, float_type="d"):
         """
@@ -286,6 +291,28 @@ cdef class Siever(object):
         self._core.initialize_local(ll, l, r)
         sig_off()
         self.initialized = True
+    
+    @property
+    def max_sieving_dim(self):
+        """
+        The maximum sieving dimension that's supported in this build of G6K.
+        This value can be changed in the following ways:
+            - Manually. You can simply change the ``MAX_SIEVING_DIM`` macro in siever.h and then recompile.
+
+            - Automatically. You can change this value by supplying the "-m <dim>" flag to rebuild.sh,
+              where <dim> is the maximum supported dimension. For nicer support with AVX/vectorisation,
+              we recommend a multiple of 32. This will recompile the g6k kernel.
+              Example:
+                ./rebuild -m 160
+        EXAMPLE::
+            >>> from fpylll import IntegerMatrix
+            >>> from g6k import Siever
+            >>> Siever(IntegerMatrix.random(50, "qary", k=25, bits=10), seed=0x1337).max_sieving_dim
+            128
+
+        """
+        return MAX_SIEVING_DIM
+
 
     @property
     def full_n(self):
@@ -453,7 +480,6 @@ cdef class Siever(object):
 
     def reset_stats(self):
         self._core.reset_stats()
-
     ############# New statistics ############
 
     # This exports _core.statistics to python. Note that stats(self) and get_stat(self, name)

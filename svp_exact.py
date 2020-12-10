@@ -16,7 +16,11 @@ from g6k.algorithms.workout import workout
 from g6k.siever import Siever
 from g6k.utils.cli import parse_args, run_all, pop_prefixed_params
 from g6k.utils.stats import SieveTreeTracer
-from g6k.utils.util import load_svpchallenge_and_randomize, load_svpchallenge_norm, db_stats
+from g6k.utils.util import (
+    load_svpchallenge_and_randomize,
+    load_svpchallenge_norm,
+    db_stats,
+)
 from g6k.utils.util import sanitize_params_names, print_stats, output_profiles
 
 
@@ -28,7 +32,7 @@ from six.moves import range
 
 
 GRADIENT_BLOCKSIZE = 31
-NPS = 60*[2.**29] + 5 * [2.**27] + 5 * [2.**26] + 1000 * [2.**25]
+NPS = 60 * [2.0 ** 29] + 5 * [2.0 ** 27] + 5 * [2.0 ** 26] + 1000 * [2.0 ** 25]
 
 
 # Re-implement bkz2.svp_reduction, with a precise radius goal rather than success proba
@@ -49,7 +53,9 @@ def svp_enum(bkz, params, goal):
 
         try:
             enum_obj = Enumeration(bkz.M)
-            max_dist, solution = enum_obj.enumerate(0, n, radius, 0, pruning=pruning.coefficients)[0]
+            max_dist, solution = enum_obj.enumerate(
+                0, n, radius, 0, pruning=pruning.coefficients
+            )[0]
             bkz.svp_postprocessing(0, n, solution, tracer=dummy_tracer)
             rerandomize = False
         except EnumerationError:
@@ -80,23 +86,37 @@ def svp_kernel(arg0, params=None, seed=None):
 
     if alg == "enum":
         assert len(workout_params) + len(pump_params) == 0
-        bkz_params = fplll_bkz.Param(block_size=n, max_loops=1, strategies=fplll_bkz.DEFAULT_STRATEGY,
-                                     flags=fplll_bkz.GH_BND)
+        bkz_params = fplll_bkz.Param(
+            block_size=n,
+            max_loops=1,
+            strategies=fplll_bkz.DEFAULT_STRATEGY,
+            flags=fplll_bkz.GH_BND,
+        )
         svp_enum(bkz, bkz_params, goal_r0)
         flast = 0
     elif alg == "duc18":
         assert len(workout_params) + len(pump_params) == 0
         flast = ducas18(g6k, tracer, goal=goal_r0)
     elif alg == "workout":
-        flast = workout(g6k, tracer, 0, n, goal_r0=goal_r0, pump_params=pump_params, **workout_params)
+        flast = workout(
+            g6k,
+            tracer,
+            0,
+            n,
+            goal_r0=goal_r0,
+            pump_params=pump_params,
+            **workout_params
+        )
     else:
         raise ValueError("Unrecognized algorithm for SVP")
 
     r0 = bkz.M.get_r(0, 0) if alg == "enum" else g6k.M.get_r(0, 0)
     if r0 > goal_r0:
-        raise ValueError('Did not reach the goal')
+        raise ValueError("Did not reach the goal")
     if 1.002 * r0 < goal_r0:
-        raise ValueError('Found a vector shorter than the goal for n=%d s=%d.'%(n, challenge_seed))
+        raise ValueError(
+            "Found a vector shorter than the goal for n=%d s=%d." % (n, challenge_seed)
+        )
 
     tracer.exit()
     stat = tracer.trace
@@ -113,32 +133,42 @@ def svp():
     """
     description = svp.__doc__
 
-    args, all_params = parse_args(description,
-                                  challenge_seed=0,
-                                  svp__alg="workout"
-                                  )
+    args, all_params = parse_args(description, challenge_seed=0, svp__alg="workout")
 
-    stats = run_all(svp_kernel, list(all_params.values()),
-                    lower_bound=args.lower_bound,
-                    upper_bound=args.upper_bound,
-                    step_size=args.step_size,
-                    trials=args.trials,
-                    workers=args.workers,
-                    seed=args.seed)
+    stats = run_all(
+        svp_kernel,
+        list(all_params.values()),
+        lower_bound=args.lower_bound,
+        upper_bound=args.upper_bound,
+        step_size=args.step_size,
+        trials=args.trials,
+        workers=args.workers,
+        seed=args.seed,
+    )
 
     inverse_all_params = OrderedDict([(v, k) for (k, v) in six.iteritems(all_params)])
     stats = sanitize_params_names(stats, inverse_all_params)
 
     fmt = "{name:50s} :: n: {n:2d}, cputime {cputime:7.4f}s, walltime: {walltime:7.4f}s, flast: {flast:3.2f}, |db|: 2^{avg_max:.2f}"
-    profiles = print_stats(fmt, stats, ("cputime", "walltime", "flast", "avg_max"),
-                           extractf={"avg_max": lambda n, params, stat: db_stats(stat)[0]})
+    profiles = print_stats(
+        fmt,
+        stats,
+        ("cputime", "walltime", "flast", "avg_max"),
+        extractf={"avg_max": lambda n, params, stat: db_stats(stat)[0]},
+    )
 
     output_profiles(args.profile, profiles)
 
     if args.pickle:
-        pickler.dump(stats, open("svp-exact-%d-%d-%d-%d.sobj" %
-                                 (args.lower_bound, args.upper_bound, args.step_size, args.trials), "wb"))
+        pickler.dump(
+            stats,
+            open(
+                "svp-exact-%d-%d-%d-%d.sobj"
+                % (args.lower_bound, args.upper_bound, args.step_size, args.trials),
+                "wb",
+            ),
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     svp()
