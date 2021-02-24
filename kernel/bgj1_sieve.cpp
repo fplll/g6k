@@ -179,12 +179,12 @@ void Siever::bgj1_sieve_task(double alpha)
                 if (UNLIKELY(new_l < maxlen))
                 {
                     #if (COLLECT_STATISTICS_OTFLIFTS >= 2) || (COLLECT_STATISTICS_REDSUCCESS >= 2) || (COLLECT_STATISTICS_DATARACES >= 2)
-                    if (bgj1_reduce_with_delayed_replace<tn>(aux, fast_cdb[j], maxlen, transaction_db, true))
+                    if (bgj1_reduce_with_delayed_replace<tn, true>(aux, fast_cdb[j], maxlen, transaction_db, inner, new_l, true))
                     {
                         ENABLE_IF_STATS_REDSUCCESS ( ++ local_stat_successful_red_outer; )
                     }
                     #else
-                    bgj1_reduce_with_delayed_replace<tn>(aux, fast_cdb[j], maxlen, transaction_db);
+                    bgj1_reduce_with_delayed_replace<tn, true>(aux, fast_cdb[j], maxlen, transaction_db, inner, new_l);
                     #endif
                     if (UNLIKELY(transaction_db.size() > params.bgj1_transaction_bulk_size))
                     {
@@ -236,7 +236,7 @@ void Siever::bgj1_sieve_task(double alpha)
                         ++local_stat_successful_xorpopcnt_reds; // adds to successful xorpopcnt and also to scalar product computations (done inside bgj1_reduce_with_delayed_replace)
                         #endif
                         ATOMIC_CPUCOUNT(103);
-                        bool const red = bgj1_reduce_with_delayed_replace<tn>(*pce1, fast_bucket[j], maxlen, transaction_db);
+                        bool const red = bgj1_reduce_with_delayed_replace<tn, false>(*pce1, fast_bucket[j], maxlen, transaction_db);
                         ENABLE_IF_STATS_REDSUCCESS(if(red) {++local_stat_successful_reductions; } )
                         if (UNLIKELY(red) && transaction_db.size() > params.bgj1_transaction_bulk_size)
                         {
@@ -272,18 +272,24 @@ void Siever::bgj1_sieve_task(double alpha)
 // reduce_while_bucketing indicates whether we call this function during the bucketing phase (rather than when working inside a bucket)
 // This is only relevant for statistics collection.
 #if (COLLECT_STATISTICS_OTFLIFTS >= 2) || (COLLECT_STATISTICS_REDSUCCESS >= 2) || (COLLECT_STATISTICS_DATARACES >= 2)
-template <int tn>
-inline bool Siever::bgj1_reduce_with_delayed_replace(CompressedEntry const &ce1, CompressedEntry const &ce2, LFT const lenbound, std::vector<Entry>& transaction_db, bool const reduce_while_bucketing)
+template <int tn, bool use_inner>
+inline bool Siever::bgj1_reduce_with_delayed_replace(CompressedEntry const &ce1, CompressedEntry const &ce2, LFT const lenbound, std::vector<Entry>& transaction_db, LFT inner, LFT new_l, 
+        bool const reduce_while_bucketing)
 {
 #else
-template <int tn>
-inline bool Siever::bgj1_reduce_with_delayed_replace(CompressedEntry const &ce1, CompressedEntry const &ce2, LFT const lenbound, std::vector<Entry>& transaction_db)
+template <int tn, bool use_inner>
+inline bool Siever::bgj1_reduce_with_delayed_replace(CompressedEntry const &ce1, CompressedEntry const &ce2, LFT const lenbound, std::vector<Entry>& transaction_db, LFT inner, LFT new_l)
 {
     constexpr bool reduce_while_bucketing = true; // The actual value does not matter.
 #endif
     // statistics.inc_fullscprods done at call site
-    LFT const inner = std::inner_product(db[ce1.i].yr.cbegin(), db[ce1.i].yr.cbegin()+(tn < 0 ? n : tn), db[ce2.i].yr.cbegin(), static_cast<LFT>(0.));
-    LFT const new_l = ce1.len + ce2.len - 2 * std::abs(inner);
+    // If we've already computed the inner product (i.e during bucketing) then there's no 
+    // point recomputing it, so we just use the ones that were passed into this function.
+    if(!use_inner) {
+        inner = std::inner_product(db[ce1.i].yr.cbegin(), db[ce1.i].yr.cbegin()+(tn < 0 ? n : tn), db[ce2.i].yr.cbegin(), static_cast<LFT>(0.));
+        new_l = ce1.len + ce2.len - 2 * std::abs(inner);
+    }
+    
     int const sign = inner < 0 ? 1 : -1;
 
     if (UNLIKELY(new_l < lenbound))

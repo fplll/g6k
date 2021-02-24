@@ -1037,11 +1037,11 @@ private:
     // This is only needed for statistical purposes and the paramter is only passed if it is needed.
     // The #if condition is an ugly hack, but this ensures that we have zero performance loss in case we do not collect statistics.
     #if (COLLECT_STATISTICS_OTFLIFTS >= 2) || (COLLECT_STATISTICS_REDSUCCESS >= 2) || (COLLECT_STATISTICS_DATARACES >= 2)
-    template <int tn>
-    inline bool bgj1_reduce_with_delayed_replace(CompressedEntry const &ce1, CompressedEntry const &ce2, LFT lenbound, std::vector<Entry>& transaction_db, bool reduce_while_bucketing = true); // in bgj1_sieve.cpp
+    template <int tn, bool use_inner>
+    inline bool bgj1_reduce_with_delayed_replace(CompressedEntry const &ce1, CompressedEntry const &ce2, LFT lenbound, std::vector<Entry>& transaction_db, LFT inner = 0., LFT new_l = 0., bool reduce_while_bucketing = true); // in bgj1_sieve.cpp
     #else
-    template <int tn>
-    inline bool bgj1_reduce_with_delayed_replace(CompressedEntry const &ce1, CompressedEntry const &ce2, LFT lenbound, std::vector<Entry>& transaction_db); // in bgj1_sieve.cpp
+    template <int tn, bool use_inner>
+    inline bool bgj1_reduce_with_delayed_replace(CompressedEntry const &ce1, CompressedEntry const &ce2, LFT lenbound, std::vector<Entry>& transaction_db, LFT inner = 0., LFT new_l = 0.); // in bgj1_sieve.cpp
     #endif
     // Tries to put pending transactions from transaction_db into the database.
     // Note that this can fail for various reasons: Points can be removed from transaction_db without inserting into db,
