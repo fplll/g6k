@@ -5,6 +5,9 @@ Sieving parameters.
 
 from contextlib import contextmanager
 from pkg_resources import resource_filename
+from decl cimport MAX_SIEVING_DIM
+
+import warnings
 
 @contextmanager
 def temp_params(self, **kwds):
@@ -54,13 +57,16 @@ cdef class SieverParams(object):
         "bgj1_resort_ratio",
         "bgj1_transaction_bulk_size",
         "simhash_codes_basedir",
+        "bdgl_improvement_db_ratio",
         # Python
         "db_size_base",
         "db_size_factor",
         "bgj1_bucket_size_expo",
         "bgj1_bucket_size_factor",
-        "triplesieve_db_size_base",
-        "triplesieve_db_size_factor",
+        "bdgl_bucket_size_factor",
+        "bdgl_blocks",
+        "bdgl_multi_hash",
+        "bdgl_min_bucket_size",
         "default_sieve",
         "gauss_crossover",
         "dual_mode"
@@ -97,15 +103,17 @@ cdef class SieverParams(object):
             kwds["bgj1_bucket_size_expo"] = .5     # The initial bgj1_bucket_size for sieving is
         if "bgj1_bucket_size_factor" not in kwds:
             kwds["bgj1_bucket_size_factor"] =  3.2
+        if "bdgl_multi_hash" not in kwds:
+            kwds["bdgl_multi_hash"] = 4
+        if "bdgl_blocks" not in kwds:
+            kwds["bdgl_blocks"] = 2
+        if "bdgl_improvement_db_ratio" not in kwds:
+            kwds["bdgl_improvement_db_ratio"] = 0.8
+        if "bdgl_bucket_size_factor" not in kwds:
+            kwds["bdgl_bucket_size_factor"] =  .3
+        if "bdgl_min_bucket_size" not in kwds:
+            kwds["bdgl_min_bucket_size"] = 128
 
-        # TODO : remove the two following ?
-        if "triplesieve_db_size_base" not in kwds:
-            kwds["triplesieve_db_size_base"] = (1.2999)**.5 # The initial db_size for triple sieve
-                                                            # (sqrt(3) * 3/4)
-        if "triplesieve_db_size_factor" not in kwds:
-            kwds["triplesieve_db_size_factor"] = 2.5       # db_size_factor_3sieve *
-                                                           # db_size_base_3sieve**n for the next
-                                                           # iteration
 
         if "dual_mode" not in kwds:
             kwds["dual_mode"] = False                      
@@ -115,7 +123,7 @@ cdef class SieverParams(object):
             kwds["reserved_db_size"] = kwds["db_size_factor"] * kwds["db_size_base"]**kwds["reserved_n"] + 100
 
         if "default_sieve" not in kwds or kwds["default_sieve"] is None:
-            kwds["default_sieve"] = "gauss_triple_mt"
+            kwds["default_sieve"] = "hk3"
         if "gauss_crossover" not in kwds:
             kwds["gauss_crossover"] = 50
         if "simhash_codes_basedir" not in kwds:
@@ -140,6 +148,8 @@ cdef class SieverParams(object):
             raise ValueError("This object is read only, create a copy to edit.")
 
         if key == "reserved_n":
+            if value > MAX_SIEVING_DIM:
+                warnings.warn("reserved_n is larger than maximum supported. To fix this warning, change the value of MAX_SIEVING_DIM in siever.h and recompile.")
             self._core.reserved_n = value
         elif key == "reserved_db_size":
             self._core.reserved_db_size = value
@@ -167,6 +177,8 @@ cdef class SieverParams(object):
             self._core.bgj1_transaction_bulk_size = value
         elif key == "simhash_codes_basedir":
             self._core.simhash_codes_basedir = value.encode("utf-8") if isinstance(value, str) else value
+        elif key == "bdgl_improvement_db_ratio":
+            self._core.bdgl_improvement_db_ratio = value
         else:
             self._pyattr[key] = value
 
@@ -199,6 +211,8 @@ cdef class SieverParams(object):
             return self._core.bgj1_transaction_bulk_size
         elif key == "simhash_codes_basedir":
             return self._core.simhash_codes_basedir
+        elif key == "bdgl_improvement_db_ratio":
+            return self._core.bdgl_improvement_db_ratio
         else:
             return self._pyattr[key]
 

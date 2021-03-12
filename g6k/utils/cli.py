@@ -30,7 +30,8 @@ cli_arg_aliases = {
     "--sat-": "--saturation-",
     "--chal_": "--challenge_",
     "--sieve": "--default_sieve",
-    "hk3": "gauss_triple_mt",
+    "gauss_triple_mt": "hk3",
+    "gauss_triple": "hk3",
     "d4f": "dim4free",
     "pnj": "pump_and_jump",
     "beta": "blocksize"

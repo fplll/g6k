@@ -7,8 +7,8 @@
     Multi-threaded Gauss - triple sieve.
 
     Naming conventions: Global variables and types from Siever that are specific to triple-sieve are
-    prefixed TS_, the functions are prefixed with gauss_triple_mt (which is also the name of the main function).
-    The gauss_triple_mt_ prefix is often dropped in the documentation.
+    prefixed TS_, the functions are prefixed with hk3_sieve (which is also the name of the main function).
+    The hk3_sieve_ prefix is often dropped in the documentation.
 
     The multi-threaded triple gauss sieve works (on a very high level) as follows:
     Our database of vectors consists of 2 parts, a LIST and a QUEUE.
@@ -137,11 +137,11 @@
     communication with the server and only send our reductions in larger chunks.
 
     We have 4+1 main functionalites to consider:
-    (0) gauss_triple_mt, which initializes data
-    (1) gauss_triple_mt_get_p, which returns a point p and moves queue_head
-    (2) gauss_triple_mt_task, which processes p, finds otf lifts and reductions, which are put onto transaction_db
-    (3) gauss_triple_mt_resort, which creates a new sorted cdb-snapshot and updates the variables
-    (4) gauss_triple_mt_execute_delayed_insertion, which puts transaction_db elements into the latest cdb-snapshot and db.
+    (0) hk3_sieve, which initializes data
+    (1) hk3_sieve_get_p, which returns a point p and moves queue_head
+    (2) hk3_sieve_task, which processes p, finds otf lifts and reductions, which are put onto transaction_db
+    (3) hk3_sieve_resort, which creates a new sorted cdb-snapshot and updates the variables
+    (4) hk3_sieve_execute_delayed_insertion, which puts transaction_db elements into the latest cdb-snapshot and db.
 
     (0) is single-threaded and requires no consideration.
     (2) actually operates completely locally. The compressed entries read might be from a previous snapshot
@@ -225,8 +225,8 @@
 
     -   We use an atomic_flag TS_currently_sorting to make sure only one thread can sort.
         Any thread that want to sort must successfully raise this flag (with it being non-set before)
-        before actually calling gauss_triple_mt_resort. Conversely, any thread that raises this flag
-        must actually call gauss_triple_mt_resort and clear the flag after sorting is finished.
+        before actually calling hk3_sieve_resort. Conversely, any thread that raises this flag
+        must actually call hk3_sieve_resort and clear the flag after sorting is finished.
         Threads that want to raise the flag, but fail because it is already set should NOT
         wait until is is cleared, but either assist in sorting or do some other useful work.
         Some logic is in place to encourage that every but the last cdb-snapshot only triggers only one sort
@@ -283,13 +283,13 @@
 #endif
 
 /**
-        Siever::gauss_triple_mt is the main function that is called from the Python layer.
-        This function does some preprocessing, hands off to the threaded gauss_triple_mt_task and then
+        Siever::hk3_sieve is the main function that is called from the Python layer.
+        This function does some preprocessing, hands off to the threaded hk3_sieve_task and then
         does some post-processing.
         The parameter alpha controls the bound on the buckets / filtered list.
         It has the same meaning as for bgj1.
 */
-void Siever::gauss_triple_mt(double alpha)
+void Siever::hk3_sieve(double alpha)
 {
     CPUCOUNT(600);
     if(alpha <= 0)
@@ -359,12 +359,12 @@ void Siever::gauss_triple_mt(double alpha)
 
     // We use TS_snapshots rather than cdb. For this, we set up our snapshots data structure.
     // This steals memory from cdb by swapping it with TS_snapshots[0].
-    gauss_triple_mt_init_snapshots();
-    /** From this point on, cdb is invalid until gauss_triple_mt_restore_cdb() is called. */
+    hk3_sieve_init_snapshots();
+    /** From this point on, cdb is invalid until hk3_sieve_restore_cdb() is called. */
 
     TS_finished.store(TS_Finished::running, std::memory_order_relaxed);
     TS_number_of_sorts = 0;
-    gauss_triple_mt_init_metainfo(already_searched, TS_latest_cdb_snapshot_p.load(std::memory_order_relaxed)->snapshot.data());
+    hk3_sieve_init_metainfo(already_searched, TS_latest_cdb_snapshot_p.load(std::memory_order_relaxed)->snapshot.data());
 
     TS_insertions_started.store(0, std::memory_order_relaxed);
     TS_cdb_insertions_finished.store(0, std::memory_order_relaxed);
@@ -385,20 +385,20 @@ void Siever::gauss_triple_mt(double alpha)
     {
         for (size_t c = 0; c < params.threads; ++c)
         {
-            threadpool.push([this, c, &padded_transaction_db, alpha](){this->Siever::gauss_triple_mt_task(padded_transaction_db[c].t, c, alpha);});
+            threadpool.push([this, c, &padded_transaction_db, alpha](){this->Siever::hk3_sieve_task(padded_transaction_db[c].t, c, alpha);});
         }
         threadpool.wait_work();
         assert(TS_finished.load(std::memory_order_relaxed) != TS_Finished::running);
         // clean up pending transactions
         for (size_t c = 0; c < params.threads; ++c)
         {
-            float dummy; // gauss_triple_mt_execute_delayed_insertions requires a parameter to update len_bound to the caller. We do not need this info.
+            float dummy; // hk3_sieve_execute_delayed_insertions requires a parameter to update len_bound to the caller. We do not need this info.
             while(!padded_transaction_db[c].t.empty())
             {
-                gauss_triple_mt_execute_delayed_insertion(padded_transaction_db[c].t, dummy, 1000); // 1000 is just a dummy tread-id, useful for debugging.
+                hk3_sieve_execute_delayed_insertion(padded_transaction_db[c].t, dummy, 1000); // 1000 is just a dummy tread-id, useful for debugging.
             }
         }
-        gauss_triple_mt_resort(1000); // 1000 is just a dummy thread-id, useful for debugging.
+        hk3_sieve_resort(1000); // 1000 is just a dummy thread-id, useful for debugging.
 
         switch(TS_finished.load(std::memory_order_relaxed)) // TS_finished contains some exit code why we terminated the threaded part.
         {
@@ -438,7 +438,7 @@ void Siever::gauss_triple_mt(double alpha)
 
     // we restore cdb from TS_snapshots data and put TS_snapshot data in a defined state.
     // (This effectively swaps TS_snapshots[current] with TS_snapshots[0] and then TS_snapshots[0] with cdb)
-    gauss_triple_mt_restore_cdb();
+    hk3_sieve_restore_cdb();
     /** CDB IS VALID AGAIN **/
 
     assert(cdb.size() == db.size());
@@ -471,8 +471,8 @@ ENABLE_IF_STATS_MEMORY
 }
 
 /**
-    gauss_triple_mt_task is the main worker function of the triple-sieve.
-    gauss_triple_mt will thread-dispatch several workers running this function.
+    hk3_sieve_task is the main worker function of the triple-sieve.
+    hk3_sieve will thread-dispatch several workers running this function.
 
     Roughly speaking (ignoring some multi-threading issues),
     it operates by obtaining elements p from the queue (which describes a "job" for the worker).
@@ -489,17 +489,17 @@ ENABLE_IF_STATS_MEMORY
             (i.e. we swap the order of loops: We collect N many x1's before we do a
             for(x2:bucket) { for(i<=N) {process those x1's with x2 }},
             where N is chose such that the all N x1's should fit into the cache)
-    This innermost loop is delegated to a function template gauss_triple_mt_process_inner_batch(...) to avoid some code duplication.
+    This innermost loop is delegated to a function template hk3_sieve_process_inner_batch(...) to avoid some code duplication.
 
     Getting p and merging the transactions are delegated to designated functions.
 
     Params:
     transaction_db is the transaction_db used. (This is created by the calling thread, so unmerged transactions are passed to the caller)
     id is the thread-id (ranging from 0 to #threads-1), used purely for debugging purposes
-    alpha is a constant parameter taken from gauss_triple_mt.
+    alpha is a constant parameter taken from hk3_sieve.
 */
 
-void Siever::gauss_triple_mt_task(TS_Transaction_DB_Type &transaction_db, MAYBE_UNUSED unsigned int id, double const alpha)
+void Siever::hk3_sieve_task(TS_Transaction_DB_Type &transaction_db, MAYBE_UNUSED unsigned int id, double const alpha)
 {
     ATOMIC_CPUCOUNT(605);
 
@@ -537,8 +537,9 @@ void Siever::gauss_triple_mt_task(TS_Transaction_DB_Type &transaction_db, MAYBE_
     // These values do not change during the algorithm.
     auto const n = this->n;
     double const alpha_square = alpha * alpha;
+#ifndef NDEBUG
     size_t const db_size = db.size();
-
+#endif
     // This contains the bucket elements of the current run. Note that we put no limit on its size.
     // (It is bounded by db_size, though). We also do not preallocate. Should we?
     std::vector<TS_FilteredCE> bucket;
@@ -551,17 +552,17 @@ void Siever::gauss_triple_mt_task(TS_Transaction_DB_Type &transaction_db, MAYBE_
     //      This information is not passed to the caller by design, because we do not want to break the loop)
 
     // Important: The initial value of thread_local_snapshot will be overwritten by the first call to get_p() anyway.
-    // Still, we have to initialize it with gauss_triple_mt_get_latest_snapshot(id), because
+    // Still, we have to initialize it with hk3_sieve_get_latest_snapshot(id), because
     // get_p(thread_lcoal_snapshot, ...)  assumes thread_local_snapshot to be in a valid state (nullptr is NOT valid)
     // to properly maintain its ref-counting.
-    // Similarly, we have to pair this call to gauss_triple_mt_get_latest_snapshot with a release_snapshot call
+    // Similarly, we have to pair this call to hk3_sieve_get_latest_snapshot with a release_snapshot call
     // (get_latest_snapshot / release_snapshot are effectively a (manual) constructor / destructor pair.
     // TODO: Replace TS_CDB_Snapshot * by a proper LocalSnapshotPtr class with constructor / destructor.
     // (This is not quite straightforward, because the class would need to contain the Siever's this,
     //  and furthermore, the global latest snapshot would not be of that type. It's ugly in any case.
     //  If we ever use these snapshots in another algorithm, make the appropriate changes. )
 
-    TS_CDB_Snapshot *thread_local_snapshot = gauss_triple_mt_get_latest_snapshot(id);
+    TS_CDB_Snapshot *thread_local_snapshot = hk3_sieve_get_latest_snapshot(id);
     TS_DEBUG_SNAPSHOTS("Thread " + std::to_string(id) + " initialized with snapshot " + std::to_string(thread_local_snapshot-&TS_cdb_snapshots[0]) + "\n")
 
     // local_len_bound is the length bound for new vectors. Vectors better than this are considered as insertion candidates.
@@ -580,11 +581,11 @@ void Siever::gauss_triple_mt_task(TS_Transaction_DB_Type &transaction_db, MAYBE_
         // Get p_entry from the queue and number_of_x1s_considered.
         // The algorithm will then first construct a filtered list of vectors close to p_entry (only the number_of_x1s_considered first element of the cdb snapshot are considered for this)
         // Futher, this call updates thread_local_snapshot and local_queue_start to their global counterparts.
-        auto const bucket_task = gauss_triple_mt_get_p(thread_local_snapshot, id, transaction_db, local_len_bound);
+        auto const bucket_task = hk3_sieve_get_p(thread_local_snapshot, id, transaction_db, local_len_bound);
         Entry const &p_entry = bucket_task.first;
         size_t const &number_of_x1s_considered = bucket_task.second;
 
-        // gauss_triple_mt_get_p returns negative length to indicate that we should finish. The other return values are meaningless in that case.
+        // hk3_sieve_get_p returns negative length to indicate that we should finish. The other return values are meaningless in that case.
         if (UNLIKELY(p_entry.len < 0.))
         {
             break;
@@ -636,21 +637,21 @@ void Siever::gauss_triple_mt_task(TS_Transaction_DB_Type &transaction_db, MAYBE_
                 if (UNLIKELY(p_x1_len < local_len_bound)) // 2-reduction possible: We try to directly perform an (outer) 2-reduction.
                 {
                     ENABLE_IF_STATS_REDSUCCESS(++local_stat_successful_2red_outer;)
-                    if (!gauss_triple_mt_delayed_red_p_db(transaction_db, p_entry, x1_db_index, x1_sign_flip)) // perform 2-reduction
+                    if (!hk3_sieve_delayed_red_p_db(transaction_db, p_entry, x1_db_index, x1_sign_flip)) // perform 2-reduction
                     {
                         // Note that failures due to data races will decrement the collision counter inside delayed_red_p_db
                         ENABLE_IF_STATS_COLLISIONS(++local_stat_collisions_2outer;)
                     }
                     else if(transaction_db.size() % TS_transaction_bulk_size == 0)
                     {
-                        gauss_triple_mt_execute_delayed_insertion(transaction_db, local_len_bound, id);
+                        hk3_sieve_execute_delayed_insertion(transaction_db, local_len_bound, id);
                     }
                     // continue; We may or may not proceed with 3-reductions here. Given that collisions are cheap, we proceed.
                 }
                 else if(params.otf_lift && (p_x1_len < params.lift_radius)) // UNLIKELY??? Not so sure
                 {
                     ENABLE_IF_STATS_OTFLIFTS(++local_stat_otflifts_2outer;)
-                    gauss_triple_mt_otflift_p_db(p_entry, x1_db_index, x1_sign_flip, p_x1_len);
+                    hk3_sieve_otflift_p_db(p_entry, x1_db_index, x1_sign_flip, p_x1_len);
                 }
                 // Check for candidate 3-reduction |<p, x1>| > TS_filter_threshold * |p| * |x1|
                 if (scalar_prod_p_x1_squared > p_len_squared_target * fast_cdb[x1_cdb_index].len)
@@ -693,27 +694,27 @@ void Siever::gauss_triple_mt_task(TS_Transaction_DB_Type &transaction_db, MAYBE_
                         // copy local_cache_block to end of bucket.
                         bucket.insert(bucket.end(),local_cache_block.cbegin(), local_cache_block.cbegin()+TS_Cacheline_Opt);
                         // compare every element from local_cache_block with everything from bucket (excluding the newly inserted elements)
-                        gauss_triple_mt_process_inner_batch<false>(transaction_db, p_entry, local_cache_block, std::integral_constant<uint_fast16_t,TS_Cacheline_Opt>{}, bucket, prev_filter, local_len_bound, id);
+                        hk3_sieve_process_inner_batch<false>(transaction_db, p_entry, local_cache_block, std::integral_constant<uint_fast16_t,TS_Cacheline_Opt>{}, bucket, prev_filter, local_len_bound, id);
                         // compare every element from local_cache_block with each other (which equals the newly inserted elements of the bucket)
-                        gauss_triple_mt_process_inner_batch<true> (transaction_db, p_entry, local_cache_block, std::integral_constant<uint_fast16_t,TS_Cacheline_Opt>{}, local_cache_block, TS_Cacheline_Opt, local_len_bound, id);
+                        hk3_sieve_process_inner_batch<true> (transaction_db, p_entry, local_cache_block, std::integral_constant<uint_fast16_t,TS_Cacheline_Opt>{}, local_cache_block, TS_Cacheline_Opt, local_len_bound, id);
                     } // end of processing cacheline block
                 } // end of if (p,x1) are a 3-reduction candidate
             } // end of if (current cdb[x1_cdb_index] is promising wrt the chosen p)
         } // end of x1_cdb_index loop
         // process local_cache_block, even if it is not full. There is no reason to copy local_cache_block into bucket in this case.
-        gauss_triple_mt_process_inner_batch<false>(transaction_db, p_entry, local_cache_block, block_pos, bucket, bucket.size(), local_len_bound, id);
-        gauss_triple_mt_process_inner_batch<true> (transaction_db, p_entry, local_cache_block, block_pos, local_cache_block, block_pos, local_len_bound, id);
-        gauss_triple_mt_execute_delayed_insertion(transaction_db, local_len_bound, id);
+        hk3_sieve_process_inner_batch<false>(transaction_db, p_entry, local_cache_block, block_pos, bucket, bucket.size(), local_len_bound, id);
+        hk3_sieve_process_inner_batch<true> (transaction_db, p_entry, local_cache_block, block_pos, local_cache_block, block_pos, local_len_bound, id);
+        hk3_sieve_execute_delayed_insertion(transaction_db, local_len_bound, id);
     } // end of while(true) loop / loop over p's. We exit if TS_finished gets set
     statistics.inc_stats_memory_buckets(bucket.capacity());
 
-    gauss_triple_mt_release_snapshot(thread_local_snapshot, id);
+    hk3_sieve_release_snapshot(thread_local_snapshot, id);
     TS_DEBUG_SNAPSHOTS("Thread " + std::to_string(id) + " finished.\n")
 
     // Try to merge pending transactions already now during multi-threaded stage.
     // This is not guaranteed to process all pending transactions, but
-    // the caller gauss_triple_mt(...) will later clean up those remaining transactions after all threads have finished.
-    gauss_triple_mt_execute_delayed_insertion(transaction_db, local_len_bound, id);
+    // the caller hk3_sieve(...) will later clean up those remaining transactions after all threads have finished.
+    hk3_sieve_execute_delayed_insertion(transaction_db, local_len_bound, id);
 
 }
 
@@ -740,7 +741,7 @@ void Siever::gauss_triple_mt_task(TS_Transaction_DB_Type &transaction_db, MAYBE_
             fast_cdb: a raw pointer to the latest / upcoming snapshot.
 */
 
-void Siever::gauss_triple_mt_init_metainfo(size_t const already_processed, CompressedEntry const * const fast_cdb)
+void Siever::hk3_sieve_init_metainfo(size_t const already_processed, CompressedEntry const * const fast_cdb)
 {
     ATOMIC_CPUCOUNT(601);
 
@@ -788,7 +789,7 @@ void Siever::gauss_triple_mt_init_metainfo(size_t const already_processed, Compr
         TS_len_bound = -1.0; // This prevents any new reductions from being found.
         return;
     }
-    gauss_triple_mt_update_lenbound(fast_cdb); // Note that this function has no internal thread-safety either
+    hk3_sieve_update_lenbound(fast_cdb); // Note that this function has no internal thread-safety either
 }
 
 /**
@@ -818,7 +819,7 @@ void Siever::gauss_triple_mt_init_metainfo(size_t const already_processed, Compr
 
     Params: fast_cdb : raw pointer to the current / upcoming cdb snapshot's underlying array.
 */
-float Siever::gauss_triple_mt_update_lenbound(CompressedEntry const * const fast_cdb)
+float Siever::hk3_sieve_update_lenbound(CompressedEntry const * const fast_cdb)
 {
 
     // the len bound is determined similarly to what is done in bgj1: We require that we make at least a fixed amount of progress:
@@ -867,7 +868,7 @@ float Siever::gauss_triple_mt_update_lenbound(CompressedEntry const * const fast
     Params: id is just a thread-identifier used solely for debug purposes.
 */
 
-void Siever::gauss_triple_mt_resort(MAYBE_UNUSED unsigned int const id)
+void Siever::hk3_sieve_resort(MAYBE_UNUSED unsigned int const id)
 {
     // calling this function is protected by an atomic flag so only one thread may call it.
     CPUCOUNT(602)
@@ -885,10 +886,10 @@ void Siever::gauss_triple_mt_resort(MAYBE_UNUSED unsigned int const id)
     // Get a raw pointer to the current cdb snapshot's underlying array.
     // Previous writes in previous invocations of sort happened-before because of synchronization via TS_insertions_started
     // and we are the only thread that is allowed to write to the current cdb snapshot.
-    CompressedEntry const * const previous_fast_cdb = gauss_triple_mt_get_true_fast_cdb();
+    CompressedEntry const * const previous_fast_cdb = hk3_sieve_get_true_fast_cdb();
 
     // Get next snapshot, reusing old memory if possible:
-    auto const next_cdb_snapshot_ptr = gauss_triple_mt_get_free_snapshot(id);
+    auto const next_cdb_snapshot_ptr = hk3_sieve_get_free_snapshot(id);
     CompressedEntry * const next_fast_cdb = next_cdb_snapshot_ptr->snapshot.data();
 
     // spin-wait until cdb writes have finished.
@@ -1006,7 +1007,7 @@ void Siever::gauss_triple_mt_resort(MAYBE_UNUSED unsigned int const id)
 
         // finished creating the data of the new snapshot. We now set up the metadata:
         assert(new_list_size <= db_size);
-        gauss_triple_mt_init_metainfo(new_list_size, next_fast_cdb);
+        hk3_sieve_init_metainfo(new_list_size, next_fast_cdb);
 
         // Check for termination condition: If the new queue size is extremely small, we would immediately re-trigger sorting.
         // In this case, we opt to terminate the algorithm.
@@ -1039,7 +1040,7 @@ void Siever::gauss_triple_mt_resort(MAYBE_UNUSED unsigned int const id)
         // This actually sort-of "publishes" the new snapshot.
         // (Note that other threads can only read it once we give up some locks, so the atomicity is not even needed here.
         // and the publishing only really happens upon lock-release.)
-        gauss_triple_mt_update_latest_cdb_snapshot(next_cdb_snapshot_ptr, id);
+        hk3_sieve_update_latest_cdb_snapshot(next_cdb_snapshot_ptr, id);
 
         ++TS_number_of_sorts; // should this be done inside the previous call?
 
@@ -1089,7 +1090,7 @@ void Siever::gauss_triple_mt_resort(MAYBE_UNUSED unsigned int const id)
     TS_wait_for_sorting.notify_all(); // wake up potential sleepers (for the above reason).
 }
 
-/** gauss_triple_mt_execute_delayed_insertion tries to perform insertions of the given transaction_db into the database.
+/** hk3_sieve_execute_delayed_insertion tries to perform insertions of the given transaction_db into the database.
     The return value is the number of actual insertions performed.
 
     The argument transaction_db is modified accordingly, such that all processed elements are removed from it.
@@ -1109,7 +1110,7 @@ void Siever::gauss_triple_mt_resort(MAYBE_UNUSED unsigned int const id)
                         Note that the value is never *read* by execute_delayed_insertion, so you can give a dummy variable.
     id: thread-id, only used for debugging.
 */
-size_t Siever::gauss_triple_mt_execute_delayed_insertion(TS_Transaction_DB_Type &transaction_db, float &update_len_bound, MAYBE_UNUSED unsigned int const id)
+size_t Siever::hk3_sieve_execute_delayed_insertion(TS_Transaction_DB_Type &transaction_db, float &update_len_bound, MAYBE_UNUSED unsigned int const id)
 {
     ATOMIC_CPUCOUNT(603);
     // Change of number of saturated entries that comes from this batch of insertions.
@@ -1283,10 +1284,10 @@ size_t Siever::gauss_triple_mt_execute_delayed_insertion(TS_Transaction_DB_Type 
         // making it somewhat ugly.
 
         // TS_latest_cdb_version cannot change until we increment TS_cdb_insertions_finished.
-        // So we use gauss_triple_mt_get_true_fast_cdb, which gets the latest cdb snapshot's underlying
+        // So we use hk3_sieve_get_true_fast_cdb, which gets the latest cdb snapshot's underlying
         // array, bypassing any ref-counts.
         // This pointer is only safe to use until we increment TS_cdb_insertions_finished.
-        CompressedEntry * const true_fast_cdb = gauss_triple_mt_get_true_fast_cdb();
+        CompressedEntry * const true_fast_cdb = hk3_sieve_get_true_fast_cdb();
 
         /**
             Step 1 + 2, determine the actual number of points to insert and and the start of the range.
@@ -1299,7 +1300,9 @@ size_t Siever::gauss_triple_mt_execute_delayed_insertion(TS_Transaction_DB_Type 
         // We will (eventually) insert into *insertion_start_ptr, ..., *insertion_end_ptr (right bound is EXCLUSIVE)
         // number of insertions is insertion_size. Note that if insertion_size == 0, the pointers are meaningless.
         // If we count from the right, we go insertion_end_ptr[-1], ..., insertion_end_ptr[-insertion_size] (inclusive)
+#ifndef NDEBUG
         CompressedEntry * insertion_start_ptr = nullptr;
+#endif
         CompressedEntry * insertion_end_ptr   = nullptr;
         bool choose_queue_to_insert; // indicates whether we insert into the list or the queue.
 
@@ -1501,7 +1504,7 @@ size_t Siever::gauss_triple_mt_execute_delayed_insertion(TS_Transaction_DB_Type 
 
                 // In this case, the new value old_queue_left - insertion_size is small, and we have to back off from
                 // some insertions and pre-reservations.
-                if(old_queue_left < static_cast<decltype(old_queue_left)> (insertion_size + TS_max_extra_queue_size))
+                if(old_queue_left < static_cast<std::remove_const<decltype(old_queue_left)>::type> (insertion_size + TS_max_extra_queue_size))
                 {
                     if(old_queue_left <= 0) // no more queue left, abort. We do not trigger sorting ourselves.
                     {
@@ -1513,7 +1516,7 @@ size_t Siever::gauss_triple_mt_execute_delayed_insertion(TS_Transaction_DB_Type 
                     assert(old_queue_left > 0);
                     assert(insertion_size > 0);
 
-                    if(old_queue_left > TS_max_extra_queue_size)
+                    if(old_queue_left > static_cast<std::remove_const<decltype(old_queue_left)>::type>(TS_max_extra_queue_size))
                     {
                         // Reduce the insertion size, such that TS_queue_left hits TS_max_extra_queue_size if we had
                         // decremented TS_queue_left by that value. We add back to TS_queue_left accordingly.
@@ -1549,7 +1552,9 @@ size_t Siever::gauss_triple_mt_execute_delayed_insertion(TS_Transaction_DB_Type 
                 // assert(TS_insert_queue == known_TS_insert_queue);
                 TS_insert_queue = insertion_start_index; // Equivalently: TS_insert_queue-= insertion_size;
 
+                #ifndef NDEBUG
                 insertion_start_ptr = true_fast_cdb + insertion_start_index;
+                #endif
                 insertion_end_ptr = true_fast_cdb + insertion_start_index + insertion_size;
 
                 // Modify TS_queue_list_imbalance:
@@ -1571,7 +1576,9 @@ size_t Siever::gauss_triple_mt_execute_delayed_insertion(TS_Transaction_DB_Type 
 //                }
                 TS_insert_list = insertion_start_index;
 
+#ifndef NDEBUG
                 insertion_start_ptr = true_fast_cdb + insertion_start_index;
+#endif
                 insertion_end_ptr   = true_fast_cdb + insertion_start_index + insertion_size;
 
 //                modify_queue_list_imbalance -= std::round(TS_queue_list_imbalance_multiplier * insertion_end_ptr[-1].len);
@@ -1591,7 +1598,8 @@ size_t Siever::gauss_triple_mt_execute_delayed_insertion(TS_Transaction_DB_Type 
         assert(insertion_start_ptr != nullptr);
         assert(insertion_end_ptr != nullptr);
         assert(insertion_start_ptr <= insertion_end_ptr);
-        assert(insertion_end_ptr - insertion_start_ptr == insertion_size);
+        // Even with the above assert this needs a cast
+        assert(static_cast<decltype(insertion_size)>(insertion_end_ptr - insertion_start_ptr) == insertion_size);
 
         // We now perform step 3: Insertion into cdb:
         // We also have exclusive write access to the reserved portion of cdb.
@@ -1609,7 +1617,9 @@ size_t Siever::gauss_triple_mt_execute_delayed_insertion(TS_Transaction_DB_Type 
             if(UNLIKELY(insertion_end_ptr[-i].len < transactions_end_it[-i].len ))
             { // What we would overwrite is shorter that what is in transaction_db.
                 insertion_size = i - 1; // number of successful insertions we actually performed.
+#ifndef NDEBUG
                 insertion_start_ptr = insertion_end_ptr - insertion_size;
+#endif
                 // TODO: If this happens when inserting into the list, take countermeasures.
                 if(choose_queue_to_insert)
                     statistics.inc_stats_replacementfailures_queue(insertion_size_copy - insertion_size);
@@ -1621,7 +1631,7 @@ size_t Siever::gauss_triple_mt_execute_delayed_insertion(TS_Transaction_DB_Type 
             insertion_end_ptr[-i].c   = transactions_end_it[-i].c;
             auto const db_insert = insertion_end_ptr[-i].i;
             db_insertion_positions[i-1] = db_insert;
-            for(int t = 0; t < (sizeof(Entry) + 63) / 64; ++t)
+            for(unsigned int t = 0; t < (sizeof(Entry) + 63) / 64; ++t)
             {
                 PREFETCH3(reinterpret_cast<char*>(db.data()+db_insert) + 64*t, 1,0 );
             }
@@ -1682,7 +1692,7 @@ cleanup:
         {
             if(TS_currently_sorting.test_and_set() == false)
             {
-                gauss_triple_mt_resort(id);
+                hk3_sieve_resort(id);
             }
         }
     }
@@ -1710,7 +1720,7 @@ cleanup:
 // Here, p is the point among the triple that is from the queue.
 // p may have negative length, which indicates that the algorithm has finished. In this case, the size_t element is meaningless.
 // thread_local_snapshot is the latest CDB snapshot the calling thread knows about, which is also updated.
-std::pair<Entry, size_t> Siever::gauss_triple_mt_get_p(TS_CDB_Snapshot * &thread_local_snapshot, unsigned int const id, TS_Transaction_DB_Type &transaction_db, float &update_len_bound)
+std::pair<Entry, size_t> Siever::hk3_sieve_get_p(TS_CDB_Snapshot * &thread_local_snapshot, unsigned int const id, TS_Transaction_DB_Type &transaction_db, float &)
 {
     ATOMIC_CPUCOUNT(604);
     std::pair<Entry, size_t> return_pair; // return value
@@ -1740,8 +1750,8 @@ std::pair<Entry, size_t> Siever::gauss_triple_mt_get_p(TS_CDB_Snapshot * &thread
 
         if(thread_local_snapshot != TS_latest_cdb_snapshot_p.load(std::memory_order_relaxed))
         {
-            gauss_triple_mt_release_snapshot(thread_local_snapshot, id);
-            thread_local_snapshot = gauss_triple_mt_get_latest_snapshot(id);
+            hk3_sieve_release_snapshot(thread_local_snapshot, id);
+            thread_local_snapshot = hk3_sieve_get_latest_snapshot(id);
         }
 
 //        thread_local_snapshot = TS_latest_cdb_version;
@@ -1781,9 +1791,9 @@ std::pair<Entry, size_t> Siever::gauss_triple_mt_get_p(TS_CDB_Snapshot * &thread
                 // This also implies that no resort can have has started since, because the TS_currently_sorting flag was clear.
                 TS_queue_left.fetch_add(1); // we give back what we took, so other threads may use it while we sort.
                 lock_queue_head.unlock();
-                gauss_triple_mt_release_snapshot(thread_local_snapshot, id);
-                gauss_triple_mt_resort(id);
-                thread_local_snapshot = gauss_triple_mt_get_latest_snapshot(id);
+                hk3_sieve_release_snapshot(thread_local_snapshot, id);
+                hk3_sieve_resort(id);
+                thread_local_snapshot = hk3_sieve_get_latest_snapshot(id);
 #if COLLECT_STATISTICS_DATARACES >= 2
                 if (!lock_queue_head.try_lock())
                 {
@@ -1834,34 +1844,34 @@ std::pair<Entry, size_t> Siever::gauss_triple_mt_get_p(TS_CDB_Snapshot * &thread
 // TS_snapshots_used entries are valid (in the sense that the std::vector TS_cdb_snapshot[i].snapshot
 // has reserved some memory).
 
-// The datastructures are initialized / de-initialized in the (non-threaded part of) gauss_triple_mt,
+// The datastructures are initialized / de-initialized in the (non-threaded part of) hk3_sieve,
 // stealing memory from cdb. Within the threaded part, *all* access to the latest snapshot must go through
 // the following functions, with the following usage restrictions:
 
 // A thread that want to get access to the latest cdb snapshot can use either
-// gauss_triple_mt_get_true_fast_cdb(...) or gauss_triple_mt_get_latest_snapshot(...). These differ
+// hk3_sieve_get_true_fast_cdb(...) or hk3_sieve_get_latest_snapshot(...). These differ
 // in usage characteristics and limitations.
 
-// With auto local_ptr = gauss_triple_mt_get_latest_snapshot(...),
-// the calling thread can get a local copy of some cdb snapshot that can be freely used until gauss_triple_mt_release_snapshot is called.
-// Any such call must be paired off with a call to gauss_triple_mt_release_snapshot(local_ptr) by the same thread,
-// which invalidates local_ptr again. local_ptr can then be reassigned with gauss_triple_mt_get_latest_snapshot(...).
+// With auto local_ptr = hk3_sieve_get_latest_snapshot(...),
+// the calling thread can get a local copy of some cdb snapshot that can be freely used until hk3_sieve_release_snapshot is called.
+// Any such call must be paired off with a call to hk3_sieve_release_snapshot(local_ptr) by the same thread,
+// which invalidates local_ptr again. local_ptr can then be reassigned with hk3_sieve_get_latest_snapshot(...).
 // (This means that to change the thread's local version, we first release the old, then assign some new)
 
-// gauss_triple_mt_get_true_fast_cdb gives a pointer to the latest cdb snapshot without the need to release and is more efficient.
+// hk3_sieve_get_true_fast_cdb gives a pointer to the latest cdb snapshot without the need to release and is more efficient.
 // This function must only be called and the result used when the implicit TS_insertions_started / TS_cdb_insertions_finished lock is held.
 // (Note that the latest cdb snapshot cannot change while this implicit lock is held)
 
-// gauss_triple_mt_get_free_snapshot will return a new TS_cdb_snapshots of a new snapshot.
+// hk3_sieve_get_free_snapshot will return a new TS_cdb_snapshots of a new snapshot.
 // Note that this function might create new snapshots and block if too many snapshots are in use.
 // (So the calling thread might need to release its own local_ptr's first before calling to avoid deadlock)
 
-// The result of mt_get_free_snapshot must be used in a subsequent call to gauss_triple_mt_update_latest_cdb_snapshot by the same thread.
+// The result of mt_get_free_snapshot must be used in a subsequent call to hk3_sieve_update_latest_cdb_snapshot by the same thread.
 // This atomically published the new free snapshot.
 // This pair of calls needs to be done within a critical section and no other snapshot-related functions must be called in between by this thread.
 // Between the pair of calls, the thread has exclusive access to the new snapshot.
 
-void Siever::gauss_triple_mt_init_snapshots()
+void Siever::hk3_sieve_init_snapshots()
 {
     if(TS_snapshots_used == 0)
     {
@@ -1894,11 +1904,11 @@ void Siever::gauss_triple_mt_init_snapshots()
     }
 }
 
-void Siever::gauss_triple_mt_restore_cdb()
+void Siever::hk3_sieve_restore_cdb()
 {
     auto const find_latest_snapshot = TS_latest_cdb_snapshot_p.load(std::memory_order_relaxed) - &TS_cdb_snapshots[0];
     assert(find_latest_snapshot >=0);
-    assert(static_cast<mystd::make_unsigned_t<decltype(find_latest_snapshot)>> (find_latest_snapshot) < TS_snapshots_used);
+    assert(static_cast<std::remove_const<mystd::make_unsigned_t<decltype(find_latest_snapshot)>>::type> (find_latest_snapshot) < TS_snapshots_used);
     assert(TS_snapshots_used <= TS_max_snapshots);
 
     TS_cdb_snapshots[0].snapshot.swap(TS_cdb_snapshots[find_latest_snapshot].snapshot);
@@ -1913,7 +1923,7 @@ void Siever::gauss_triple_mt_restore_cdb()
 }
 
 
-void Siever::gauss_triple_mt_release_snapshot(TS_CDB_Snapshot * &thread_local_snapshot, MAYBE_UNUSED unsigned int const id)
+void Siever::hk3_sieve_release_snapshot(TS_CDB_Snapshot * &thread_local_snapshot, MAYBE_UNUSED unsigned int const id)
 {
     TS_DEBUG_SNAPSHOTS( "Thread " + std::to_string(id) + " forgets old snapshot " + std::to_string(thread_local_snapshot-&TS_cdb_snapshots[0]) + "\n" )
     auto const old_ref = thread_local_snapshot->ref_count.fetch_sub(1, std::memory_order_release);
@@ -1928,7 +1938,7 @@ void Siever::gauss_triple_mt_release_snapshot(TS_CDB_Snapshot * &thread_local_sn
     }
 }
 
-auto Siever::gauss_triple_mt_get_latest_snapshot(MAYBE_UNUSED unsigned int const id) -> TS_CDB_Snapshot *
+auto Siever::hk3_sieve_get_latest_snapshot(MAYBE_UNUSED unsigned int const id) -> TS_CDB_Snapshot *
 {
     TS_CDB_Snapshot * ret;
     { // lock_guard scope
@@ -1941,12 +1951,12 @@ auto Siever::gauss_triple_mt_get_latest_snapshot(MAYBE_UNUSED unsigned int const
     return ret;
 }
 
-auto Siever::gauss_triple_mt_get_true_fast_cdb() -> CompressedEntry *
+auto Siever::hk3_sieve_get_true_fast_cdb() -> CompressedEntry *
 {
     return TS_latest_cdb_snapshot_p.load(std::memory_order_relaxed)->snapshot.data();
 }
 
-void Siever::gauss_triple_mt_update_latest_cdb_snapshot(TS_CDB_Snapshot * const next_cdb_snapshot_ptr, MAYBE_UNUSED unsigned int const id)
+void Siever::hk3_sieve_update_latest_cdb_snapshot(TS_CDB_Snapshot * const next_cdb_snapshot_ptr, MAYBE_UNUSED unsigned int const id)
 {
     std::lock_guard<std::mutex> lock_latest_snapshot(TS_latest_cdb_mutex);
     // Note: This cannot mark the snapshot as unused, because the caller of resort still has a reference.
@@ -1957,7 +1967,7 @@ void Siever::gauss_triple_mt_update_latest_cdb_snapshot(TS_CDB_Snapshot * const 
 //    next_cdb_snapshot_ptr ->ref_count.store(1, std::memory_order_relaxed);
 }
 
-auto Siever::gauss_triple_mt_get_free_snapshot(MAYBE_UNUSED unsigned int const id) -> TS_CDB_Snapshot *
+auto Siever::hk3_sieve_get_free_snapshot(MAYBE_UNUSED unsigned int const id) -> TS_CDB_Snapshot *
 {
     size_t new_snapshot_index; // return value
     // Not that TS_free_snapshot is 1 + index, with 0 meaning "No free snapshot known". So we have to adjust by -1
@@ -2048,7 +2058,7 @@ auto Siever::gauss_triple_mt_get_free_snapshot(MAYBE_UNUSED unsigned int const i
 // (with sign_flip == true if we have a - sign)
 // new_uid is the new_uid of the constructed point. This may be wrong due to races and the function correctly handles this.
 // Return value indicates success.
-bool Siever::gauss_triple_mt_delayed_3_red(TS_Transaction_DB_Type &transaction_db, Entry const &p, size_t const x1_index, bool const x1_sign_flip, size_t const x2_index, bool const x2_sign_flip, UidType const new_uid)
+bool Siever::hk3_sieve_delayed_3_red(TS_Transaction_DB_Type &transaction_db, Entry const &p, size_t const x1_index, bool const x1_sign_flip, size_t const x2_index, bool const x2_sign_flip, UidType const new_uid)
 {
     ATOMIC_CPUCOUNT(606);
     if(uid_hash_table.insert_uid(new_uid)==false)
@@ -2097,7 +2107,7 @@ bool Siever::gauss_triple_mt_delayed_3_red(TS_Transaction_DB_Type &transaction_d
 // (The default is x1 - x2)
 // new_uid is the uid of the new point. It may be wrong due to races. The functions handles this.
 // Return value indicates success.
-bool Siever::gauss_triple_mt_delayed_2_red_inner(TS_Transaction_DB_Type &transaction_db, size_t const x1_db_index, bool const x1_sign_flip, size_t const x2_db_index, bool const x2_sign_flip, UidType new_uid)
+bool Siever::hk3_sieve_delayed_2_red_inner(TS_Transaction_DB_Type &transaction_db, size_t const x1_db_index, bool const x1_sign_flip, size_t const x2_db_index, bool const x2_sign_flip, UidType new_uid)
 {
     ATOMIC_CPUCOUNT(609);
     // statistics for collisions are managed by the caller.
@@ -2146,7 +2156,7 @@ bool Siever::gauss_triple_mt_delayed_2_red_inner(TS_Transaction_DB_Type &transac
 // (so the default is p + x1)
 // uid is not passed to this function, but computed inside.
 // Return value indicates success.
-bool Siever::gauss_triple_mt_delayed_red_p_db(TS_Transaction_DB_Type &transaction_db, Entry const &p, size_t const x1_index, bool const sign_flip)
+bool Siever::hk3_sieve_delayed_red_p_db(TS_Transaction_DB_Type &transaction_db, Entry const &p, size_t const x1_index, bool const sign_flip)
 {
     ATOMIC_CPUCOUNT(607);
     UidType new_uid = p.uid;
@@ -2226,7 +2236,7 @@ template<class Arg> using Get_Value_Type = typename Arg::value_type;
 // We use std::array for SmallContainer1 and either std::array or std::vector for LargeContainer2.
 // You can use g6k_utility::MaybeFixed or std::integral_constant for Integer1 to pass a compile-time constant for end_block1.
 template<bool EnforceOrder, class SmallContainer1, class LargeContainer2, class Integer1>
-inline void Siever::gauss_triple_mt_process_inner_batch(TS_Transaction_DB_Type &transaction_db, Entry const &p, SmallContainer1 const &block1, Integer1 const end_block1, LargeContainer2 const &block2, size_t const end_block2, float &local_len_bound, MAYBE_UNUSED unsigned int const id)
+inline void Siever::hk3_sieve_process_inner_batch(TS_Transaction_DB_Type &transaction_db, Entry const &p, SmallContainer1 const &block1, Integer1 const end_block1, LargeContainer2 const &block2, size_t const end_block2, float &local_len_bound, MAYBE_UNUSED unsigned int const id)
 {
     ATOMIC_CPUCOUNT(610);
     // Make sure that the template arguments are good:
@@ -2356,19 +2366,19 @@ inline void Siever::gauss_triple_mt_process_inner_batch(TS_Transaction_DB_Type &
                     {
                         UidType believed_new_uid = block1[x1_block_index].uid_adjusted + block2_entry.uid_adjusted + p.uid;
                         ENABLE_IF_STATS_REDSUCCESS(++local_stat_successful_3red;)
-                        if (!gauss_triple_mt_delayed_3_red(transaction_db, p, x1_db_index, block1[x1_block_index].sign_flip, x2_db_index, block2_entry.sign_flip, believed_new_uid))
+                        if (!hk3_sieve_delayed_3_red(transaction_db, p, x1_db_index, block1[x1_block_index].sign_flip, x2_db_index, block2_entry.sign_flip, believed_new_uid))
                         {
                             ENABLE_IF_STATS_COLLISIONS(++local_stat_collisions_3;)
                         }
                         else if(transaction_db.size() % TS_transaction_bulk_size == 0)
                         {
-                            gauss_triple_mt_execute_delayed_insertion(transaction_db, local_len_bound, id);
+                            hk3_sieve_execute_delayed_insertion(transaction_db, local_len_bound, id);
                         }
                     }
                     else if(params.otf_lift && (believed_final_len < params.lift_radius)) // UNLIKELY??? Not so sure
                     {
                         ENABLE_IF_STATS_OTFLIFTS(++local_stat_otflifts_3;)
-                        gauss_triple_mt_otflift_p_x1_x2(p, x1_db_index, block1[x1_block_index].sign_flip, x2_db_index, block2_entry.sign_flip, believed_final_len);
+                        hk3_sieve_otflift_p_x1_x2(p, x1_db_index, block1[x1_block_index].sign_flip, x2_db_index, block2_entry.sign_flip, believed_final_len);
                     }
                 }
                 else CPP17CONSTEXPRIF (TS_perform_inner2red) // w is huge due to underflow, i.e. x1 - x2 (after sign-adjustment) is a possible 2 reduction
@@ -2378,19 +2388,19 @@ inline void Siever::gauss_triple_mt_process_inner_batch(TS_Transaction_DB_Type &
                     {
                         UidType believed_new_uid = block1[x1_block_index].uid_adjusted - block2_entry.uid_adjusted;
                         ENABLE_IF_STATS_REDSUCCESS(++local_stat_successful_2red_inner;)
-                        if (!gauss_triple_mt_delayed_2_red_inner(transaction_db, x1_db_index, block1[x1_block_index].sign_flip, x2_db_index, block2_entry.sign_flip, believed_new_uid))
+                        if (!hk3_sieve_delayed_2_red_inner(transaction_db, x1_db_index, block1[x1_block_index].sign_flip, x2_db_index, block2_entry.sign_flip, believed_new_uid))
                         {
                             ENABLE_IF_STATS_COLLISIONS(++local_stat_collisions_2inner;)
                         }
                         else if(transaction_db.size() % TS_transaction_bulk_size == 0)
                         {
-                            gauss_triple_mt_execute_delayed_insertion(transaction_db, local_len_bound, id);
+                            hk3_sieve_execute_delayed_insertion(transaction_db, local_len_bound, id);
                         }
                     }
                     else if (params.otf_lift && (believed_final_len < params.lift_radius))
                     {
                         ENABLE_IF_STATS_OTFLIFTS(++local_stat_otflifts_2inner;)
-                        gauss_triple_mt_otflift_x1_x2(x1_db_index, block1[x1_block_index].sign_flip, x2_db_index, block2_entry.sign_flip, believed_final_len );
+                        hk3_sieve_otflift_x1_x2(x1_db_index, block1[x1_block_index].sign_flip, x2_db_index, block2_entry.sign_flip, believed_final_len );
                     }
                 }
             }
@@ -2398,7 +2408,7 @@ inline void Siever::gauss_triple_mt_process_inner_batch(TS_Transaction_DB_Type &
     }
 }
 
-void Siever::gauss_triple_mt_otflift_p_db(Entry const &p, size_t const db_index, bool const sign_flip, double const believed_len)
+void Siever::hk3_sieve_otflift_p_db(Entry const &p, size_t const db_index, bool const sign_flip, double const believed_len)
 {
     ATOMIC_CPUCOUNT(611);
     ZT x_full[r];
@@ -2418,7 +2428,7 @@ void Siever::gauss_triple_mt_otflift_p_db(Entry const &p, size_t const db_index,
     lift_and_compare(x_full, believed_len * gh, otf_helper);
 }
 
-void Siever::gauss_triple_mt_otflift_p_x1_x2(Entry const &p, size_t const x1_db_index, bool const x1_sign_flip, size_t const x2_db_index, bool const x2_sign_flip, double const believed_len)
+void Siever::hk3_sieve_otflift_p_x1_x2(Entry const &p, size_t const x1_db_index, bool const x1_sign_flip, size_t const x2_db_index, bool const x2_sign_flip, double const believed_len)
 {
     ATOMIC_CPUCOUNT(612);
     ZT x_full[r];
@@ -2451,7 +2461,7 @@ void Siever::gauss_triple_mt_otflift_p_x1_x2(Entry const &p, size_t const x1_db_
     lift_and_compare(x_full, believed_len * gh, otf_helper);
 }
 
-void Siever::gauss_triple_mt_otflift_x1_x2(size_t const x1_db_index, bool const x1_sign_flip, size_t const x2_db_index, bool const x2_sign_flip, double const believed_len)
+void Siever::hk3_sieve_otflift_x1_x2(size_t const x1_db_index, bool const x1_sign_flip, size_t const x2_db_index, bool const x2_sign_flip, double const believed_len)
 {
     ATOMIC_CPUCOUNT(613);
     ZT x_full[r];

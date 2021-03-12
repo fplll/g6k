@@ -65,7 +65,7 @@ if [ ${enable_stats} -ge 1 ]; then
 fi
 if [ ${enable_stats} -ge 2 ]; then
 	EXTRAFLAGS="$EXTRAFLAGS -DENABLE_EXTENDED_STATS"
-fi 
+fi
 if [ ${enable_ndebug} -eq 1 ]; then
 	EXTRAFLAGS="$EXTRAFLAGS -DNDEBUG"
 fi

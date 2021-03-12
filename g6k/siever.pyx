@@ -24,6 +24,7 @@ from math import ceil, floor
 
 from decl cimport CompressedEntry, Entry
 from decl cimport show_cpu_stats
+from decl cimport MAX_SIEVING_DIM
 
 from scipy.special import betaincinv
 
@@ -99,11 +100,15 @@ cdef class Siever(object):
             seed = IntegerMatrix.random(1, "uniform", bits=32)[0, 0]
         self._core = new Siever_c(params._core, <unsigned long>seed)
         self.params = copy.copy(params)
-
+          
         self._core.full_n = M.d
+        
+        if self._core.full_n > self.max_sieving_dim:
+            warnings.warn("Dimension of lattice is larger than maximum supported. To fix this warning, change the value of MAX_SIEVING_DIM in siever.h and recompile.")
+
         self.lll(0, M.d)
         self.initialized = False
-
+    
     @classmethod
     def MatGSO(cls, A, float_type="d"):
         """
@@ -286,6 +291,28 @@ cdef class Siever(object):
         self._core.initialize_local(ll, l, r)
         sig_off()
         self.initialized = True
+    
+    @property
+    def max_sieving_dim(self):
+        """
+        The maximum sieving dimension that's supported in this build of G6K.
+        This value can be changed in the following ways:
+            - Manually. You can simply change the ``MAX_SIEVING_DIM`` macro in siever.h and then recompile.
+
+            - Automatically. You can change this value by supplying the "-m <dim>" flag to rebuild.sh,
+              where <dim> is the maximum supported dimension. For nicer support with AVX/vectorisation,
+              we recommend a multiple of 32. This will recompile the g6k kernel.
+              Example:
+                ./rebuild -m 160
+        EXAMPLE::
+            >>> from fpylll import IntegerMatrix
+            >>> from g6k import Siever
+            >>> Siever(IntegerMatrix.random(50, "qary", k=25, bits=10), seed=0x1337).max_sieving_dim
+            128
+
+        """
+        return MAX_SIEVING_DIM
+
 
     @property
     def full_n(self):
@@ -453,7 +480,6 @@ cdef class Siever(object):
 
     def reset_stats(self):
         self._core.reset_stats()
-
     ############# New statistics ############
 
     # This exports _core.statistics to python. Note that stats(self) and get_stat(self, name)
@@ -1163,6 +1189,40 @@ cdef class Siever(object):
         self.check_saturation()
         return self.stats
 
+    def bdgl_sieve(self, blocks=None, buckets=None, reset_stats=True, check_saturation=True):
+        assert(self.initialized)
+        if self.n < 40:
+            logging.warning("bdgl_sieve not recommended below dimension 40")
+
+
+        if reset_stats:
+            self.reset_stats()
+
+        N = self.params.db_size_factor * self.params.db_size_base ** self.n
+        self.resize_db(N)
+
+        if blocks is None:
+            blocks =  self.params.bdgl_blocks
+
+        if blocks not in [1,2,3]:
+            logging.warning("bdgl_sieve only supports 1, 2, or 3 blocks")
+
+        blocks = min(3, max(1, blocks))
+        blocks = min(int(self.n / 28), blocks)
+
+        if buckets is None:
+            buckets = self.params.bdgl_bucket_size_factor * 2.**((blocks-1.)/(blocks+1.)) * self.params.bdgl_multi_hash**((2.*blocks)/(blocks+1.)) * (N ** (blocks/(1.0+blocks)))
+
+        buckets = min(buckets, self.params.bdgl_multi_hash * N / self.params.bdgl_min_bucket_size)
+        buckets = max(buckets, 2**(blocks-1))
+
+        sig_on()
+        self._core.bdgl_sieve(buckets, blocks, self.params.bdgl_multi_hash)
+        sig_off()
+
+        if check_saturation:
+            self.check_saturation()
+
     def nv_sieve(self, reset_stats=True):
         assert(self.initialized)
         if self.n < 40:
@@ -1180,21 +1240,9 @@ cdef class Siever(object):
 
         self.check_saturation()
 
-    def gauss_triple_sieve_st(self, size_t max_db_size=0, reset_stats=True):
-        assert(self.initialized)
-        if reset_stats:
-            self.reset_stats()
 
-        if max_db_size==0:
-          max_db_size = 200 + 10*self.n + 2 * self.params.triplesieve_db_size_factor * self.params.triplesieve_db_size_base ** self.n
-        sig_on()
-        self._core.gauss_triple_sieve_st(max_db_size)
-        sig_off()
 
-        #self.check_saturation() TODO: make check_saturation_triplesieve
-        return self.stats
-
-    def gauss_triple_mt(self, size_t max_db_size = 0, reset_stats=True):
+    def hk3_sieve(self, size_t max_db_size = 0, reset_stats=True):
         assert(self.initialized)
         if self.n < 40:
             logging.warning("triple_mt sieve not recommended below dimension 40")
@@ -1220,7 +1268,7 @@ cdef class Siever(object):
 
 
         sig_on()
-        self._core.gauss_triple_mt(alpha)
+        self._core.hk3_sieve(alpha)
         sig_off()
 
         self.check_saturation()
@@ -1248,6 +1296,18 @@ cdef class Siever(object):
 
     def __call__(self, alg=None, reset_stats=True, tracer=dummy_tracer):
         assert(self.initialized)
+
+        # Check choice of sieve algorithm preemptively, to avoid incorrect user 
+        # choices  being overwritten by default or crossover leading to non-deterministic 
+        # raise of the error
+
+        valid_sieves = ["nv", "bgj1", "gauss", "hk3", "bdgl", "bdgl1", "bdgl2", "bdgl3"]
+        if alg is not None and alg not in valid_sieves:
+            raise NotImplementedError("Sieve Algorithm '%s' invalid. "%(alg) + "Please choose among "+str(valid_sieves) )
+
+        if self.params.default_sieve not in valid_sieves:
+            raise NotImplementedError("Sieve Algorithm '%s' invalid. "%(self.params.default_sieve) + "Please choose among "+str(valid_sieves) )
+
         if alg is None:
             if self.n < self.params.gauss_crossover:
                 alg = "gauss"
@@ -1263,22 +1323,28 @@ cdef class Siever(object):
         elif alg == "bgj1":
             with tracer.context("bgj1"):
                 self.bgj1_sieve(reset_stats=reset_stats)
+        elif alg == "bdgl":
+            with tracer.context("bdgl"):
+                self.bdgl_sieve(reset_stats=reset_stats)
+        elif alg == "bdgl1":
+            with tracer.context("bdgl"):
+                self.bdgl_sieve(blocks=1, reset_stats=reset_stats)
+        elif alg == "bdgl2":
+            with tracer.context("bdgl"):
+                self.bdgl_sieve(blocks=2, reset_stats=reset_stats)
+        elif alg == "bdgl3":
+            with tracer.context("bdgl"):
+                self.bdgl_sieve(blocks=3, reset_stats=reset_stats)
         elif alg == "gauss":
             with tracer.context("gauss"):
                 self.gauss_sieve(reset_stats=reset_stats)
-        elif alg == "gauss_no_upd":
-            print "--alg gauss_no_upd has been renamed into just --alg gauss. the gauss_no_upd option will be removed soon." #TODO: Remove this line. It just serves to spot issues gracefully.
-            with tracer.context("gauss"):
-                self.gauss_sieve(reset_stats=reset_stats)
-        elif alg == "gauss_triple_st":  #Single-threaded 3Sieve
-            with tracer.context("triple_st"):
-                self.gauss_triple_sieve_st(reset_stats=reset_stats)
-        elif alg == "gauss_triple_mt": #Multi-threaded 3Sieve, keep both for now
-            with tracer.context("triple_mt"):
-                self.gauss_triple_mt(reset_stats=reset_stats)
-        # NOTE : There currently is no working gauss_triple without _no_upd, gauss_triple_no_upd might be renamed into gauss_triple
+        elif alg == "hk3": #Multi-threaded 3Sieve, keep both for now
+            with tracer.context("hk3"):
+                self.hk3_sieve(reset_stats=reset_stats)
         else:
-            raise NotImplementedError("Algorithm `%s` of type %s not recognized"%(alg, type(alg)))
+            # The algorithm should have been preemptively checked
+            assert(False)
+            
 
     def extend_left(self, offset=1):
         """
@@ -1576,7 +1642,7 @@ cdef class Siever(object):
             >>> bl = g6k.best_lifts()
             >>> id, nrm, w = bl[0]
             >>> id, round(nrm)
-            (0, 194629.0)
+            (0, 194629)
             >>> sum([v**2 for v in A.multiply_left(w)])
             194629
 

@@ -125,6 +125,8 @@ def pump(g6k, tracer, kappa, blocksize, dim4free, down_sieve=False,             
             pump.phase = "up"
             # Pump Up
             while (g6k.l > pump.l):
+                if(g6k.n + 1 > g6k.max_sieving_dim):
+                    raise RuntimeError("The current sieving context is bigger than maximum supported dimension.")
                 g6k.extend_left(1)
 
                 if verbose:

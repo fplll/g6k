@@ -53,7 +53,7 @@ extensions = [
 setup(
     name="G6K",
     description="General Sieve Kernel",
-    version="0.0.1",
+    version="0.1.0",
     url="https://github.com/fplll/g6k",
     ext_modules=cythonize(extensions, compiler_directives={'binding': True,
                                                            'embedsignature': True,

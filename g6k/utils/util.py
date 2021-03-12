@@ -244,7 +244,7 @@ def db_stats(stats):
             "|db|", filter=lambda node: SieveTreeTracer.is_sieve_node(node.label), repr="max"
         ).max
 
-    return log(max_dbs.avg, 2), log(max_dbs.max, 2)
+    return log(max(1, max_dbs.avg), 2), log(max(1,max_dbs.max), 2)
 
 
 def load_lwe_challenge(n=40, alpha=0.005):
