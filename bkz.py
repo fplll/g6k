@@ -35,7 +35,7 @@ def bkz_kernel(arg0, params=None, seed=None):
     :param params: parameters for BKZ:
 
         - bkz/alg: choose the underlying BKZ from
-          {fpylll, naive, pump_n_jump}
+          {fpylll, naive, pump_n_jump, slide}
 
         - bkz/blocksizes: given as low:high:inc perform BKZ reduction
           with blocksizes in range(low, high, inc) (after some light)
@@ -57,6 +57,8 @@ def bkz_kernel(arg0, params=None, seed=None):
 
         - pump/down_sieve: sieve after each insert in the pump-down
           phase of the pump
+        
+        - slide/overlap: shift of the dual blocks when running slide reduction
 
         - challenge_seed: a seed to randomise the generated lattice
 

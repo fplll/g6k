@@ -134,6 +134,21 @@ def pump_n_jump_bkz_tour(g6k, tracer, blocksize, jump=1,
 
 def slide_tour(g6k, tracer, blocksize, dim4free_fun=default_dim4free_fun, overlap = 1,
                    extra_dim4free=0, workout_params=None, pump_params=None):
+    """
+    Run a slide reduction tour: call ``workout`` as an SVP oracle consecutively on
+    the disjoint blocks and then on the dual blocks shifted by ``overlap''
+
+    :param g6k: The g6k object to work with
+    :param tracer: A tracer for g6k
+    :param blocksize: dimension of the blocks
+    :param dim4free_fun: number of dimension for free as a function of beta (function, or string e.g. `lambda x: 11.5+0.075*x`)
+    :param overlap: shift of the dual blocks
+    :param extra_dim4free: increase the number of dims 4 free (blocksize is increased, but not sieve dimension)
+    :param workout_params: parameters to pass to the workout
+    :param pump_params: parameters to pass to the pump
+
+    """
+    
     if workout_params is None:
         workout_params = {}
 
