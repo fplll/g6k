@@ -117,8 +117,8 @@ def bkz_kernel(arg0, params=None, seed=None):
 
     T0 = time.time()
     for blocksize in blocksizes:
-        with tracer.context("blocksize", blocksize, dump_gso= not dont_trace):
-            for t in range(tours):
+        for t in range(tours):
+            with tracer.context("tour", t, dump_gso=True):
                 if algbkz == "fpylll":
                     par = BKZ_FPYLLL.Param(blocksize,
                                            strategies=BKZ_FPYLLL.DEFAULT_STRATEGY,
@@ -146,12 +146,12 @@ def bkz_kernel(arg0, params=None, seed=None):
                 else:
                     raise ValueError("bkz/alg=%s not recognized." % algbkz)
 
-                if verbose:
-                    slope = basis_quality(M)["/"]
-                    fmt = "{'alg': '%25s', 'jump':%2d, 'pds':%d, 'extra_d4f': %2d, 'beta': %2d, 'slope': %.5f,'total walltime': %.3f}" # noqa
-                    print(fmt % (algbkz + "+" + ("enum" if algbkz == "fpylll" else g6k.params.default_sieve),
-                                 jump, pump_params["down_sieve"], extra_dim4free,
-                                 blocksize, slope, time.time() - T0))
+            if verbose:
+                slope = basis_quality(M)["/"]
+                fmt = "{'alg': '%25s', 'jump':%2d, 'pds':%d, 'extra_d4f': %2d, 'beta': %2d, 'slope': %.5f,'total walltime': %.3f}" # noqa
+                print(fmt % (algbkz + "+" + ("enum" if algbkz == "fpylll" else g6k.params.default_sieve),
+                             jump, pump_params["down_sieve"], extra_dim4free,
+                             blocksize, slope, time.time() - T0))
 
     tracer.exit()
     slope = basis_quality(M)["/"]
