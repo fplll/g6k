@@ -3,6 +3,7 @@
 from __future__ import absolute_import
 from fpylll import IntegerMatrix
 from g6k.algorithms.bkz import pump_n_jump_bkz_tour as bkz
+from g6k.algorithms.bkz import slide_tour as slide
 from g6k.siever import Siever
 from g6k.utils.stats import dummy_tracer
 
@@ -42,3 +43,11 @@ def test_bkz():
             bkz(g6k, dummy_tracer, 20)
             bkz(g6k, dummy_tracer, 20)
             bkz(g6k, dummy_tracer, 20)
+        
+        # Slide
+        A = make_integer_matrix(d)
+        g6k = Siever(A)
+        block_size = 25 if d == 50 else 20
+        slide(g6k, dummy_tracer, block_size, overlap = 10)
+        slide(g6k, dummy_tracer, block_size, overlap = 10)
+        slide(g6k, dummy_tracer, block_size, overlap = 10)

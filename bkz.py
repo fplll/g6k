@@ -16,7 +16,7 @@ from collections import OrderedDict
 from fpylll import BKZ as BKZ_FPYLLL, GSO, IntegerMatrix
 from fpylll.tools.quality import basis_quality
 
-from g6k.algorithms.bkz import naive_bkz_tour, pump_n_jump_bkz_tour
+from g6k.algorithms.bkz import naive_bkz_tour, pump_n_jump_bkz_tour, slide_tour
 from g6k.siever import Siever
 from g6k.utils.cli import parse_args, run_all, pop_prefixed_params
 from g6k.utils.stats import SieveTreeTracer, dummy_tracer
@@ -35,7 +35,7 @@ def bkz_kernel(arg0, params=None, seed=None):
     :param params: parameters for BKZ:
 
         - bkz/alg: choose the underlying BKZ from
-          {fpylll, naive, pump_n_jump}
+          {fpylll, naive, pump_n_jump, slide}
 
         - bkz/blocksizes: given as low:high:inc perform BKZ reduction
           with blocksizes in range(low, high, inc) (after some light)
@@ -57,6 +57,8 @@ def bkz_kernel(arg0, params=None, seed=None):
 
         - pump/down_sieve: sieve after each insert in the pump-down
           phase of the pump
+        
+        - slide/overlap: shift of the dual blocks when running slide reduction
 
         - challenge_seed: a seed to randomise the generated lattice
 
@@ -75,6 +77,7 @@ def bkz_kernel(arg0, params=None, seed=None):
     dim4free_fun = params.pop("bkz/dim4free_fun")
     extra_dim4free = params.pop("bkz/extra_dim4free")
     jump = params.pop("bkz/jump")
+    overlap = params.pop("slide/overlap")
     pump_params = pop_prefixed_params("pump", params)
     workout_params = pop_prefixed_params("workout", params)
 
@@ -135,6 +138,12 @@ def bkz_kernel(arg0, params=None, seed=None):
                                          dim4free_fun=dim4free_fun,
                                          extra_dim4free=extra_dim4free,
                                          pump_params=pump_params)
+                elif algbkz == "slide":
+                    slide_tour(g6k, dummy_tracer, blocksize, overlap=overlap,
+                               dim4free_fun=dim4free_fun,
+                               extra_dim4free=extra_dim4free,
+                               workout_params=workout_params,
+                               pump_params=pump_params)
                 else:
                     raise ValueError("bkz/alg=%s not recognized." % algbkz)
 
@@ -173,6 +182,7 @@ def bkz_tour():
                                   bkz__extra_dim4free=0,
                                   bkz__jump=1,
                                   bkz__dim4free_fun="default_dim4free_fun",
+                                  slide__overlap=1,
                                   pump__down_sieve=True,
                                   challenge_seed=0,
                                   dummy_tracer=False,  # set to control memory
