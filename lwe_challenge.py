@@ -145,6 +145,7 @@ def lwe_kernel(arg0, params=None, seed=None):
         tracer = SieveTreeTracer(g6k, root_label=("lwe"), start_clocks=True)
 
     d = g6k.full_n
+    blocksizes = [blocksize for blocksize in blocksizes if blocksize <= d]
     g6k.lll(0, g6k.full_n)
     slope = basis_quality(g6k.M)["/"]
     print("Intial Slope = %.5f\n" % slope)
@@ -209,8 +210,13 @@ def lwe_kernel(arg0, params=None, seed=None):
             llb = d - blocksize
             while gaussian_heuristic([g6k.M.get_r(i, i) for i in range(llb, d)]) < target_norm * (d - llb)/(1.*d): # noqa
                 llb -= 1
+                if llb < 0:
+                    break
 
-            f = d-llb-n_max
+            # catch small cases where selections above give nonsensical suggestions
+            llb = max(0, llb)
+            f = max(d-llb-n_max, 0)
+
             if verbose:
                 print("Starting svp pump_{%d, %d, %d}, n_max = %d, Tmax= %.2f sec" % (llb, d-llb, f, n_max, svp_Tmax)) # noqa
             pump(g6k, tracer, llb, d-llb, f, verbose=verbose,
