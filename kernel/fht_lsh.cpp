@@ -20,6 +20,7 @@
 
 //// https://github.com/lducas/AVX2-BDGL-bucketer commit 630c2286a440fae1eddd9f90341ff2020f18b614
 
+#ifdef __AVX2__
 #include "fht_lsh.h"
 
 
@@ -598,3 +599,4 @@ void ProductLSH::hash(const float * const v, int32_t * const res)
     }
 
 }
+#endif

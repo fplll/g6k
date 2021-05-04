@@ -17,12 +17,11 @@
 *
 ****/
 
-
 //// https://github.com/lducas/AVX2-BDGL-bucketer commit 630c2286a440fae1eddd9f90341ff2020f18b614
 
 #ifndef G6K_FHTLSH_H
 #define G6K_FHTLSH_H
-
+#ifdef __AVX2__
 #include <immintrin.h>
 #include <stdio.h>
 #include <assert.h>
@@ -340,4 +339,5 @@ class ProductLSH
         void hash(const float* v, int32_t * res);
     };
 
+#endif
 #endif
