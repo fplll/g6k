@@ -92,6 +92,24 @@ if test $enable_native = "yes"; then
 fi
 
 #
+# Template Dimensions
+#
+
+AC_ARG_ENABLE(templated-dim,
+AC_HELP_STRING([--enable-templated-dim],
+               [enable templated dimensions (longer compilation time, better performance) [default=no]]),
+               [case $enableval in
+                  yes|no) ;;
+                  *) AC_MSG_ERROR([bad value $enableval for --enable-templated-dim, need yes or no]) ;;
+                esac],
+               [enable_templated_dim=no]
+)
+
+if test $enable_templated_dim = "yes"; then
+     AC_DEFINE_UNQUOTED([TEMPLATED_DIM], 1, [enable templated dimensions])
+fi
+
+#
 # Enable CPU counters
 #
 
@@ -122,9 +140,9 @@ AC_ARG_WITH(stats,
 )
 
 if test $enable_stats = "1"; then
-AC_DEFINE_UNQUOTED([ENABLE_STATS], 1, [enable statistics])
+    AC_DEFINE_UNQUOTED([ENABLE_STATS], 1, [enable statistics])
 elif test $enable_stats = "2"; then
-AC_DEFINE_UNQUOTED([ENABLE_EXTENDED_STATS], 1, [enable extended statistics])
+    AC_DEFINE_UNQUOTED([ENABLE_EXTENDED_STATS], 1, [enable extended statistics])
 fi
 
 #

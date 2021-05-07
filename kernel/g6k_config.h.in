@@ -194,6 +194,9 @@
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
+/* enable templated dimensions */
+#undef TEMPLATED_DIM
+
 /* Version number of package */
 #undef VERSION
 
