@@ -41,6 +41,7 @@
 #include <condition_variable>
 #include "compat.hpp"
 #include "statistics.hpp"
+#include "g6k_config.h"
 
 using std::size_t;
 

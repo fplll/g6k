@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: @PACKAGE_NAME@
+Description: lattice algorithms with floating-point computations
+Version: @PACKAGE_VERSION@
+Cflags: @PTHREAD_CFLAGS@ @CXXFLAGS@
+Libs: @PTHREAD_LIBS@ @LIBS@ 

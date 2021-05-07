@@ -21,7 +21,8 @@
 
 #ifndef G6K_FHTLSH_H
 #define G6K_FHTLSH_H
-#ifdef __AVX2__
+
+#ifdef HAVE_AVX2
 #include <immintrin.h>
 #include <stdio.h>
 #include <assert.h>

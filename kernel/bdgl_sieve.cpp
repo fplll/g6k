@@ -58,7 +58,7 @@ std::pair<LFT, int8_t> Siever::reduce_to_QEntry(CompressedEntry *ce1, Compressed
     return { new_l, sign };
 }
 
-#ifdef __AVX2__
+#ifdef HAVE_AVX2
 
 inline int Siever::bdgl_reduce_with_delayed_replace(const size_t i1, const size_t i2, LFT const lenbound, std::vector<Entry>& transaction_db, int64_t& write_index, LFT new_l, int8_t sign)
 {

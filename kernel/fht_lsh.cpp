@@ -20,7 +20,9 @@
 
 //// https://github.com/lducas/AVX2-BDGL-bucketer commit 630c2286a440fae1eddd9f90341ff2020f18b614
 
-#ifdef __AVX2__
+#include "g6k_config.h"
+
+#ifdef HAVE_AVX2
 #include "fht_lsh.h"
 
 

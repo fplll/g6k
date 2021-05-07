@@ -19,9 +19,6 @@
 #
 ####
 
-
-
-from __future__ import absolute_import
 try:
     from setuptools import setup
     from setuptools.extension import Extension
@@ -31,29 +28,23 @@ except ImportError:
 from Cython.Build import cythonize
 
 import subprocess
-import os
-subprocess.check_call("make")
-
+import glob
 import numpy
 
+subprocess.check_call("make")
 
-def read_from_makefile(field):
-    data = [line for line in open("kernel/Makefile").readlines() if line.startswith(field)][0]
-    data = "=" .join(data.split("=")[1:])
+
+def read_from_pc(field):
+    data = [line for line in open("g6k.pc").readlines() if line.startswith(field)][0]
+    data = "=" .join(data.split(": ")[1:])
     data = data.strip()
-    data = data.split(" ")
+    data = [d for d in data.split(" ") if d]
     return data
 
 
-objects  = ["kernel/"+obj for obj in read_from_makefile("OBJ")]
-extra_compile_args = read_from_makefile("CXXFLAGS")
-
-# replace $(EXTRAFLAGS) in extra_compile_args with environment variable
-try:
-    del extra_compile_args[extra_compile_args.index("$(EXTRAFLAGS)")]
-except ValueError:
-    pass
-extra_compile_args += os.environ.get('EXTRAFLAGS', "").split()
+objects  = glob.glob("kernel/.libs/*.o")
+extra_compile_args = ["-std=c++11"]
+extra_compile_args += read_from_pc("Cflags")
 # extra_compile_args += ["-DCYTHON_TRACE=1"]
 
 kwds = {
