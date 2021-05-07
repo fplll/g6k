@@ -39,7 +39,7 @@ import os
 #
 
 if not os.path.exists("configure"):
-    subprocess.check_call("autoreconf -i")
+    subprocess.check_call(["autoreconf", "-i"])
 
 if not os.path.exists("Makefile"):
     subprocess.check_call("./configure")
