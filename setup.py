@@ -53,12 +53,12 @@ if not os.path.exists("Makefile"):
 class build_ext(build_module.build_ext):
     def run(self):
 
-        # for arg in sys.argv:
-        #     if arg.startswith("-j"):
-        #         subprocess.check_call(["make", arg])
-        #         break
-        # else:
-        subprocess.check_call("make")
+        for arg in sys.argv:
+            if arg.startswith("-j"):
+                subprocess.check_call(["make", arg])
+                break
+        else:
+            subprocess.check_call("make")
 
         build_module.build_ext.run(self)
 
