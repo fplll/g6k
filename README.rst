@@ -33,9 +33,7 @@ Otherwise, you will need fplll and fpylll already installed and build the G6K Cy
 
     pip install Cython
     pip install -r requirements.txt
-    ./rebuild.sh -f
-
-Remove ``-f`` option to compile faster (fewer optimisations). See ``rebuild.sh`` for more options.
+    python setup.py build
 
 If building via ```./bootstrap.sh``` fails, then the script will return an error code. 
 The error codes are documented in ```bootstrap.sh.```

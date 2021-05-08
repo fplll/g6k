@@ -33,6 +33,7 @@ import subprocess
 import numpy
 import sys
 import os
+from ast import parse
 
 #
 # `setup,py` consumes files output by `configure` so we insist on running it first.
@@ -71,6 +72,13 @@ def read_from(filename, field, sep):
     return data
 
 
+# Version
+
+with open(os.path.join("g6k", "__init__.py")) as f:
+    __version__ = (
+        parse(next(filter(lambda line: line.startswith("__version__"), f))).body[0].value.s
+    )
+
 extra_compile_args = ["-std=c++11"]
 # extra_compile_args += ["-DCYTHON_TRACE=1"]
 # there's so many warnings generated here, we need to filter out -Werror
@@ -96,7 +104,7 @@ extensions = [
 setup(
     name="G6K",
     description="General Sieve Kernel",
-    version="0.1.0",
+    version=__version__,
     url="https://github.com/fplll/g6k",
     ext_modules=cythonize(
         extensions,
