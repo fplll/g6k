@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(g6k, 0.1.1)
+AC_INIT(g6k-kernel, 0.1.1)
 AC_CANONICAL_HOST
 AC_CONFIG_SRCDIR([kernel/sieving.cpp])
 AM_MAINTAINER_MODE([enable])
