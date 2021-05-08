@@ -22,10 +22,10 @@ You will need the current master of FPyLLL. See ``bootstrap.sh`` for creating (a
 
     ./bootstrap.sh [ -j # ]       # once only: creates local python env, builds fplll, fpylll and G6K
     source ./activate             # for every new shell: activates local python env
-    ./rebuild.sh -f [ -j # ]      # whenever you want to rebuild G6K
+    python setup.py build [ -j # ]      # whenever you want to rebuild G6K
 
 On systems with co-existing python2 and 3, you can force a specific version installation using ``PYTHON=<pythoncmd> ./boostrap.sh`` instead.
-The number of parallel compilation jobs can be controlled with `-j #`, which defaults to 4.
+The number of parallel compilation jobs can be controlled with `-j #`.
 
 Otherwise, you will need fplll and fpylll already installed and build the G6K Cython extension **in place** like so:
 
