@@ -35,6 +35,11 @@ import sys
 import os
 from ast import parse
 
+try:
+    from itertools import ifilter as filter
+except ImportError:
+    pass  # python 3
+
 #
 # `setup,py` consumes files output by `configure` so we insist on running it first.
 #
