@@ -115,6 +115,8 @@ setup(
     cmdclass={
         "build_ext": build_ext,
     },
+    author="G6K team",
+    author_email="fplll-devel@googlegroups.com",
     scripts=[
         "bkz.py",
         "full_sieve.py",
