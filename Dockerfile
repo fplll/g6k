@@ -13,7 +13,6 @@ ENTRYPOINT /usr/local/bin/ipython
 
 RUN git clone --branch $BRANCH https://github.com/fplll/g6k && \
     cd g6k && \
-    CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS make -j $JOBS && \
     pip3 install -r requirements.txt && \
     CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS python3 setup.py build -j $JOBS && \
     python3 setup.py -q install && \

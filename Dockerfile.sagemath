@@ -32,7 +32,6 @@ RUN SAGE_ROOT=`pwd`/sage && \
     cd .. && \
     git clone --branch $G6K_BRANCH https://github.com/fplll/g6k && \
     cd g6k && \
-    CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS make -j $JOBS && \
     pip3 install -r requirements.txt && \
     CFLAGS=$CFLAGS CXXFLAGS=$CXXFLAGS python3 setup.py build -j $JOBS && \
     python3 setup.py -q install && \
