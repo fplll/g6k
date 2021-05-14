@@ -44,6 +44,7 @@ It's possible to alter the C++ kernel build configuration as follows:
 
 .. code-block:: bash
 
+    make clean
     ./configure [opts...]           # e.g. opts: --enable-native --enable-templated-dim --with-max-sieving-dim=128
                                     # see ./configure --help for more options
     python setup.py build [ -j # ]
