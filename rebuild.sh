@@ -88,4 +88,4 @@ make -C kernel -j ${jobs} || exit 1
 
 rm -r build g6k/*.so `find g6k -name "*.pyc"`
 python setup.py clean
-python setup.py build_ext -j ${jobs} --inplace || python setup.py build_ext --inplace
+python setup.py build -j ${jobs} --inplace || python setup.py build --inplace
