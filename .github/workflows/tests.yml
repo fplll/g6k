@@ -52,7 +52,10 @@ jobs:
           pip install -r requirements.txt
           
       - name: Compile Kernel
-        run: CXXFLAGS="-Werror" make -j $JOBS
+        run: |
+          autoreconf -i
+          CXXFLAGS="-Werror" ./configure
+          make -j $JOBS
 
       - name: Compile Python
         run: python setup.py build_ext -j $JOBS --inplace

@@ -41,6 +41,7 @@
 #include <condition_variable>
 #include "compat.hpp"
 #include "statistics.hpp"
+#include "g6k_config.h"
 
 using std::size_t;
 
@@ -431,9 +432,9 @@ public:
     */
 
     explicit Siever(const SieverParams &params, unsigned long int seed = 0) :
-        full_n(0), full_muT(), full_rr(), ll(0), l(0), r(-1), n(0), muT(), db(), cdb(),
-        best_lifts_so_far(), histo(),
-        rng(seed), sim_hashes(rng.rng_nolock())
+      full_n(0), full_muT(), full_rr(), ll(0), l(0), r(-1), n(0),
+      supports_bdgl{__builtin_cpu_supports("avx2") > 0}, muT(), db(), cdb(),
+      best_lifts_so_far(), histo(), rng(seed), sim_hashes(rng.rng_nolock())
 #ifdef PERFORMANCE_COUNTING
         , _totalcpu(perfcounters[0])
 #endif
@@ -444,6 +445,7 @@ public:
     explicit Siever(unsigned int full_n, double const* mu, const SieverParams &params, unsigned long int seed = 0)
         : Siever(params, seed)
     {
+        
         load_gso(full_n, mu);
         r = full_n;
     }
@@ -566,6 +568,8 @@ public: // TODO: Make more things private and do not export to Python.
     unsigned int r;                           // current context right position
     unsigned int n;                           // current context dimension, n = r - l
 
+    const bool supports_bdgl;                       // true if the machine supports bdgl at runtime, false otherwise 
+  
     // gso_update_postprocessing post-processes the database with the change-of-basis transformation M
     // - Thread-safety ensured by each thread working on different data
     // - Matrix M should have dimension old_n * new_n

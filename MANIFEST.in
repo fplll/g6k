@@ -1,0 +1,13 @@
+global-include README.rst requirements.txt install-dependencies.sh
+global-include setup.py *.pyx
+graft g6k
+include tests/test_*
+include examples/*.py
+include kernel/*.cpp kernel/*.inl kernel/*.hpp kernel/*.h kernel/untemplate.mac
+include configure.ac Makefile.am kernel/Makefile.am m4/*
+include configure Makefile.in kernel/Makefile.in g6k.pc.in kernel/g6k_config.h.in 
+include install-sh config.sub config.guess ltmain.sh compile depcomp missing
+include Dockerfile Dockerfile.sagemath
+include LICENSE
+prune build
+prune dist
