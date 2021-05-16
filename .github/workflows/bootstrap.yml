@@ -30,6 +30,4 @@ jobs:
         run: ./bootstrap.sh
           
       - name: Test        
-        run: |
-          source ./activate
-          python -m pytest
+        run: source ./activate && python -m pytest
