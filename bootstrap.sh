@@ -85,7 +85,7 @@ fi
 
 make $jobs
 retval=$?
-if [$retval -ne 0 ]; then
+if [ $retval -ne 0 ]; then
     echo "Making fplll failed."
     echo "Check the logs above - they'll contain more information."
     exit 2 # 2 is the exit value if building fplll fails as a result of make $jobs.
@@ -94,7 +94,7 @@ fi
 make install
 retval=$?
 
-if [$retval -ne 0 ]; then
+if [ $retval -ne 0 ]; then
     echo "Make install failed for fplll."
     echo "Check the logs above - they'll contain more information."
     exit 3 # 3 is the exit value if installing fplll failed.
