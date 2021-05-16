@@ -8,7 +8,7 @@ on:
 
 env:
   JOBS: 2
-  DEPS: libgmp-dev libmpfr-dev libqd-dev libtool autoconf python3-pip python3-dev python3-flake8 python3-virtualenv
+  DEPS: libgmp-dev libmpfr-dev libqd-dev libtool autoconf python3-pip python3-dev python3-flake8
   
 jobs:
   python3:
@@ -25,6 +25,7 @@ jobs:
         run: |
           sudo DEBIAN_FRONTEND=noninteractive apt-get update
           sudo DEBIAN_FRONTEND=noninteractive apt-get install $DEPS
+          pip install virtualenv
       - name: Bootstrap
         run: ./bootstrap.sh
           
