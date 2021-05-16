@@ -38,7 +38,7 @@ Otherwise, you will need fplll and fpylll already installed and build the G6K Cy
 
     pip install Cython
     pip install -r requirements.txt
-    python setup.py build [ -j # ]
+    python setup.py build_ext [ -j # ]
 
 It's possible to alter the C++ kernel build configuration as follows:
 
@@ -47,7 +47,7 @@ It's possible to alter the C++ kernel build configuration as follows:
     make clean
     ./configure [opts...]           # e.g. opts: --enable-native --enable-templated-dim --with-max-sieving-dim=128
                                     # see ./configure --help for more options
-    python setup.py build [ -j # ]
+    python setup.py build_ext [ -j # ]
 
 Tests
 =====

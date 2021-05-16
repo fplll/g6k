@@ -80,7 +80,7 @@ retval=$?
 if [ $retval -ne 0 ]; then
     echo "Make clean failed in fplll. This is usually because there was an error with either autogen.sh or configure."
     echo "Check the logs above - they'll contain more information."
-    exit 1 # 1 is the exit value if building fplll fails via configure or autogen
+    exit 1 # 1 is the exit value if build_exting fplll fails via configure or autogen
 fi
 
 make $jobs
@@ -88,7 +88,7 @@ retval=$?
 if [ $retval -ne 0 ]; then
     echo "Making fplll failed."
     echo "Check the logs above - they'll contain more information."
-    exit 2 # 2 is the exit value if building fplll fails as a result of make $jobs.
+    exit 2 # 2 is the exit value if build_exting fplll fails as a result of make $jobs.
 fi
 
 make install
@@ -109,13 +109,13 @@ $PIP install Cython
 $PIP install -r requirements.txt
 $PIP install -r suggestions.txt
 $PYTHON setup.py clean
-$PYTHON setup.py build $jobs || $PYTHON setup.py build
+$PYTHON setup.py build_ext $jobs || $PYTHON setup.py build_ext
 $PYTHON setup.py install
 cd ..
 
 $PIP install -r requirements.txt
 $PYTHON setup.py clean
-$PYTHON setup.py build $jobs --inplace || $PYTHON setup.py build --inplace
+$PYTHON setup.py build_ext $jobs --inplace || $PYTHON setup.py build_ext --inplace
 
 echo " "
 echo "Don't forget to activate environment each time:"
