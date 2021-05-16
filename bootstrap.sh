@@ -21,7 +21,7 @@ echo "Using $jobs"
 sleep 1
 
 rm -rf g6k-env
-$PYTHON -m virtualenv g6k-env
+$PYTHON -m virtualenv g6k-env -p $PYTHON
 cat <<EOF >>g6k-env/bin/activate
 ### LD_LIBRARY_HACK
 _OLD_LD_LIBRARY_PATH="\$LD_LIBRARY_PATH"
@@ -103,19 +103,24 @@ fi
 cd ..
 
 # Install FPyLLL
+
 git clone https://github.com/fplll/fpylll g6k-fpylll
 cd g6k-fpylll || exit
 $PIP install Cython
 $PIP install -r requirements.txt
 $PIP install -r suggestions.txt
 $PYTHON setup.py clean
-$PYTHON setup.py build $jobs || $PYTHON setup.py build
+$PYTHON setup.py build_ext $jobs || $PYTHON setup.py build_ext
 $PYTHON setup.py install
 cd ..
 
+# Build G6K
+
 $PIP install -r requirements.txt
 $PYTHON setup.py clean
-$PYTHON setup.py build $jobs --inplace || $PYTHON setup.py build --inplace
+$PYTHON setup.py build_ext $jobs --inplace || $PYTHON setup.py build_ext --inplace
+
+# Fin
 
 echo " "
 echo "Don't forget to activate environment each time:"
