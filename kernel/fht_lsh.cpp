@@ -464,7 +464,7 @@ template<> void ProductLSH::hash_templated<3>(const float * const vv, int32_t * 
     float c0[multi_hash_block], c1[multi_hash_block], c2[multi_hash_block];
     float c[multi_hash];
 
-    // This memset is inserted to prevent clang from complaining about initialising
+    // This memset is inserted to prevent some compilers from complaining about initialising
     // stack-allocated arrays. This is because stack-allocated arrays are a compiler extension
     // and not endorsed by the C++ standard.
 
@@ -525,7 +525,7 @@ template<> void ProductLSH::hash_templated<2>(const float * const vv, int32_t * 
     float c0[multi_hash_block], c1[multi_hash_block];
 
     float c[multi_hash]; 
-    // This explicit memset is to prevent clang from complaining about initialising
+    // This explicit memset is to prevent some compilers from complaining about initialising
     // stack-allocated arrays. 
     memset(&c, 0, sizeof(float)*multi_hash);
     
