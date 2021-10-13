@@ -239,3 +239,8 @@ To test the answer we compute:
     True
 
 More examples can be found in the folder  ``examples``.
+
+Acknowledgements
+================
+
+This project was supported through the European Union PROMETHEUS project (Horizon 2020 Research and Innovation Program, grant 780701).
