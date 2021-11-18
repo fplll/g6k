@@ -17,6 +17,7 @@
 *
 ****/
 
+#include "g6k_config.h"
 #include "fht_lsh.h"
 
 // Please note that this file originally came from:
