@@ -377,7 +377,6 @@ void Siever::bdgl_queue(std::vector<std::vector<QEntry>> &t_queues, std::vector<
 }
 
 bool Siever::bdgl_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t multi_hash) {
-    assert(this->supports_bdgl);
     switch_mode_to(SieveStatus::plain);
     parallel_sort_cdb();
     statistics.inc_stats_sorting_sieve();
