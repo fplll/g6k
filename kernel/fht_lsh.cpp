@@ -124,14 +124,14 @@ void FastHadamardLSH::hash_templated(const int16_t * const vv, int32_t * const r
     	//h0 and h1 contains the Hadamard transforms of v[0] and v[1] on each iteration respectively.
       Simd::VecType h0, h1;
     	// Permute the 16-bit integers in the matrix
-      Simd::m256_permute_epi16<regs_>(v, prg_state, tailmask, aes_key, &extra_state);
+      Simd::m256_permute_epi16<regs_>(v, prg_state, reinterpret_cast<Simd::VecType>(tailmask), aes_key, &extra_state);
     
     	// Now we apply the Hadamard transformations and permutations, inserting the scores
     	// in to the res array (note that these are double-packed)
     	for(uint64_t i_high = 0; i_high < codesize; i_high += 32) 
     	{
 	  Simd::m256_hadamard32_epi16(v[0],v[1], h0, h1);
-	  Simd::m256_permute_epi16<regs_>(v, prg_state, tailmask, aes_key, &extra_state);
+	  Simd::m256_permute_epi16<regs_>(v, prg_state, reinterpret_cast<Simd::VecType>(tailmask), aes_key, &extra_state);
           insert_in_maxs_epi16(res, i_high, h0);
           insert_in_maxs_epi16(res, i_high+16, h1);     
     	}
@@ -139,12 +139,12 @@ void FastHadamardLSH::hash_templated(const int16_t * const vv, int32_t * const r
 	// h0 contains the result of applying the Hadamard on v[0]
         Simd::VecType h0;
 	// Permute and apply the Hadamard transformations as above.
-	Simd::m256_permute_epi16<regs_>(v, prg_state, tailmask, aes_key, &extra_state);
+	Simd::m256_permute_epi16<regs_>(v, prg_state, reinterpret_cast<Simd::VecType>(tailmask), aes_key, &extra_state);
 
     	for(uint64_t i_high = 0; i_high < codesize; i_high += 16)
     	{
 	  Simd::m256_hadamard16_epi16(v[0], h0);
-	  Simd::m256_permute_epi16<regs_>(v, prg_state, tailmask, aes_key, &extra_state);
+	  Simd::m256_permute_epi16<regs_>(v, prg_state, reinterpret_cast<Simd::VecType>(tailmask), aes_key, &extra_state);
           insert_in_maxs_epi16(res, i_high, h0);
     	}
   }

@@ -1,6 +1,8 @@
 #ifndef G6K_SIMD_H
 #define G6K_SIMD_H
 
+#include "g6k_config.h"
+
 #include <cstdint>
 #include <immintrin.h>
 #include <iostream>
