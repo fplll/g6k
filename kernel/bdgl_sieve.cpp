@@ -58,7 +58,6 @@ std::pair<LFT, int8_t> Siever::reduce_to_QEntry(CompressedEntry *ce1, Compressed
     return { new_l, sign };
 }
 
-#ifdef HAVE_AVX2
 
 inline int Siever::bdgl_reduce_with_delayed_replace(const size_t i1, const size_t i2, LFT const lenbound, std::vector<Entry>& transaction_db, int64_t& write_index, LFT new_l, int8_t sign)
 {
@@ -421,77 +420,3 @@ bool Siever::bdgl_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t
         it++;
     }
 }
-
-#else
-// These are defined solely to make the Cython layer happy.
-// Please note that the parameters are deliberately unnamed -- this is solely to silence the plethora
-// of unused parameter warnings.
-inline int Siever::bdgl_reduce_with_delayed_replace(const size_t, const size_t, LFT const, std::vector<Entry>&, int64_t&, LFT, int8_t)
-{
-    assert(false);
-    __builtin_unreachable(); // Not necessary but silences compiler warning on return value.
-}
-
-inline void Siever::bdgl_lift(const size_t, const size_t, LFT, int8_t)
-{   
-    assert(false);
-}
-
-bool Siever::bdgl_replace_in_db(size_t, Entry&)
-{
-    assert(false);
-    __builtin_unreachable();
-}
-
-void Siever::bdgl_bucketing_task(const size_t, std::vector<uint32_t>&, 
-		std::vector<atomic_size_t_wrapper> &, ProductLSH &)
-{ 
-   assert(false);
-}
-
-// assumes buckets and buckets_index are resized and resetted correctly.
-void Siever::bdgl_bucketing(const size_t, const size_t, const size_t, 
-    std::vector<uint32_t>&, std::vector<atomic_size_t_wrapper>&)
-{
-	assert(false);
-}
-
-void Siever::bdgl_process_buckets_task(const size_t, 
-    const std::vector<uint32_t>&, 
-    const std::vector<atomic_size_t_wrapper>&, std::vector<QEntry> &)
-{
-    assert(false);
-}
-
-// Returned queue is sorted
-void Siever::bdgl_process_buckets(const std::vector<uint32_t> &, 
-		const std::vector<atomic_size_t_wrapper> &, 
-    std::vector<std::vector<QEntry>> &)
-{
-	assert(false);
-}
-
-void Siever::bdgl_queue_dup_remove_task( std::vector<QEntry>&) {
-    	assert(false);
-}
-
-void Siever::bdgl_queue_create_task( const size_t, const std::vector<QEntry>&, 
-		std::vector<Entry>&, int64_t&) {
-	assert(false);
-}
-
-size_t Siever::bdgl_queue_insert_task(const size_t, std::vector<Entry>&, int64_t) {
-	assert(false);
-	__builtin_unreachable();
-}
-
-void Siever::bdgl_queue(std::vector<std::vector<QEntry>>&, std::vector<std::vector<Entry>>&) {
-	assert(false);
-}
-
-bool Siever::bdgl_sieve(size_t, const size_t, const size_t) {
-	assert(false);
-	__builtin_unreachable();
-}
-
-#endif

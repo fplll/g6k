@@ -1,213 +1,9 @@
-/***\
-*
-*   Copyright (C) 2018-2021 Team G6K
-*
-*   This file is part of G6K. G6K is free software:
-*   you can redistribute it and/or modify it under the terms of the
-*   GNU General Public License as published by the Free Software Foundation,
-*   either version 2 of the License, or (at your option) any later version.
-*
-*   G6K is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-*   GNU General Public License for more details.
-*
-*   You should have received a copy of the GNU General Public License
-*   along with G6K. If not, see <http://www.gnu.org/licenses/>.
-*
-****/
-
-
-//// https://github.com/lducas/AVX2-BDGL-bucketer commit 630c2286a440fae1eddd9f90341ff2020f18b614
-
-#include "g6k_config.h"
-
-#ifdef HAVE_AVX2
 #include "fht_lsh.h"
 
-
-/*
- * m256_hadamard16_epi16. This function applies the Hadamard transformation
- * over 16 entries of 16-bit integers stored in a single __m256i vector x1, 
- * storing result in r1.
- */
-
-inline void FastHadamardLSH::m256_hadamard16_epi16(const __m256i &x1, __m256i &r1)
-{
-   /* Apply a permutation 0123 -> 1032 to 64 bit words. */ 
-    __m256i a1 = _mm256_permute4x64_epi64(x1, 0b01001110);
-    
-    // From here we treat the input vector x1 as 16, 16-bit integers - which is what the entries are
-    // Now negate the first 8 16-bit integers of x1
-    __m256i t1 = _mm256_sign_epi16(x1, sign_mask_8);
-
-    // Add the permutation to the recently negated portion & apply the second sign mask
-    a1 = _mm256_add_epi16(a1, t1);
-    __m256i b1 = _mm256_sign_epi16(a1, sign_mask_2);
-
-    // With this, we can now build what we want by repeatedly applying the sign mask and adding
-    a1 = _mm256_hadd_epi16(a1, b1);
-    b1 = _mm256_sign_epi16(a1, sign_mask_2);
-    a1 = _mm256_hadd_epi16(a1, b1);
-    b1 = _mm256_sign_epi16(a1, sign_mask_2);
-    r1 = _mm256_hadd_epi16(a1, b1);
-
-}
-
-/**
- * m256_hadamard32_epi16. This function applies the Hadamard transformation 
-   over 2 __m256i vectors, x1 and x2, storing the results in two distinct vectors r1 & r2.
-
-   Note: appart for the final mixing, this is equivalent to running the above twice,
-   but the interleaving makes it faster, mitigating delays.
- */
-inline void FastHadamardLSH::m256_hadamard32_epi16(const __m256i &x1,const __m256i &x2, __m256i &r1, __m256i &r2)
-{
-    // Permute 64-bit chunks of a1 and a2 and then negate the first 8 16-bit integers of each 
-    // x1 and x2.
-    __m256i a1 = _mm256_permute4x64_epi64(x1, 0b01001110);
-    __m256i a2 = _mm256_permute4x64_epi64(x2, 0b01001110);
-    __m256i t1 = _mm256_sign_epi16(x1, sign_mask_8);
-    __m256i t2 = _mm256_sign_epi16(x2, sign_mask_8);
-
-    // Add the results and negate the second 8 16-bit integers 
-    a1 = _mm256_add_epi16(a1, t1);
-    a2 = _mm256_add_epi16(a2, t2);
-    __m256i b1 = _mm256_sign_epi16(a1, sign_mask_2);
-    __m256i b2 = _mm256_sign_epi16(a2, sign_mask_2);
-
-    // Now apply the 16-bit Hadamard transforms and repeat the process
-    a1 = _mm256_hadd_epi16(a1, b1);
-    a2 = _mm256_hadd_epi16(a2, b2);
-    b1 = _mm256_sign_epi16(a1, sign_mask_2);
-    b2 = _mm256_sign_epi16(a2, sign_mask_2);
-    a1 = _mm256_hadd_epi16(a1, b1);
-    a2 = _mm256_hadd_epi16(a2, b2);
-    b1 = _mm256_sign_epi16(a1, sign_mask_2);
-    b2 = _mm256_sign_epi16(a2, sign_mask_2);
-    a1 = _mm256_hadd_epi16(a1, b1);
-    a2 = _mm256_hadd_epi16(a2, b2);
-
-    r1 = _mm256_add_epi16(a1, a2);
-    r2 = _mm256_sub_epi16(a1, a2);
-}
-
-
-/*
- * m256_mix. Swaps V0[i] and V1[i] iff mask[i] = 1 for 0 <= i < 255.
- */
-inline void FastHadamardLSH::m256_mix(__m256i &v0, __m256i &v1, const __m256i &mask)
-{
-    __m256i diff;
-    diff = _mm256_xor_si256(v0, v1);
-    diff = _mm256_and_si256(diff, mask);
-    v0 = _mm256_xor_si256(v0, diff);
-    v1 = _mm256_xor_si256(v1, diff);
-}
-
-/*
- * m256_permute_epi16. The goal of this function is to permute the input vector v, 
- * according to the randomness from prg_state & the tailmask.  Note that this function is a specialisation of the 
- * broader m256_permute_epi16.
- * @param v - this is a pointer to the input vector. 
- * @param prgstate - this is the state of the prg for the current hashing round
- * @param tailmask - a mask for handling mixing when the length of v is not a multiple of 16.
-
- This is specialized for inputs of 2 AVX vectors, ie for v of length 17 to 32.
- */
-template<>
-inline void FastHadamardLSH::m256_permute_epi16<2>(__m256i * const v, __m128i &prg_state, const __m256i &tailmask)
-{
-    // double pack the prg state in rnd (has impact of doubly repeating the prg state in rnd)
-    // Though we will use different threshold on each part decorrelating the permutation
-    // on each halves 
-
-    __m256i rnd = _mm256_broadcastsi128_si256(prg_state);
-    __m256i mask;
-
-    // With only 2 registers, we may not have enough room to randomize via m256_mix, 
-    // so we also choose at random among a few precomputed permutation to apply on
-    // the first register
-
-    uint32_t x = _mm_extract_epi64(prg_state, 0);
-    uint32_t x1 = (x  >> 16) & 0x03;
-    uint32_t x2 = x & 0x03;
-
-    // Apply the precomputed permutations to the input vector
-    v[0] = _mm256_shuffle_epi8(v[0], permutations_epi16[x1]);
-    m256_mix(v[0], v[1], tailmask);
-    v[0] = _mm256_permute4x64_epi64(v[0], 0b10010011);
-    v[0] = _mm256_shuffle_epi8(v[0], permutations_epi16[x2]);
-
-    mask = _mm256_cmpgt_epi16(rnd, mixmask_threshold);
-    mask = _mm256_and_si256(mask, tailmask);
-    m256_mix(v[0], v[1], mask);
-
-    // update the very fast but non-cryptographic PRG (one tour of AES)
-    prg_state = _mm_aesenc_si128(prg_state, aes_key);    
-}
-
-
-
-/* Same as above, but for inputs of arbitrary lengths.  */
-
-template<int regs_> 
-inline void FastHadamardLSH::m256_permute_epi16(__m256i * const v, __m128i &prg_state, const __m256i &tailmask)
-{
-    // double pack the prg state in rnd (has impact of doubly repeating the prg state in rnd)
-    // Though we will use different threshold on each part decorrelating the permutation
-    // on each halves 
-
-    __m256i rnd = _mm256_broadcastsi128_si256(prg_state);
-    __m256i tmp;
-
-    // We treat the even and the odd positions differently
-    // This is for the goal of decorrelating the permutation on the 
-    // double packed prng state.
-    for (int i = 0; i < (regs_-1)/2; ++i)
-    {
-        // shuffle 8 bit parts in each 128 bit lane
-	// Note - the exact semantics of what this function does are a bit confusing.
-	// See the Intel intrinsics guide if you're curious
-        v[2*i  ] = _mm256_shuffle_epi8(v[2*i], permutations_epi16[i % 3]);
-	// For the odd positions we permute each 64-bit chunk according to the mask.
-        v[2*i+1] = _mm256_permute4x64_epi64(v[2*i+1], 0b10010011);
-    }
-
-
-    // Now we negate the first two vectors according to the negation masks
-    v[0] = _mm256_sign_epi16(v[0], negation_masks_epi16[0]);
-    v[1] = _mm256_sign_epi16(v[1], negation_masks_epi16[1]);
-
-
-    // swap int16 entries of v[0] and v[1] where rnd > threshold
-    tmp = _mm256_cmpgt_epi16(rnd, mixmask_threshold);
-    m256_mix(v[0], v[1], tmp);
-    // Shift the randomness around before extracting more (sonmewhat independent) mixing bits
-    rnd = _mm256_slli_epi16(rnd, 1);
-
-    // Now do random swaps between v[0] and v[last-1]
-    m256_mix(v[0], v[regs_- 2], tmp);
-    rnd = _mm256_slli_epi16(rnd, 1);
-
-    // Now do swaps between v[1] and v[last], avoiding padding data
-    m256_mix(v[1], v[regs_ - 1], tailmask);
-
-
-    // More permuting
-    for (int i = 2; i + 2 < regs_; i+=2)
-    {
-        rnd = _mm256_slli_epi16(rnd, 1);
-        tmp = _mm256_cmpgt_epi16(rnd, mixmask_threshold);
-        m256_mix(v[0], v[i], tmp);
-        rnd = _mm256_slli_epi16(rnd, 1);
-        tmp = _mm256_cmpgt_epi16(rnd, mixmask_threshold);
-        m256_mix(v[1], v[i+1], tmp);
-    }
-
-    // update the very fast but non-cryptographic PRG (one tour of AES)
-    prg_state = _mm_aesenc_si128(prg_state, aes_key);    
-}
+// Please note that this file originally came from:
+// https://github.com/lducas/AVX2-BDGL-bucketer commit 630c2286a440fae1eddd9f90341ff2020f18b614
+// This has since been modified: this version can be found at:
+// https://github.com/joerowell/gcc-bucketer commit 868c3ef
 
 // insert_in_maxs. Given a hash value val, insert it into maxs along with its index.
 inline void FastHadamardLSH::insert_in_maxs(int32_t * const maxs, const int16_t val, const int32_t index)
@@ -247,23 +43,22 @@ inline void FastHadamardLSH::insert_in_maxs(int32_t * const maxs, const int16_t 
 }
 
 // insert_in_maxs_epi16. Insert the 16-bit vals in vals into the maxs array. 
-inline void FastHadamardLSH::insert_in_maxs_epi16(int32_t * const maxs, const int i_high, const __m256i &vals)
+inline void FastHadamardLSH::insert_in_maxs_epi16(int32_t * const maxs, const int i_high, const Simd::VecType vals)
 {	
     // Grab the smallest absolute  value and put it in the threshold vector
     int16_t T = maxs[2*(multi_hash - 1)];
-    __m256i threshold = _mm256_set_epi16(T,T,T,T,T,T,T,T,T,T,T,T,T,T,T,T);
+    auto threshold = Simd::build_vec_type(T);
+    
     // Convert each value to their abs value - then compare to the threshold
-    __m256i tmp = _mm256_abs_epi16(vals);
+    auto tmp = Simd::m256_abs_epi16(vals);
     // N.b tmp is full of 1s and 0s at this point.
-    tmp = _mm256_cmpgt_epi16(tmp, threshold);
+    tmp = Simd::m256_cmpgt_epi16(tmp, threshold);
     // If the bitwise AND is 1 then return (this shouldn't happen!)
-    if (_mm256_testz_si256(tmp, tmp)) return;
+    if (Simd::m256_testz_si256(tmp, tmp)) return;
 
     // Otherwise, we extract the 16-bit values and put them in an array
     int16_t vals_[16];
-
-    // N.B we use a reinterpret cast to be explicit
-    _mm256_storeu_si256(reinterpret_cast<__m256i*>(vals_), vals);
+    Simd::m256_storeu_si256(vals_, vals);
 
     // Set up the iteration condition - we want a value of at max 16 (as it's a 256-bit vector), but
     // codesize-i_high encodes what the length should be.
@@ -290,44 +85,47 @@ void FastHadamardLSH::hash_templated(const int16_t * const vv, int32_t * const r
  
     // Firstly we set up our matrix - we have regs_ many values to work on,
     // so we create a matrix with regs_ * 16 many 16-bit integer entries.
-    __m256i v[regs_] = {0};
+  Simd::VecType v[regs_] = {0};
     // We grab the appropriate tailmask & set up the randomness for the permutations
-    __m256i tailmask = tailmasks[n % 16];
-    __m128i prg_state = full_seed;
+  auto tailmask = Simd::tailmasks[n % 16];
+  auto prg_state = full_seed;
 
     // Copy over each run of 16-bit integers from vv
     for (int i = 0; i < regs_; ++i)
     {
-        v[i] = _mm256_loadu_si256((__m256i*)&vv[16 * i]);
+      v[i] = Simd::m256_loadu_si256(&vv[16 * i]);
     }
     
 
-    if (regs_ > 2) {
+    // If we have more than 2 registers to operate on then we apply the Hadamard transform on 32 entries at a given time
+    // However, if we've got only 2 registers to operate on then we need to use different permutations 
+    // and we only apply the Hadamard transform on 16 entries at a given time.
+    if(regs_ > 2) {
     	//h0 and h1 contains the Hadamard transforms of v[0] and v[1] on each iteration respectively.
-    	__m256i h0, h1;
+      Simd::VecType h0, h1;
     	// Permute the 16-bit integers in the matrix
-    	m256_permute_epi16<regs_>(v, prg_state, tailmask);
+      Simd::m256_permute_epi16<regs_>(v, prg_state, tailmask, aes_key, &extra_state);
     
     	// Now we apply the Hadamard transformations and permutations, inserting the scores
     	// in to the res array (note that these are double-packed)
     	for(uint64_t i_high = 0; i_high < codesize; i_high += 32) 
     	{
-        	m256_hadamard32_epi16(v[0],v[1], h0, h1);
-        	m256_permute_epi16<regs_>(v, prg_state, tailmask);
-        	insert_in_maxs_epi16(res, i_high, h0);
-        	insert_in_maxs_epi16(res, i_high+16, h1);     
+	  Simd::m256_hadamard32_epi16(v[0],v[1], h0, h1);
+	  Simd::m256_permute_epi16<regs_>(v, prg_state, tailmask, aes_key, &extra_state);
+          insert_in_maxs_epi16(res, i_high, h0);
+          insert_in_maxs_epi16(res, i_high+16, h1);     
     	}
    } else {
 	// h0 contains the result of applying the Hadamard on v[0]
-	__m256i h0;
+        Simd::VecType h0;
 	// Permute and apply the Hadamard transformations as above.
-    	m256_permute_epi16<regs_>(v, prg_state, tailmask);
+	Simd::m256_permute_epi16<regs_>(v, prg_state, tailmask, aes_key, &extra_state);
 
     	for(uint64_t i_high = 0; i_high < codesize; i_high += 16)
     	{
-        	m256_hadamard16_epi16(v[0], h0);
-        	m256_permute_epi16<regs_>(v, prg_state, tailmask);
-        	insert_in_maxs_epi16(res, i_high, h0);
+	  Simd::m256_hadamard16_epi16(v[0], h0);
+	  Simd::m256_permute_epi16<regs_>(v, prg_state, tailmask, aes_key, &extra_state);
+          insert_in_maxs_epi16(res, i_high, h0);
     	}
   }
 }
@@ -462,17 +260,7 @@ template<> void ProductLSH::hash_templated<3>(const float * const vv, int32_t * 
     //These arrays are temporaries that we use while inserting the hashes to res
     int32_t h0[multi_hash_block], h1[multi_hash_block], h2[multi_hash_block];
     float c0[multi_hash_block], c1[multi_hash_block], c2[multi_hash_block];
-    float c[multi_hash];
-
-    // This memset is inserted to prevent some compilers from complaining about initialising
-    // stack-allocated arrays. This is because stack-allocated arrays are a compiler extension
-    // and not endorsed by the C++ standard.
-
-    // Note that this call to memset actually appears to generate better code on more recent variants
-    // of gcc. In particular, the inline initialisation calls memset anyway, but it does more work
-    // in the pre-amble for setting up the stack-allocated array. See https://godbolt.org/z/vGh9c69br
-    // for an example. 
-    memset(&c, 0, sizeof(float)*multi_hash);    
+    float c[multi_hash] = {0};
 
     // Hash against the subcodes
     lshs[0].hash(&(vv[0]), c0, h0);
@@ -523,12 +311,8 @@ template<> void ProductLSH::hash_templated<2>(const float * const vv, int32_t * 
 {
     int32_t h0[multi_hash_block], h1[multi_hash_block];
     float c0[multi_hash_block], c1[multi_hash_block];
+    float c[multi_hash] = {0};
 
-    float c[multi_hash]; 
-    // This explicit memset is to prevent some compilers from complaining about initialising
-    // stack-allocated arrays. 
-    memset(&c, 0, sizeof(float)*multi_hash);
-    
     // Now hash against the two subcode blocks.
     lshs[0].hash(&(vv[0]), c0, h0);
     lshs[1].hash(&(vv[is[1]]), c1, h1);
@@ -571,15 +355,11 @@ template<> void ProductLSH::hash_templated<1>(const float * const vv, int32_t * 
 {
     //  Hash against the single block, copy the results and return
     //  We memcpy over the results into the res array.
-    int32_t h0[multi_hash];
-    float c0[multi_hash];
-    assert(multi_hash_block >= multi_hash);
+    int32_t h0[multi_hash_block];
+    float c0[multi_hash_block];
 
     lshs[0].hash(&(vv[0]), c0, h0);    
-    for (unsigned int i = 0; i < multi_hash; ++i)
-    {
-        res[i] = h0[i];
-    }
+    memcpy(res, h0, multi_hash_block * sizeof(int32_t));
 }
 
 /**
@@ -615,4 +395,3 @@ void ProductLSH::hash(const float * const v, int32_t * const res)
     }
 
 }
-#endif

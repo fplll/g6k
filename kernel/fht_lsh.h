@@ -17,13 +17,14 @@
 *
 ****/
 
-//// https://github.com/lducas/AVX2-BDGL-bucketer commit 630c2286a440fae1eddd9f90341ff2020f18b614
+
+// Please note that this version of FastHadamardLSH
+// was modified from  https://github.com/lducas/AVX2-BDGL-bucketer commit 630c2286a440fae1eddd9f90341ff2020f18b614.
+// This version can be found at: https://github.com/joerowell/gcc-bucketer commit 868c3ef
 
 #ifndef G6K_FHTLSH_H
 #define G6K_FHTLSH_H
 
-#ifdef HAVE_AVX2
-#include <immintrin.h>
 #include <stdio.h>
 #include <assert.h>
 #include <cstring>
@@ -33,129 +34,9 @@
 #include <math.h>
 #include <iostream>
 
-/**
- * These are all various different masks and thresholds that are used during the permutations and 
- * Hadamard transformations of the input vectors.
- * See the fht_lsh.cpp file for uses.
- */
+// All of the SIMD stuff lives here
+#include "simd.h"
 
-
-const __m256i mixmask_threshold = _mm256_set_epi16(
-    0x5555, 0x5555, 0x5555, 0x5555, 0x5555, 0x5555, 0x5555, 0x5555, 
-    0xAAAA, 0xAAAA, 0xAAAA, 0xAAAA, 0xAAAA, 0xAAAA, 0xAAAA, 0xAAAA);
-
-const __m256i _7FFF_epi16 = _mm256_set_epi16(
-    0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 
-    0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF);
-
-const __m256i sign_mask_2 = _mm256_set_epi16(
-    0xFFFF, 0x0001, 0xFFFF, 0x0001, 0xFFFF, 0x0001, 0xFFFF, 0x0001, 
-    0xFFFF, 0x0001, 0xFFFF, 0x0001, 0xFFFF, 0x0001, 0xFFFF, 0x0001);
-
-const __m256i mask_even_epi16 = _mm256_set_epi16(
-    0xFFFF, 0x0000, 0xFFFF, 0x0000, 0xFFFF, 0x0000, 0xFFFF, 0x0000, 
-    0xFFFF, 0x0000, 0xFFFF, 0x0000, 0xFFFF, 0x0000, 0xFFFF, 0x0000);
-
-const __m256i mask_odd_epi16 = _mm256_set_epi16(
-    0x0000, 0xFFFF, 0x0000, 0xFFFF, 0x0000, 0xFFFF, 0x0000, 0xFFFF, 
-    0x0000, 0xFFFF, 0x0000, 0xFFFF, 0x0000, 0xFFFF, 0x0000, 0xFFFF);
-
-const __m256i regroup_for_max = _mm256_set_epi8(
-    0x0F, 0x0E, 0x07, 0x06, 0x0D, 0x0C, 0x05, 0x04, 
-    0x0B, 0x0A, 0x03, 0x02, 0x09, 0x08, 0x01, 0x00,
-    0x1F, 0x1E, 0x17, 0x16, 0x1D, 0x1C, 0x15, 0x14, 
-    0x1B, 0x1A, 0x13, 0x12, 0x19, 0x18, 0x11, 0x10);
-
-const __m256i sign_mask_8 = _mm256_set_epi16(
-    0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
-    0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001);
-
-const __m256i sign_shuffle = _mm256_set_epi16(
-    0xFFFF, 0xFFFF, 0xFFFF, 0x0001, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
-    0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0xFFFF, 0xFFFF);
-
-const __m256i indices_epi8 = _mm256_set_epi8(
-    0x0F, 0x0E, 0x0D, 0x0C, 0x0B, 0x0A, 0x09, 0x08,
-    0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00,
-    0x1F, 0x1E, 0x1D, 0x1C, 0x1B, 0x1A, 0x19, 0x18,
-    0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10);
-
-const __m256i indices_epi16 = _mm256_set_epi16(
-    0x000F, 0x000E, 0x000D, 0x000C, 0x000B, 0x000A, 0x0009, 0x0008,
-    0x0007, 0x0006, 0x0005, 0x0004, 0x0003, 0x0002, 0x0001, 0x0000);
-
-const __m256i indices_sa1_epi16 = _mm256_set_epi16(
-    0x0010, 0x000F, 0x000E, 0x000D, 0x000C, 0x000B, 0x000A, 0x0009,
-    0x0008, 0x0007, 0x0006, 0x0005, 0x0004, 0x0003, 0x0002, 0x0001);
-
-const __m256i _0010_epi16 = _mm256_set_epi16(
-    0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010,
-    0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010);
-
-
-const __m256i rnd_mult_epi32 = _mm256_set_epi32(
-    0xF010A011, 0x70160011, 0x70162011, 0x00160411,
-    0x0410F011, 0x02100011, 0xF0160011, 0x00107010);
-
-// 0xFFFF = -1, 0x0001 = 1
-const __m256i negation_masks_epi16[2] = {
-    _mm256_set_epi16(
-    0xFFFF, 0x0001, 0xFFFF, 0xFFFF, 0xFFFF, 0x0001, 0x0001, 0xFFFF,
-    0xFFFF, 0x0001, 0xFFFF, 0x0001, 0xFFFF, 0xFFFF, 0x0001, 0xFFFF),
-    _mm256_set_epi16(
-    0xFFFF, 0x0001, 0x0001, 0xFFFF, 0xFFFF, 0x0001, 0x0001, 0xFFFF,
-    0xFFFF, 0x0001, 0xFFFF, 0x0001, 0xFFFF, 0xFFFF, 0x0001, 0xFFFF)
-    };
-
-const __m256i permutations_epi16[4] = {
-    _mm256_set_epi16(
-    0x0F0E, 0x0706, 0x0100, 0x0908, 0x0B0A, 0x0D0C, 0x0504, 0x0302,
-    0x0706, 0x0F0E, 0x0504, 0x0302, 0x0B0A, 0x0908, 0x0D0C, 0x0100),
-    _mm256_set_epi16(
-    0x0D0C, 0x0504, 0x0302, 0x0B0A, 0x0F0E, 0x0908, 0x0706, 0x0100, 
-    0x0B0A, 0x0908, 0x0706, 0x0F0E, 0x0302, 0x0100, 0x0504, 0x0D0C),
-    _mm256_set_epi16(
-    0x0D0C, 0x0B0A, 0x0706, 0x0100, 0x0F0E, 0x0908, 0x0504, 0x0302, 
-    0x0B0A, 0x0908, 0x0302, 0x0100, 0x0504, 0x0D0C, 0x0706, 0x0F0E),
-    _mm256_set_epi16(
-    0x0D0C, 0x0F0E, 0x0908, 0x0706, 0x0100, 0x0504, 0x0302, 0x0B0A,
-    0x0302, 0x0100, 0x0504, 0x0B0A, 0x0908, 0x0706, 0x0F0E, 0x0D0C)
-    };
-
-
-const __m256i tailmasks[16] = {
-    _mm256_set_epi16(0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
-                     0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF),
-    _mm256_set_epi16(0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-                     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0xFFFF),
-    _mm256_set_epi16(0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-                     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0xFFFF, 0xFFFF),
-    _mm256_set_epi16(0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-                     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0xFFFF, 0xFFFF, 0xFFFF),
-    _mm256_set_epi16(0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-                     0x0000, 0x0000, 0x0000, 0x0000, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF),
-    _mm256_set_epi16(0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-                     0x0000, 0x0000, 0x0000, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF),
-    _mm256_set_epi16(0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-                     0x0000, 0x0000, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF),
-    _mm256_set_epi16(0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-                     0x0000, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF),
-    _mm256_set_epi16(0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-                     0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF),
-    _mm256_set_epi16(0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0xFFFF,
-                     0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF),
-    _mm256_set_epi16(0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0xFFFF, 0xFFFF,
-                     0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF),
-    _mm256_set_epi16(0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0xFFFF, 0xFFFF, 0xFFFF,
-                     0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF),
-    _mm256_set_epi16(0x0000, 0x0000, 0x0000, 0x0000, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
-                     0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF),
-    _mm256_set_epi16(0x0000, 0x0000, 0x0000, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
-                     0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF),
-    _mm256_set_epi16(0x0000, 0x0000, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
-                     0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF),
-    _mm256_set_epi16(0x0000, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
-                     0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF)};
 
 class FastHadamardLSH
     {
@@ -163,26 +44,17 @@ class FastHadamardLSH
     private:
     // full_seed contains the source of randomness. We extract from this in our permutations and update
     // it to keep it fresh.
-        __m128i full_seed;
+      Simd::SmallVecType full_seed;
     // aes_key contains the key we use for using the singular AES tour for updating our randomness.
-        __m128i aes_key;
+      Simd::SmallVecType aes_key;
 
-    /*
-     * see fht_lsh.cpp for commments on these functions.
-     */
-    
-        inline void m256_hadamard16_epi16(const __m256i &x1,__m256i &r1);
-        inline void m256_hadamard32_epi16(const __m256i &x1,const __m256i &x2, __m256i &r1, __m256i &r2);
+      Simd::SmallVecType extra_state;
 
-        template<int regs_> 
-        inline void m256_permute_epi16(__m256i * const v, __m128i &randomness,const __m256i &tailmask);
-        inline void m256_mix(__m256i &v0, __m256i &v1, const __m256i &mask);
+      inline void insert_in_maxs(int32_t * const maxs, const int16_t val, const int32_t index);
+      inline void insert_in_maxs_epi16(int32_t * const maxs, const int i_high, const Simd::VecType vals);
 
-        inline void insert_in_maxs(int32_t * const maxs, const int16_t val, const int32_t index);
-        inline void insert_in_maxs_epi16(int32_t * const maxs, const int i_high, const __m256i &vals);
-
-        template<int regs_> 
-        void hash_templated(const int16_t * const vv, int32_t * const res);
+      template<int regs_> 
+      void hash_templated(const int16_t * const vv, int32_t * const res);
 
     public: 
 
@@ -199,7 +71,7 @@ class FastHadamardLSH
         int64_t seed;
 
     // Prints out an m256i vector as 16bit chunks
-        void pprint(const __m256i& x)
+      void pprint(const Simd::VecType x)
         {
             int16_t* f = (int16_t*) &x;
             printf("%4i %4i %4i %4i %4i %4i %4i %4i %4i %4i %4i %4i %4i %4i %4i %4i\n",
@@ -212,10 +84,11 @@ class FastHadamardLSH
                                  const unsigned _multi_hash, const  int64_t _seed) : 
         n(_n), codesize(_codesize), multi_hash(_multi_hash), seed(_seed)
         { 
-            // Generate some initial randomness - this is used for building the permutations later 
-        aes_key   = _mm_set_epi64x(0xDEADBEAF * _seed + 0xC00010FF, 0x00BAB10C * _seed + 0xBAADA555);
-            full_seed = _mm_set_epi64x(0xC0DED00D * _seed + 0xBAAAAAAD, 0x000FF1CE * _seed + 0xCAFED00D);
-
+            // Generate some initial randomness - this is used for building the permutations later
+	  aes_key = Simd::m128_set_epi64x(0xDEADBEAF * _seed + 0xC00010FF, 0x00BAB10C * _seed + 0xBAADA555);
+	  full_seed = Simd::m128_set_epi64x(0xC0DED00D * _seed + 0xBAAAAAAD, 0x000FF1CE * _seed + 0xCAFED00D);
+	  extra_state = aes_key;
+	  
         // It only makes sense to hash to one or more buckets, so we do this check here
             if (multi_hash == 0) throw std::invalid_argument( "multi_hash should be >= 1" );
 
@@ -249,8 +122,9 @@ class ProductLSH
             inline bool insert_in_maxs(float * const scores, int32_t * const indices, const float score, const int32_t index);
 
         // These are used for the prg_state when building the permutation
-            __m128i full_seed;
-            __m128i aes_key;
+      Simd::SmallVecType full_seed;
+      Simd::SmallVecType aes_key;
+      Simd::SmallVecType extra_state;
 
         // This function is a specialisation of the hash function - the only difference here is that we handle differently
         // depending on the number of blocks we're hashing against 
@@ -275,9 +149,10 @@ class ProductLSH
         n(_n), blocks(_blocks), codesize(_codesize), multi_hash(_multi_hash)
         {
         // Set up our permutation randomness    
-            aes_key =   _mm_set_epi64x(0xFACEFEED * _seed + 0xDEAD10CC, 0xFFBADD11 * _seed + 0xDEADBEEF);
-            full_seed = _mm_set_epi64x(0xD0D0FA11 * _seed + 0xD15EA5E5, 0xFEE1DEAD * _seed + 0xB105F00D);
-            __m128i prg_state = full_seed;
+            aes_key =   Simd::m128_set_epi64x(0xFACEFEED * _seed + 0xDEAD10CC, 0xFFBADD11 * _seed + 0xDEADBEEF);
+	    extra_state = aes_key;
+	    full_seed = Simd::m128_set_epi64x(0xD0D0FA11 * _seed + 0xD15EA5E5, 0xFEE1DEAD * _seed + 0xB105F00D);
+	    Simd::SmallVecType prg_state = full_seed;
 
         // Taken is a vector denoting if we've used this position in our permutation before
             std::vector<bool> taken(n,false);
@@ -288,19 +163,22 @@ class ProductLSH
         // produce a new prng state & take the first 64-bits as output
         // We then use this to correspond to an array position - repeating if we fail
         // to find an unused element
-                prg_state = _mm_aesenc_si128(prg_state, aes_key);
-                size_t pos = _mm_extract_epi64(prg_state, 0) % n; 
+	     
+	      prg_state = Simd::m128_random_state(prg_state, aes_key, &extra_state);
+	      size_t pos = Simd::m128_extract_epi64<0>(prg_state) % n;
+	     
                 if (taken[pos]) continue;
         // Note that we've used this element, and put it in the permutation array
                 taken[pos] = true;
                 permutation[i] = pos;
         // We also take this chance to permute the signs too - if the second 64-bit number is odd then 
         // we will negate in future. Then, just continue producing the permutation
-                sign[pos] = (_mm_extract_epi64(prg_state, 1) % 2) ? 1 : -1;
+		  sign[pos] = Simd::m128_extract_epi64<1>(prg_state) % 2 ? 1 : -1;
                 ++i;
+	
             }
 
-
+	
         // rn is the number of remaining dimensions we have to divide up
         // Similarly with rblocks and rcodesize
             int rn = n;
@@ -311,7 +189,7 @@ class ProductLSH
         // We take this opportunity to reserve some memory, so that we don't have to keep 
         // allocating more as we push back    
             lshs.reserve(blocks);
-
+	    
             for (size_t i = 0; i < blocks; ++i)
             {
         // Divide up the number of dimensions 
@@ -340,5 +218,4 @@ class ProductLSH
         void hash(const float* v, int32_t * res);
     };
 
-#endif
 #endif
