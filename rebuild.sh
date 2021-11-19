@@ -7,6 +7,7 @@ maxsievingdim=128
 enable_ggdb=0
 enable_templated_dim=0
 jobs=4
+avx2=1
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
@@ -41,6 +42,10 @@ while [[ $# -gt 0 ]]; do
 			;;
 		--build-threshold)
 			build_threshold=$2
+			shift
+			;;
+		--avx2)
+			avx2=$2
 			shift
 			;;
 		--sieve-threshold)
@@ -81,6 +86,10 @@ fi
 if [ "$sieve_threshold" != "" ]; then
 	EXTRAFLAGS="$EXTRAFLAGS -DXPC_THRESHOLD=${sieve_threshold}"
 fi
+if [ "$avx2" != "" ]; then
+	EXTRAFLAGS="$EXTRAFLAGS -DHAVE_AVX2=${avx2}"
+fi
+
 export EXTRAFLAGS
 
 make -C kernel clean || exit 1
