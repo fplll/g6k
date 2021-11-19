@@ -280,8 +280,15 @@ template<> void ProductLSH::hash_templated<3>(const float * const vv, int32_t * 
     //These arrays are temporaries that we use while inserting the hashes to res
     int32_t h0[multi_hash_block], h1[multi_hash_block], h2[multi_hash_block];
     float c0[multi_hash_block], c1[multi_hash_block], c2[multi_hash_block];
-    float c[multi_hash] = {0};
 
+    // This memset is inserted to prevent some compilers from complaining about initialising
+    // variable-length arrays. This is because variable-length arrays are a compiler extension and
+    // not endorsed by the C++ standard.
+    // Note that this call to memset actually appears to generate better code on more recent versions of gcc.
+    // See https://godbolt.org/z/vGh9c69br for an example
+    float c[multi_hash];
+    memset(&c, 0, sizeof(float)*multi_hash);
+    
     // Hash against the subcodes
     lshs[0].hash(&(vv[0]), c0, h0);
     lshs[1].hash(&(vv[is[1]]), c1, h1);

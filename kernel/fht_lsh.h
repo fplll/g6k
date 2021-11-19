@@ -47,7 +47,10 @@ class FastHadamardLSH
       Simd::SmallVecType full_seed;
     // aes_key contains the key we use for using the singular AES tour for updating our randomness.
       Simd::SmallVecType aes_key;
-
+      // This contains some extra state for the random number generator in non-AVX2 builds.
+      // Essentially the AVX2 version uses AES instructions to generate randomness: in non AVX2 we don't assume this and instead
+      // use a generator based on xorshift128. This requires extra state. Note that the prg_state is also used for this, but we
+      // overwrite that via the output of the call to the rng. 
       Simd::SmallVecType extra_state;
 
       inline void insert_in_maxs(int32_t * const maxs, const int16_t val, const int32_t index);
