@@ -47,14 +47,15 @@ using std::size_t;
 
 // Macros
 #include "untemplate.mac"   // This defines UNTEMPLATE_DIM, which is used to dispatch a function to
-                            // one of many template specializations with hardwired dimension.
-                            // This is done for some function calls as an optimization.
-                            // Note that UNTEMPLATE_DIM is only active if TEMPLATED_DIM is set, which
-                            // is activated by the build environment with rebuild.sh -t.
+                            // one of many template specializations with hardwired dimension. This
+                            // is done for some function calls as an optimization. Note that
+                            // UNTEMPLATE_DIM is only active if TEMPLATED_DIM is set, which is
+                            // activated by the build environment with ./configure
+                            // --enable-templated-dim
 
 // MACRO to enable CPU cycle counters. Use ATOMIC_CPUCOUNT for threaded functions.
 // Used counters should be registered in cpuperf.cpp.
-// DO NOT ENABLE THIS MANUALLY, use 'rebuild.sh -c'
+// DO NOT ENABLE THIS MANUALLY, use './configure --enable-cpucounters'
 /****  PERFORMANCE_COUNTING *****/
 #ifdef PERFORMANCE_COUNTING
 #include "cpuperformance.hpp"
