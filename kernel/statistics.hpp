@@ -46,14 +46,13 @@
 */
 
 /**
-    How SieveStatistics works:
-    Depending on whether ENABLE_STATS / ENABLE_EXTENDED_STATS are set, we set COLLECT_STATISTICS to a numerical value that
-    indicates the level of statistics we collect.
-    This is then used to set various COLLECT_STATISTICS_FOO macros.
-    ENABLE_STATS / ENABLE_EXTENDED_STATS is set by the build system (rebuild.sh -s resp. rebuild.sh -ss). The COLLECT_STATISTICS_FOO macros can be
-    manually set to override individual statistics.
-    These macros control which member fields SieveStatistics have.
-    We also have ENABLE_IF_STATS_FOO(x) macros that conditionally compile x to simplify some code.
+    How SieveStatistics works: Depending on whether ENABLE_STATS / ENABLE_EXTENDED_STATS are set, we
+    set COLLECT_STATISTICS to a numerical value that indicates the level of statistics we collect.
+    This is then used to set various COLLECT_STATISTICS_FOO macros. ENABLE_STATS /
+    ENABLE_EXTENDED_STATS is set by the build system (./configure --with-stats>0). The
+    COLLECT_STATISTICS_FOO macros can be manually set to override individual statistics. These
+    macros control which member fields SieveStatistics have. We also have ENABLE_IF_STATS_FOO(x)
+    macros that conditionally compile x to simplify some code.
 
     The (non-static) members of SieveStatistics are all private.
     We have getters and incrementers with names get_stats_FOO and inc_stats_BAR.

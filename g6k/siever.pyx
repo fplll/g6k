@@ -100,15 +100,15 @@ cdef class Siever(object):
             seed = IntegerMatrix.random(1, "uniform", bits=32)[0, 0]
         self._core = new Siever_c(params._core, <unsigned long>seed)
         self.params = copy.copy(params)
-          
+
         self._core.full_n = M.d
-        
+
         if self._core.full_n > self.max_sieving_dim:
             warnings.warn("Dimension of lattice is larger than maximum supported. To fix this warning, change the value of MAX_SIEVING_DIM in siever.h and recompile.")
 
         self.lll(0, M.d)
         self.initialized = False
-    
+
     @classmethod
     def MatGSO(cls, A, float_type="d"):
         """
@@ -168,7 +168,7 @@ cdef class Siever(object):
 
     def update_gso(self, int l_bound, int r_bound):
         """
-        Update the Gram-Schmidt vectors (from the left bound l_bound up to the right bound r_bound). 
+        Update the Gram-Schmidt vectors (from the left bound l_bound up to the right bound r_bound).
         If in dual mode, l_bound and r_bound are automatically reflected about self.full_n/2.
 
         EXAMPLE::
@@ -186,8 +186,8 @@ cdef class Siever(object):
         """
         if not (0 <= l_bound and l_bound <= r_bound and r_bound <= self.M.d):
             raise ValueError("Parameters %d, %d, %d do not satisfy constraint  0 <= l_bound <= r_bound <= self.M.d"%(l_bound, r_bound))
-        
-        
+
+
         cdef int i, j, k
         cdef int m = self.full_n
         cdef int n = r_bound - l_bound
@@ -213,7 +213,7 @@ cdef class Siever(object):
                 _mu_view[i][i] = 1.
                 for j in range(l_bound, i):
                     _mu_view[i][j] = self.M.get_mu(i, j)
-        
+
         else:
             # copy mu and rr from the MatGSO object and invert them (to compute the GSO of the dual)
             for i in range(l_bound, r_bound):
@@ -221,16 +221,16 @@ cdef class Siever(object):
                 _mu_view[i][i] = 1.
                 for j in range(l_bound, i):
                     _mu_view[i][j] = self.M.get_mu(m - 1 - j, m - 1 - i)
-            
+
             # the following inverts _mu (into _mu_view) by exploiting the lower triangular structure
             for i in range(n):
                 for k in range(i+1, n):
                     _muinv_view[k, i] = -_mu_view[l_bound + k, l_bound + i]
-                
+
                 for k in range(i):
                     for j in range(i+1, n):
                         _muinv_view[j, k] += _muinv_view[j, i]*_muinv_view[i, k]
-            
+
             _mu[l_bound:r_bound, l_bound:r_bound] = _muinv
 
         for i in range(l_bound, r_bound):
@@ -284,26 +284,28 @@ cdef class Siever(object):
         """
         if not (0 <= ll and ll <= l and l <= r and r <= self.M.d):
             raise ValueError("Parameters %d, %d, %d do not satisfy constraint  0 <= ll <= l <= r <= self.M.d"%(ll, l, r))
-        
+
         if update_gso:
             self.update_gso(ll, r)
         sig_on()
         self._core.initialize_local(ll, l, r)
         sig_off()
         self.initialized = True
-    
+
     @property
     def max_sieving_dim(self):
         """
         The maximum sieving dimension that's supported in this build of G6K.
         This value can be changed in the following ways:
-            - Manually. You can simply change the ``MAX_SIEVING_DIM`` macro in siever.h and then recompile.
 
-            - Automatically. You can change this value by supplying the "-m <dim>" flag to rebuild.sh,
-              where <dim> is the maximum supported dimension. For nicer support with AVX/vectorisation,
-              we recommend a multiple of 32. This will recompile the g6k kernel.
-              Example:
-                ./rebuild -m 160
+            - Manually. You can simply change the ``MAX_SIEVING_DIM`` macro in siever.h and then
+              recompile.
+
+            - Automatically. You can change this value by supplying the
+              ``--with-max-sieving-dim <dim>`` flag to ``./configure``, where ``<dim>`` is the
+              maximum supported dimension. For nicer support with AVX/vectorisation, we recommend
+              a multiple of 32. This will recompile the g6k kernel.
+
         EXAMPLE::
             >>> from fpylll import IntegerMatrix
             >>> from g6k import Siever
@@ -432,7 +434,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> A = LLL.reduction(IntegerMatrix.random(50, "qary", k=25, bits=10))
             >>> g6k = Siever(A, seed=0x1337)
-            >>> g6k.initialize_local(0, 0, 50) 
+            >>> g6k.initialize_local(0, 0, 50)
             >>> g6k(alg="gauss") # Run that first to avoid rank-loss bug
             >>> g6k()
             >>> g6k.db_size()
@@ -1297,8 +1299,8 @@ cdef class Siever(object):
     def __call__(self, alg=None, reset_stats=True, tracer=dummy_tracer):
         assert(self.initialized)
 
-        # Check choice of sieve algorithm preemptively, to avoid incorrect user 
-        # choices  being overwritten by default or crossover leading to non-deterministic 
+        # Check choice of sieve algorithm preemptively, to avoid incorrect user
+        # choices  being overwritten by default or crossover leading to non-deterministic
         # raise of the error
 
         valid_sieves = ["nv", "bgj1", "gauss", "hk3", "bdgl", "bdgl1", "bdgl2", "bdgl3"]
@@ -1344,7 +1346,7 @@ cdef class Siever(object):
         else:
             # The algorithm should have been preemptively checked
             assert(False)
-            
+
 
     def extend_left(self, offset=1):
         """
@@ -1481,7 +1483,7 @@ cdef class Siever(object):
         :param kappa: position at which to insert improved vector
         :param v: Improved vector expressed in base B[0 … r-1]
         """
-        assert(self.initialized)      
+        assert(self.initialized)
         assert(len(v) == self.r)
         m = self.full_n
 
@@ -1571,7 +1573,7 @@ cdef class Siever(object):
 
     def split_lll(self, lp, l, r):
         """
-        Run partials LLL first between lp and l and then between l and r. text 
+        Run partials LLL first between lp and l and then between l and r. text
         does not change.
 
         :param lp: left index
@@ -1580,7 +1582,7 @@ cdef class Siever(object):
 
         ..  note:: This enforces that the projected sublattice between l and r does not change
             and thus the sieving can be maintained. This maintaince is /not/ done here. In dual mode
-            this requires to limit the size reduction in one of the calls so the result might not be 
+            this requires to limit the size reduction in one of the calls so the result might not be
             fully size reduced.
 
         EXAMPLES::

@@ -32,14 +32,16 @@ The number of parallel compilation jobs can be controlled with `-j #`.
 If building via ```./bootstrap.sh``` fails, then the script will return an error code. 
 The error codes are documented in ```bootstrap.sh.```
 
-Otherwise, you will need fplll and fpylll already installed and build the G6K Cython extension **in place** like so:
+Otherwise, you will need fplll and fpylll already installed and build the G6K Cython extension like so:
 
 .. code-block:: bash
 
     pip install Cython
     pip install -r requirements.txt
-    python setup.py build_ext [ -j # ]
+    python setup.py build_ext --inplace [ -j # ]
 
+This builds G6K **in place**. Alternatively, you can skip ```--inplace``` and run ```python setup.py install``` as usual after building.
+    
 It's possible to alter the C++ kernel build configuration as follows:
 
 .. code-block:: bash
