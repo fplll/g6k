@@ -311,6 +311,7 @@ cdef class Siever(object):
             >>> from g6k import Siever
             >>> Siever(IntegerMatrix.random(50, "qary", k=25, bits=10), seed=0x1337).max_sieving_dim
             128
+
         """
         return MAX_SIEVING_DIM
 
