@@ -102,7 +102,7 @@ extensions = [
 ]
 
 setup(
-    name="G6K",
+    name="g6k",
     description="General Sieve Kernel",
     version=__version__,
     url="https://github.com/fplll/g6k",
