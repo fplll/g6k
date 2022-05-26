@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(g6k-kernel, 0.1.1)
+AC_INIT(g6k-kernel, 0.1.2)
 AC_CANONICAL_HOST
 AC_CONFIG_SRCDIR([kernel/sieving.cpp])
 AM_MAINTAINER_MODE([enable])
@@ -47,7 +47,7 @@ AC_PROG_LIBTOOL
 #    current, and set both revision and age to zero.
 
 G6K_LT_CURRENT=1
-G6K_LT_REVISION=0
+G6K_LT_REVISION=1
 G6K_LT_AGE=0
 
 AC_SUBST(G6K_LT_CURRENT)
