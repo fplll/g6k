@@ -39,17 +39,27 @@ from ast import parse
 # `setup,py` consumes files output by `configure` so we insist on running it first.
 #
 
+if "CONDA_PREFIX" in os.environ:
+    prefix = os.environ["CONDA_PREFIX"]
+elif "VIRTUAL_ENV" in os.environ:
+    prefix = os.environ["VIRTUAL_ENV"]
+elif "LD_LIBRARY_PATH" in os.environ and os.environ["LD_LIBRARY_PATH"].endswith("/lib"):
+    prefix = os.environ["LD_LIBRARY_PATH"][:-4]
+else:
+    prefix = None
+
 if not os.path.exists("configure"):
     subprocess.check_call(["autoreconf", "-i"])
 
 if not os.path.exists("Makefile"):
-    subprocess.check_call("./configure")
-
+    if prefix is not None:
+        subprocess.check_call(["./configure", f"--prefix={prefix}"])
+    else:
+        subprocess.check_call("./configure")
 
 #
 # But we only run `make` as part of `build_ext`
 #
-
 
 class build_ext(build_module.build_ext):
     def run(self):
@@ -83,7 +93,7 @@ extra_compile_args = ["-std=c++11"]
 # extra_compile_args += ["-DCYTHON_TRACE=1"]
 # there's so many warnings generated here, we need to filter out -Werror
 extra_compile_args += [opt for opt in read_from("g6k.pc", "Cflags", ": ") if opt != "-Werror"]
-extra_compile_args += [f"-L{opt}/lib" for opt in read_from("g6k.pc", "prefix", "=")]
+extra_compile_args += [f"-L{prefix}/lib"]
 
 kwds = {
     "language": "c++",
@@ -94,6 +104,7 @@ kwds = {
         for fn in read_from("kernel/Makefile.am", "libg6k_la_SOURCES", "=")
     ],
     "libraries": ["gmp", "pthread"],
+    "library_dirs": [f"{prefix}/lib"],
     "include_dirs": [numpy.get_include()],
 }
 
