@@ -52,7 +52,7 @@ if not os.path.exists("configure"):
     subprocess.check_call(["autoreconf", "-i"])
 
 if not os.path.exists("Makefile"):
-    if prefix is not None:
+    if prefix:
         subprocess.check_call(["./configure", f"--prefix={prefix}"])
     else:
         subprocess.check_call("./configure")
@@ -60,6 +60,7 @@ if not os.path.exists("Makefile"):
 #
 # But we only run `make` as part of `build_ext`
 #
+
 
 class build_ext(build_module.build_ext):
     def run(self):
@@ -93,7 +94,8 @@ extra_compile_args = ["-std=c++11"]
 # extra_compile_args += ["-DCYTHON_TRACE=1"]
 # there's so many warnings generated here, we need to filter out -Werror
 extra_compile_args += [opt for opt in read_from("g6k.pc", "Cflags", ": ") if opt != "-Werror"]
-extra_compile_args += [f"-L{prefix}/lib"]
+if prefix:
+    extra_compile_args += [f"-L{prefix}/lib"]
 
 kwds = {
     "language": "c++",
@@ -104,9 +106,12 @@ kwds = {
         for fn in read_from("kernel/Makefile.am", "libg6k_la_SOURCES", "=")
     ],
     "libraries": ["gmp", "pthread"],
-    "library_dirs": [f"{prefix}/lib"],
     "include_dirs": [numpy.get_include()],
 }
+
+if prefix:
+    kwds["library_dirs"] = [f"{prefix}/lib"]
+
 
 extensions = [
     Extension("g6k.siever", ["g6k/siever.pyx"], **kwds),
