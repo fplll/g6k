@@ -83,6 +83,7 @@ extra_compile_args = ["-std=c++11"]
 # extra_compile_args += ["-DCYTHON_TRACE=1"]
 # there's so many warnings generated here, we need to filter out -Werror
 extra_compile_args += [opt for opt in read_from("g6k.pc", "Cflags", ": ") if opt != "-Werror"]
+extra_compile_args += [f"-L{opt}/lib" for opt in read_from("g6k.pc", "prefix", "=")]
 
 kwds = {
     "language": "c++",
