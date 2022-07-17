@@ -5,12 +5,27 @@
 #include <cstring> // Needed for memcpy. If (for some unknown reason) this is prohibitive you can instead
                    // use __builtin_memcpy.
 
-inline Simd::SmallVecType Simd::m128_slli_epi64(const SmallVecType a,
-                                                const int mask) {
+
+// Clang and GCC don't have a shared syntax for built-in shuffling.
+// This was fixed in GCC-12 and later, but GCC's shuffle expects a vector mask,
+// whereas Clang needs a compile-time known list of indices.
+#ifdef __clang__
+#define SHUFFLE16(a, b, ...) __builtin_shufflevector(a, b, __VA_ARGS__)
+// We just re-use SHUFFLE16 here, so __builtin_shufflevector is variadic.
+#define SHUFFLE8(a, b, ...) SHUFFLE16(a, b, __VA_ARGS__)
+#define SHUFFLE4(a, b, ...) SHUFFLE16(a, b, __VA_ARGS__)
+#elif defined(__GNUG__)
+#define SHUFFLE16(a, b, ...) __builtin_shuffle(a, b, Vec16s{__VA_ARGS__});
+#define SHUFFLE8(a, b, ...) __builtin_shuffle(a, b, Vec8s{__VA_ARGS__});
+#define SHUFFLE4(a, b, ...) __builtin_shuffle(a, b, Vec4q{__VA_ARGS__});
+#endif
+
+template<int pos>
+inline Simd::SmallVecType Simd::m128_slli_epi64(const SmallVecType a) {
 #ifdef HAVE_AVX2
-  return _mm_slli_epi64(a, mask);
+  return _mm_slli_epi64(a, pos);
 #else
-  return a << mask;
+  return a << pos;
 #endif
 }
 
@@ -40,7 +55,10 @@ inline Simd::SmallVecType Simd::m128_set_epi64x(const int64_t e1,
   // NOTE the swap: this is for endianness.
   // All else acts exactly the same, this is just the one weird bit of
   // inconsistency.
-  return (SmallVecType)(Vec2q{e0, e1});
+  int64_t arr[]{e0, e1};
+  SmallVecType vec;
+  memcpy(&vec, &arr, sizeof(arr));
+  return vec;
 #endif
 }
 
@@ -52,7 +70,10 @@ inline Simd::SmallVecType Simd::m128_set_epi64x(const uint64_t e1,
   // NOTE the swap: this is for endianness.
   // All else acts exactly the same, this is just the one weird bit of
   // inconsistency.
-  return (SmallVecType)(Vec2uq{e0, e1});
+  uint64_t arr[]{e0, e1};
+  SmallVecType vec;
+  memcpy(&vec, &arr, sizeof(arr));
+  return vec;
 #endif
 }
 
@@ -69,13 +90,12 @@ inline Simd::VecType Simd::m256_hadd_epi16(const Simd::VecType a,
   // do another shuffle at the end to recombine these results into something
   // useful.
 
-  static constexpr Vec16s hadd_shift_mask_epi16 = {
-      0, 2, 4, 6, 16, 18, 20, 22, 8, 10, 12, 14, 24, 26, 28, 30};
-  static constexpr Vec16s shift_right_1_epi16 = {1, 2,  3,  4,  5,  6,  7,  8,
-                                                 9, 10, 11, 12, 13, 14, 15, 0};
+#define SHIFT_RIGHT_1_MASK 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0
+#define HADD_SHIFT_MASK 0,2,4,6,16,18,20,22,8,10,12,14,24,26,28,30
 
-  const auto a1 = __builtin_shuffle(a, shift_right_1_epi16);
-  const auto b1 = __builtin_shuffle(b, shift_right_1_epi16);
+  const auto a1 = SHUFFLE16(a, a, SHIFT_RIGHT_1_MASK);
+  const auto b1 = SHUFFLE16(b, b, SHIFT_RIGHT_1_MASK);
+  
 
   // a2 = (a[0] + a[1], a[1] + a[2]  , a[2] + a[3], a[3] + a[4],
   //       a[4] + a[5], a[5] + a[6]  , a[6] + a[7], a[7] + a[8],
@@ -89,7 +109,9 @@ inline Simd::VecType Simd::m256_hadd_epi16(const Simd::VecType a,
   // The mask works by shuffling mod the length of the vector.
   // This means that (for example) a value of `18` refers to b2[2], whereas `2`
   // refers to a2[2].
-  return __builtin_shuffle(a2, b2, hadd_shift_mask_epi16);
+  return SHUFFLE16(a2, b2, HADD_SHIFT_MASK);
+  #undef SHIFT_RIGHT_1_MASK
+  #undef HADD_SHIFT_MASK
 #endif
 }
 
@@ -98,7 +120,14 @@ inline Simd::SmallVecType Simd::m128_add_epi64(const SmallVecType a,
 #ifdef HAVE_AVX2
   return _mm_add_epi64(a, b);
 #else
-  return (SmallVecType)((Vec2uq)(a) + (Vec2uq)(b));
+  Vec2q a_as_q, b_as_q;
+  memcpy(&a_as_q, &a, sizeof(a));
+  memcpy(&b_as_q, &b, sizeof(b));
+  const auto c = a_as_q + b_as_q;
+  SmallVecType result;
+  static_assert(sizeof(result) == sizeof(c), "Error: sizeof(SmallVecType) != sizeof(Vec2q)");
+  memcpy(&result, &c, sizeof(result));
+  return result;
 #endif
 }
 
@@ -127,12 +156,12 @@ inline Simd::SmallVecType Simd::m128_xor_si128(const SmallVecType a,
 #endif
 }
 
-inline Simd::SmallVecType Simd::m128_srli_epi64(const SmallVecType a,
-                                                const int pos) {
+template<int pos>
+inline Simd::SmallVecType Simd::m128_srli_epi64(const SmallVecType a) {
 #ifdef HAVE_AVX2
   return _mm_srli_si128(a, pos);
 #else
-  return (SmallVecType)(((Vec2q)a) >> pos);
+  return a >> pos;
 #endif
 }
 
@@ -164,10 +193,18 @@ inline Simd::VecType Simd::m256_permute4x64_epi64(const VecType a) {
   // You could do this with a lookup table (it would only require a bit of
   // storage) but it's probably not worth it: this is just a general function.
 
-  constexpr Vec4q temp_mask{mask & 3, (mask & 12) >> 2, (mask & 48) >> 4,
-                            (mask & 192) >> 6};
-  return reinterpret_cast<Vec16s>(
-      __builtin_shuffle(reinterpret_cast<Vec4q>(a), temp_mask));
+  // NOTE: the memcpying here is a type-punning guard. Technically reinterpret casting
+  // here would be UB (GCC has an extension for this, but Clang doesn't).
+  // The compiler knows that this isn't actually an operation that it needs to do:
+  // the backend optimises out the memcpys (see https://godbolt.org/z/zxKvnKdeP: the code
+  // for this function compiles down to a vectorised permutation).
+  Vec4q tmp_a;
+  memcpy(&tmp_a, &a, sizeof(tmp_a));
+  const auto res = SHUFFLE4(tmp_a, tmp_a, mask&3, (mask&12)>>2,
+                      (mask&48) >> 4, (mask&192) >> 6);
+  VecType out;
+  memcpy(&out, &res, sizeof(out));
+  return out;
 #endif
 }
 
@@ -176,15 +213,7 @@ Simd::m256_permute4x64_epi64_for_hadamard(const VecType a) {
 #ifdef HAVE_AVX2
   return _mm256_permute4x64_epi64(a, 0b01001110);
 #else
-  // The shuffle vector should be built at compile-time.
-  static constexpr int64_t arr[4] = {1, 0, 3, 2};
-  // NOTE: for some unknown reason *this* needs to be backwards, even if the
-  // version for the general shuffle doesn't need to be backwards.
-  // My guess is that it's to do with the endianness of `a` but I've
-  // got no idea beyond that.
-  constexpr Vec4q mask{arr[3], arr[2], arr[1], arr[0]};
-  return reinterpret_cast<Vec16s>(
-      __builtin_shuffle(reinterpret_cast<Vec4q>(a), mask));
+  return m256_permute4x64_epi64<0b01001110>(a);
 #endif
 }
 
@@ -194,18 +223,14 @@ inline int Simd::m256_testz_si256(const VecType a, const VecType b) {
 #else
   // This doesn't have a neat implementation.
   // Basically, GCC's == operator produces a vector as a result, which is really
-  // useful in most cases (but not here). To hack around this we need to cast
-  // each part to a __int128_t and compare against zero.
+  // useful in most cases (but not here).
+  // To get around this, we just copy into a fixed-size array and compare against the all zero.
+  // Again, the copy here is a type-punning guard.
   const auto res = a & b;
-
-  Vec8s p1, p2;
-  memcpy(&p1, &res, sizeof(p1));
-  memcpy(&p2, &res[8], sizeof(p2));
-
-  __int128_t lhs = reinterpret_cast<__int128_t>(p1);
-  __int128_t rhs = reinterpret_cast<__int128_t>(p2);
-
-  return (lhs == 0) & (rhs == 0);
+  constexpr static std::array<int16_t, 16> zero{0};
+  std::array<int16_t, 16> res_as_16;
+  memcpy(&res_as_16, &res, sizeof(res_as_16));
+  return memcmp(&res_as_16, &zero, sizeof(zero)) == 0;
 #endif
 }
 
@@ -227,7 +252,9 @@ template <int pos> inline int64_t Simd::m256_extract_epi64(const VecType a) {
 #ifdef HAVE_AVX2
   return _mm256_extract_epi64(a, pos);
 #else
-  return ((Vec4q)a)[pos];
+  int64_t arr[4];
+  memcpy(&arr, &a, sizeof(a));
+  return a[pos];
 #endif
 }
 
@@ -237,7 +264,10 @@ inline int64_t Simd::m128_extract_epi64(const SmallVecType a) {
 #ifdef HAVE_AVX2
   return _mm_extract_epi64(a, pos);
 #else
-  return ((Vec2q)a)[pos];
+  int64_t arr[2];
+  static_assert(sizeof(arr) == sizeof(a), "Error: sizeof(arr) != sizeof(a)");
+  memcpy(&arr, &a, sizeof(a));
+  return a[pos];
 #endif
 }
 
@@ -288,11 +318,12 @@ inline Simd::VecType Simd::m256_sign_epi16(const VecType a,
 #endif
 }
 
-inline Simd::VecType Simd::m256_slli_epi16(const VecType a, const int count) {
+template<int pos>
+inline Simd::VecType Simd::m256_slli_epi16(const VecType a) {
 #ifdef HAVE_AVX2
-  return _mm256_slli_epi16(a, count);
+  return _mm256_slli_epi16(a, pos);
 #else
-  return a << count;
+  return a << pos;
 #endif
 }
 
@@ -308,13 +339,13 @@ inline Simd::VecType Simd::m256_broadcastsi128_si256(const SmallVecType in) {
 #ifdef HAVE_AVX2
   return _mm256_broadcastsi128_si256(in);
 #else
-  // The simple solution here is to copy all of the elements of `in` in order
-  // into a new vector, but that's really slow and GCC produces _awful_ object
-  // code. A better solution (although still slower than the ideal case) is to
-  // use memcpy, since GCC seems to do better there: I have no idea why.
+  // N.B we need to copy into an array here, since Clang doesn't let us do
+  // element-wise access into vectors.
+  std::array<int16_t, 16> out_as_arr;
+  memcpy(&out_as_arr, &in, sizeof(in));
+  memcpy(&out_as_arr[8], &in, sizeof(in));  
   Vec16s out;
-  memcpy(&out[0], &in[0], sizeof(Vec8s));
-  memcpy(&out[8], &in[0], sizeof(Vec8s));
+  memcpy(&out, &out_as_arr, sizeof(out));
   return out;
 #endif
 }
@@ -323,26 +354,58 @@ inline Simd::SmallVecType Simd::m128_shuffle_epi8(const SmallVecType in,
                                                   const SmallVecType mask) {
 #ifdef HAVE_AVX2
   return _mm_shuffle_epi8(in, mask);
-#else
+#elif defined(__GNUG__) & !defined(__clang__)
+  // We have separate code here for GCC and Clang. The reason why
+  // is because Clang's shuffle doesn't support variable inputs,
+  // and GCC's shuffle would be pessimised by just using the generic code.
+  
   // The mm_shuffle_epi8 intrinsic is a bit weird.
   // First of all, we need to extract the lowest 4 bits of each word (since
   // there's only 16 options this is all we're allowed). We then shuffle
   // according to that.
-  const auto shuffle_mask = reinterpret_cast<Vec16c>(mask) & 15;
-  // So now we've gotten that match, we'll want to make the shuffle. Sounds
-  // easy, right?
-  const auto intermediate =
-      __builtin_shuffle(reinterpret_cast<Vec16c>(in), shuffle_mask);
+  Vec16c shuffle_mask, in_as_16c;
+  memcpy(&shuffle_mask, &mask, sizeof(shuffle_mask));
+  shuffle_mask = shuffle_mask & 15;
+  memcpy(&in_as_16c, &in, sizeof(in));
 
-  // Aha! Gotcha.
+  // We'll use GCC@s shuffle here since we're inside the GNUG block.
+  const auto intermediate = __builtin_shuffle(in_as_16c, shuffle_mask);
+
   // It turns out the mm_shuffle_epi8 intrinsic is a bit weird.
   // Essentially, if the top-most bit of `mask[i]` is set then `out[i] == 0`.
+  Vec16uc mask_as_uc;
+  memcpy(&mask_as_uc, &mask, sizeof(mask_as_uc));
+  const auto gt_64 = mask_as_uc & 0x80;
   const auto gt_64 = reinterpret_cast<Vec16uc>(mask) & 0x80;
 
   // And now if the element is > 64 we choose 0, otherwise we choose the
   // shuffled version
   const auto result = gt_64 ? 0 : intermediate;
-  return reinterpret_cast<SmallVecType>(result);
+  SmallVecType res;
+  memcpy(&res, &result, sizeof(result));
+  return res;
+#else
+  // We'll shuffle by hand.
+  std::array<uint8_t, 16> in_arr, mask_arr, out_arr;
+  static_assert(sizeof(in_arr) == sizeof(SmallVecType), "Error: wrong array size for copy");
+  memcpy(&in_arr, &in, sizeof(in_arr));
+  memcpy(&mask_arr, &mask, sizeof(mask_arr));
+  for(unsigned i = 0; i < 16; i++) {
+    out_arr[i] = in_arr[mask_arr[i] & 15];
+  }
+  
+  // Now we've shuffled we'll go back to explicitly vectorised instructions.
+  Vec16uc intermediate;
+  memcpy(&intermediate, &out_arr, sizeof(intermediate));
+
+  // We'll also now do the same masking as in the GNUG block.
+  Vec16uc mask_as_uc;
+  memcpy(&mask_as_uc, &mask, sizeof(mask));
+  const auto gt_64 = mask_as_uc & 0x80;
+  const auto result = gt_64 ? 0 : intermediate;
+  SmallVecType res;
+  memcpy(&res, &result, sizeof(result));
+  return res;
 #endif
 }
 
@@ -351,31 +414,36 @@ inline Simd::VecType Simd::m256_shuffle_epi8(const VecType in,
 #ifdef HAVE_AVX2
   return _mm256_shuffle_epi8(in, mask);
 #else
-  // WARNING: you cannot use the native __builtin_shuffle here.
-  // As tempting as it might seem, the reason why is that __builtin_shuffle
+  // WARNING: you cannot use the native shuffle here.
+  // As tempting as it might seem, the reason why is that shuffle
   // let's you do cross-lane shuffles, whereas the _mm256_shuffle_epi8 intrinsic
   // does not. To fix this problem, we sub-divide: we deal with each 128-bit
   // segment separately and then re-combine at the end.
-  Vec16s result;
+  std::array<int16_t, 16> mask_as_arr, in_as_arr;
+  static_assert(sizeof(mask_as_arr) == sizeof(in), "Error: wrong vector size for copy");
+  memcpy(&mask_as_arr, &mask, sizeof(mask_as_arr));
+  memcpy(&in_as_arr, &in, sizeof(in_as_arr));
+
+  SmallVecType first_mask, last_mask;
   Vec8s first, last;
-  Vec16c first_mask, last_mask;
 
   // NOTE: the compiler is likely to turn these into moves, since these
   // variables are most likely in registers.
-  memcpy(&first, &in, sizeof(Vec8s));
-  memcpy(&last, &in[8], sizeof(Vec8s));
-  memcpy(&first_mask, &mask, sizeof(Vec8s));
-  memcpy(&last_mask, &mask[8], sizeof(Vec8s));
+  memcpy(&first, &in_as_arr, sizeof(Vec8s));
+  memcpy(&last, &in_as_arr[8], sizeof(Vec8s));
+  memcpy(&first_mask, &mask_as_arr, sizeof(Vec8s));
+  memcpy(&last_mask, &mask_as_arr[8], sizeof(Vec8s));
+    
+  const auto res_1 = Simd::m128_shuffle_epi8(
+      first, first_mask);
+  const auto res_2 =
+      Simd::m128_shuffle_epi8(last, last_mask);
 
-  // Delegate to the 128-bit version.
-  auto res_1 = Simd::m128_shuffle_epi8(
-      first, reinterpret_cast<SmallVecType>(first_mask));
-  auto res_2 =
-      Simd::m128_shuffle_epi8(last, reinterpret_cast<SmallVecType>(last_mask));
-
-  // Same caveat as above.
-  memcpy(&result, &res_1, sizeof(Vec8s));
-  memcpy(&result[8], &res_2, sizeof(Vec8s));
+  std::array<int16_t, 16> out_as_arr;
+  memcpy(&out_as_arr, &res_1, sizeof(res_1));
+  memcpy(&out_as_arr[8], &res_2, sizeof(res_2));
+  VecType result;
+  memcpy(&result, &out_as_arr, sizeof(result));
   return result;
 #endif
 }
@@ -447,15 +515,12 @@ inline Simd::SmallVecType Simd::m128_random_state(SmallVecType prg_state,
 #else
   // Silence the fact it isn't used.
   (void)key;
+  (void)prg_state;
 
-  SmallVecType s1 = prg_state;
-  const SmallVecType s0 = *extra_state;
-
-  s1 = m128_xor_si128(s1, m128_slli_epi64(s1, 23));
-  *extra_state = m128_xor_si128(
-      m128_xor_si128(m128_xor_si128(s1, s0), m128_srli_epi64(s1, 5)),
-      m128_srli_epi64(s0, 5));
-  return m128_add_epi64(*extra_state, s0);
+  // Rand should be fine here: it stops us falling into random cycles.
+  *extra_state = m128_set_epi64x(static_cast<uint64_t>(rand()),
+                                 static_cast<uint64_t>(rand()));
+  return *extra_state;
 #endif
 }
 
@@ -543,21 +608,21 @@ inline void Simd::m256_permute_epi16(VecType *const v, SmallVecType &prg_state,
   m256_mix(v[0], v[1], tmp);
   // Shift the randomness around before extracting more (somewhat independent)
   // mixing bits
-  rnd = m256_slli_epi16(rnd, 1);
+  rnd = m256_slli_epi16<1>(rnd);
 
   // Now do random swaps between v[0] and v[last-1]
   m256_mix(v[0], v[regs_ - 2], tmp);
-  rnd = m256_slli_epi16(rnd, 1);
+  rnd = m256_slli_epi16<1>(rnd);
 
   // Now do swaps between v[1] and v[last], avoiding padding data
   m256_mix(v[1], v[regs_ - 1], tailmask);
 
   // More permuting
   for (int i = 2; i + 2 < regs_; i += 2) {
-    rnd = m256_slli_epi16(rnd, 1);
+    rnd = m256_slli_epi16<1>(rnd);
     tmp = m256_cmpgt_epi16(rnd, reinterpret_cast<VecType>(mixmask_threshold));
     m256_mix(v[0], v[i], tmp);
-    rnd = m256_slli_epi16(rnd, 1);
+    rnd = m256_slli_epi16<1>(rnd);
     tmp = m256_cmpgt_epi16(rnd, reinterpret_cast<VecType>(mixmask_threshold));
     m256_mix(v[1], v[i + 1], tmp);
   }
