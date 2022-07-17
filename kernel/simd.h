@@ -4,8 +4,9 @@
 #include "g6k_config.h"
 
 #include <cstdint>
+#ifdef HAVE_AVX2
 #include <immintrin.h>
-#include <iostream>
+#endif
 
 /**
    Simd. This namespace provides access to a variety of low-level SIMD routines
@@ -208,63 +209,63 @@ inline VecType build_vec_type(const int16_t in) {
 // Masks for various operations.
 // We only compile the ones we'll use.
 
-#ifdef COMPILE_AVX2
-constexpr __m256i mixmask_threshold = _mm256_set_epi16(
+#ifdef HAVE_AVX2
+static const __m256i mixmask_threshold = _mm256_set_epi16(
     0x5555, 0x5555, 0x5555, 0x5555, 0x5555, 0x5555, 0x5555, 0x5555, 0xAAAA,
     0xAAAA, 0xAAAA, 0xAAAA, 0xAAAA, 0xAAAA, 0xAAAA, 0xAAAA);
 
-constexpr __m256i _7FFF_epi16 = _mm256_set_epi16(
+static const __m256i _7FFF_epi16 = _mm256_set_epi16(
     0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF,
     0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF, 0x7FFF);
 
-constexpr __m256i sign_mask_2 = _mm256_set_epi16(
+static const __m256i sign_mask_2 = _mm256_set_epi16(
     0xFFFF, 0x0001, 0xFFFF, 0x0001, 0xFFFF, 0x0001, 0xFFFF, 0x0001, 0xFFFF,
     0x0001, 0xFFFF, 0x0001, 0xFFFF, 0x0001, 0xFFFF, 0x0001);
 
-constexpr __m256i mask_even_epi16 = _mm256_set_epi16(
+static const __m256i mask_even_epi16 = _mm256_set_epi16(
     0xFFFF, 0x0000, 0xFFFF, 0x0000, 0xFFFF, 0x0000, 0xFFFF, 0x0000, 0xFFFF,
     0x0000, 0xFFFF, 0x0000, 0xFFFF, 0x0000, 0xFFFF, 0x0000);
 
-constexpr __m256i mask_odd_epi16 = _mm256_set_epi16(
+static const __m256i mask_odd_epi16 = _mm256_set_epi16(
     0x0000, 0xFFFF, 0x0000, 0xFFFF, 0x0000, 0xFFFF, 0x0000, 0xFFFF, 0x0000,
     0xFFFF, 0x0000, 0xFFFF, 0x0000, 0xFFFF, 0x0000, 0xFFFF);
 
-constexpr __m256i regroup_for_max = _mm256_set_epi8(
+static const __m256i regroup_for_max = _mm256_set_epi8(
     0x0F, 0x0E, 0x07, 0x06, 0x0D, 0x0C, 0x05, 0x04, 0x0B, 0x0A, 0x03, 0x02,
     0x09, 0x08, 0x01, 0x00, 0x1F, 0x1E, 0x17, 0x16, 0x1D, 0x1C, 0x15, 0x14,
     0x1B, 0x1A, 0x13, 0x12, 0x19, 0x18, 0x11, 0x10);
 
-constexpr __m256i sign_mask_8 = _mm256_set_epi16(
+static const __m256i sign_mask_8 = _mm256_set_epi16(
     0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0x0001,
     0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001);
 
-constexpr __m256i sign_shuffle = _mm256_set_epi16(
+static const __m256i sign_shuffle = _mm256_set_epi16(
     0xFFFF, 0xFFFF, 0xFFFF, 0x0001, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0x0001,
     0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0xFFFF, 0xFFFF);
 
-constexpr __m256i indices_epi8 = _mm256_set_epi8(
+static const __m256i indices_epi8 = _mm256_set_epi8(
     0x0F, 0x0E, 0x0D, 0x0C, 0x0B, 0x0A, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04,
     0x03, 0x02, 0x01, 0x00, 0x1F, 0x1E, 0x1D, 0x1C, 0x1B, 0x1A, 0x19, 0x18,
     0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10);
 
-constexpr __m256i indices_epi16 = _mm256_set_epi16(
+static const __m256i indices_epi16 = _mm256_set_epi16(
     0x000F, 0x000E, 0x000D, 0x000C, 0x000B, 0x000A, 0x0009, 0x0008, 0x0007,
     0x0006, 0x0005, 0x0004, 0x0003, 0x0002, 0x0001, 0x0000);
 
-constexpr __m256i indices_sa1_epi16 = _mm256_set_epi16(
+static const __m256i indices_sa1_epi16 = _mm256_set_epi16(
     0x0010, 0x000F, 0x000E, 0x000D, 0x000C, 0x000B, 0x000A, 0x0009, 0x0008,
     0x0007, 0x0006, 0x0005, 0x0004, 0x0003, 0x0002, 0x0001);
 
-constexpr __m256i _0010_epi16 = _mm256_set_epi16(
+static const __m256i _0010_epi16 = _mm256_set_epi16(
     0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010,
     0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010);
 
-constexpr __m256i rnd_mult_epi32 =
+static const __m256i rnd_mult_epi32 =
     _mm256_set_epi32(0xF010A011, 0x70160011, 0x70162011, 0x00160411, 0x0410F011,
                      0x02100011, 0xF0160011, 0x00107010);
 
 // 0xFFFF = -1, 0x0001 = 1
-constexpr __m256i negation_masks_epi16[2] = {
+static const __m256i negation_masks_epi16[2] = {
     _mm256_set_epi16(0xFFFF, 0x0001, 0xFFFF, 0xFFFF, 0xFFFF, 0x0001, 0x0001,
                      0xFFFF, 0xFFFF, 0x0001, 0xFFFF, 0x0001, 0xFFFF, 0xFFFF,
                      0x0001, 0xFFFF),
@@ -272,7 +273,7 @@ constexpr __m256i negation_masks_epi16[2] = {
                      0xFFFF, 0xFFFF, 0x0001, 0xFFFF, 0x0001, 0xFFFF, 0xFFFF,
                      0x0001, 0xFFFF)};
 
-constexpr __m256i permutations_epi16[4] = {
+static const __m256i permutations_epi16[4] = {
     _mm256_set_epi16(0x0F0E, 0x0706, 0x0100, 0x0908, 0x0B0A, 0x0D0C, 0x0504,
                      0x0302, 0x0706, 0x0F0E, 0x0504, 0x0302, 0x0B0A, 0x0908,
                      0x0D0C, 0x0100),
@@ -286,7 +287,7 @@ constexpr __m256i permutations_epi16[4] = {
                      0x0B0A, 0x0302, 0x0100, 0x0504, 0x0B0A, 0x0908, 0x0706,
                      0x0F0E, 0x0D0C)};
 
-constexpr __m256i tailmasks[16] = {
+static const __m256i tailmasks[16] = {
     _mm256_set_epi16(0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
                      0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
                      0xFFFF, 0xFFFF),
@@ -555,10 +556,10 @@ inline VecType m256_cmpgt_epi16(const VecType a, const VecType b);
 /**
  * m256_slli_epi16. This function accepts a vector `a` and shifts each word in
  * `a` left by `count` many bits. This function mimics exactly the behaviour of
- * _mm256_slli_epi16. \param[in] a: the vector to shift. \param[in] count: the
- * amount to shift by. \return a << count.
+ * _mm256_slli_epi16. \tparam pos: the number of positions to shift by. \param[in] a: the vector to shift. \return a << count.
  */
-inline VecType m256_slli_epi16(const VecType a, const int count);
+  template<int pos>
+inline VecType m256_slli_epi16(const VecType a);
 
 /**
  m256_hadd_epi16. Accepts two vectors `a` and `b` and emulates the
@@ -620,10 +621,10 @@ inline SmallVecType m128_xor_si128(const SmallVecType a, const SmallVecType b);
 /**
  * m128_slli_epi64. This function accepts a vector `a` and shifts each quadword
  * in `a` left by `count` many bits. This function mimics exactly the behaviour
- * of _mm_slli_epi64. \param[in] a: the vector to shift. \param[in] count: the
- * amount to shift by. \return a << count.
+ * of _mm_slli_epi64. \tparam pos: the amount to shift by. \param[in] a: the vector to shift. \return a << pos.
  */
-inline SmallVecType m128_slli_epi64(const SmallVecType a, const int pos);
+  template<int pos>
+inline SmallVecType m128_slli_epi64(const SmallVecType a);
 /**
  * m128_srli_epi64. This function accepts a vector `a` and shifts each quadword
  * in `a` right by `count` many bits. This function mimics exactly the behaviour

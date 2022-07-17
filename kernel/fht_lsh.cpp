@@ -338,8 +338,9 @@ template<> void ProductLSH::hash_templated<2>(const float * const vv, int32_t * 
 {
     int32_t h0[multi_hash_block], h1[multi_hash_block];
     float c0[multi_hash_block], c1[multi_hash_block];
-    float c[multi_hash] = {0};
-
+    float c[multi_hash];
+    memset(&c, 0, sizeof(float) * multi_hash);
+    
     // Now hash against the two subcode blocks.
     lshs[0].hash(&(vv[0]), c0, h0);
     lshs[1].hash(&(vv[is[1]]), c1, h1);
