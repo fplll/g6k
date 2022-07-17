@@ -375,7 +375,7 @@ inline Simd::SmallVecType Simd::m128_shuffle_epi8(const SmallVecType in,
   // Essentially, if the top-most bit of `mask[i]` is set then `out[i] == 0`.
   Vec16uc mask_as_uc;
   memcpy(&mask_as_uc, &mask, sizeof(mask_as_uc));
-  const auto gt_64 = mask_as_uc & 0x80;
+  const auto gt_64 = reinterpret_cast<Vec16uc>(mask) & 0x80;
 
   // And now if the element is > 64 we choose 0, otherwise we choose the
   // shuffled version

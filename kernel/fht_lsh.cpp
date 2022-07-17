@@ -19,6 +19,7 @@
 
 #include "g6k_config.h"
 #include "fht_lsh.h"
+#include<cmath> 
 
 // Please note that this file originally came from:
 // https://github.com/lducas/AVX2-BDGL-bucketer commit 630c2286a440fae1eddd9f90341ff2020f18b614
