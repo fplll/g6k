@@ -306,8 +306,9 @@ void Siever::bdgl_queue_create_task( const size_t t_id, const std::vector<QEntry
         if( queue[index].sign == 0 ){
             continue;
         }
+
         bdgl_reduce_with_delayed_replace( queue[index].i, queue[index].j, 
-                                          cdb[std::min(S-1, insert_after+params.threads*write_index)].len / REDUCE_LEN_MARGIN,
+                                          cdb[std::min(S-1, static_cast<unsigned long>(insert_after+params.threads*write_index))].len / REDUCE_LEN_MARGIN,
                                                   transaction_db, write_index, queue[index].len, queue[index].sign);
         if( write_index < 0 ){
             std::cerr << "Spilling full transaction db" << t_id << " " << Q-index << std::endl;

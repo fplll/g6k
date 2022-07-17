@@ -73,7 +73,7 @@ inline Simd::SmallVecType Simd::m128_set_epi64x(const uint64_t e1,
   uint64_t arr[]{e0, e1};
   SmallVecType vec;
   memcpy(&vec, &arr, sizeof(arr));
-  reutrn vec;
+  return vec;
 #endif
 }
 
@@ -386,7 +386,7 @@ inline Simd::SmallVecType Simd::m128_shuffle_epi8(const SmallVecType in,
   return res;
 #else
   // We'll shuffle by hand.
-  std::array<uint16_t, 16> in_arr, mask_arr, out_arr;
+  std::array<uint8_t, 16> in_arr, mask_arr, out_arr;
   static_assert(sizeof(in_arr) == sizeof(SmallVecType), "Error: wrong array size for copy");
   memcpy(&in_arr, &in, sizeof(in_arr));
   memcpy(&mask_arr, &mask, sizeof(mask_arr));

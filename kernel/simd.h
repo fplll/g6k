@@ -628,10 +628,11 @@ inline SmallVecType m128_slli_epi64(const SmallVecType a);
 /**
  * m128_srli_epi64. This function accepts a vector `a` and shifts each quadword
  * in `a` right by `count` many bits. This function mimics exactly the behaviour
- * of _mm_srli_epi64. \param[in] a: the vector to shift. \param[in] count: the
+ * of _mm_srli_epi64. \tparam pos: the number of positions to shift by. \param[in] a: the vector to shift. \param[in] count: the
  * amount to shift by. \return a >> count.
  */
-inline SmallVecType m128_srli_epi64(const SmallVecType a, const int pos);
+  template<int pos>
+inline SmallVecType m128_srli_epi64(const SmallVecType a);
 
 /**
  m256_and_si256. This function accepts two vectors `a` and `b` and returns a
