@@ -20,7 +20,6 @@
 
 #include "siever.h"
 #include "fht_lsh.h"
-#include <immintrin.h>
 #include <stdio.h>
 #include <assert.h>
 #include <cstring>
@@ -308,7 +307,7 @@ void Siever::bdgl_queue_create_task( const size_t t_id, const std::vector<QEntry
             continue;
         }
         bdgl_reduce_with_delayed_replace( queue[index].i, queue[index].j, 
-                                                  cdb[std::min(S-1, insert_after+params.threads*write_index)].len / REDUCE_LEN_MARGIN,
+                                          cdb[std::min(S-1, insert_after+params.threads*write_index)].len / REDUCE_LEN_MARGIN,
                                                   transaction_db, write_index, queue[index].len, queue[index].sign);
         if( write_index < 0 ){
             std::cerr << "Spilling full transaction db" << t_id << " " << Q-index << std::endl;
