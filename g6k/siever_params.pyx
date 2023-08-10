@@ -261,10 +261,10 @@ cdef class SieverParams(object):
             >>> sp.bgj1_bucket_size_factor
             3.2
 
-            >>> sp.bgj2_bucket_max_size_factor
+            >>> sp.bgj2_bucket_max_size_factor  # doctest: +ELLIPSIS
             Traceback (most recent call last):
             ...
-            AttributeError: 'SieverParams' object has no attribute 'bgj2_bucket_max_size_factor'
+            AttributeError: 'SieverParams' object has no attribute 'bgj2_bucket_max_size_factor'...
 
         """
         try:
@@ -278,10 +278,10 @@ cdef class SieverParams(object):
 
             >>> from g6k import SieverParams
             >>> sp = SieverParams()
-            >>> sp.bgj2_bucket_max_size_factor
+            >>> sp.bgj2_bucket_max_size_factor  # doctest: +ELLIPSIS
             Traceback (most recent call last):
             ...
-            AttributeError: 'SieverParams' object has no attribute 'bgj2_bucket_max_size_factor'
+            AttributeError: 'SieverParams' object has no attribute 'bgj2_bucket_max_size_factor'...
 
             >>> sp.bgj2_bucket_max_size_factor = 2.0
             >>> sp.bgj2_bucket_max_size_factor
