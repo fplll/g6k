@@ -54,8 +54,6 @@ ln -s g6k-env/bin/activate ./
 source ./activate
 
 $PIP install -U pip
-$PIP install cysignals
-
 
 cat <<EOF >>g6k-env/bin/activate
 CFLAGS="\$CFLAGS -O3 -march=native -Wp,-U_FORTIFY_SOURCE"
