@@ -36,7 +36,6 @@ Otherwise, you will need fplll and fpylll already installed and build the G6K Cy
 
 .. code-block:: bash
 
-    pip install Cython
     pip install -r requirements.txt
     python setup.py build_ext --inplace [ -j # ]
 

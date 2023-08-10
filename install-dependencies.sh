@@ -14,7 +14,6 @@ cd ..
 # Install FPyLLL
 git clone https://github.com/fplll/fpylll
 cd fpylll || exit
-pip install Cython
 pip install -r requirements.txt
 pip install -r suggestions.txt
 python setup.py clean
