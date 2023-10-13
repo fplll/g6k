@@ -1661,7 +1661,7 @@ cdef class Siever(object):
         return L
 
 
-    def insert_best_lift(self, scoring=(lambda index, nlen, olen, aux: True), aux=None):
+    def insert_best_lift(self, scoring=None, aux=None):
         """
         Consider all best lifts, score them, and insert the one with the best score.
 
@@ -1690,6 +1690,9 @@ cdef class Siever(object):
             >>> _ = sieve.insert_best_lift()
 
         """
+        if scoring is None:
+            scoring = lambda index, nlen, olen, aux: True
+
         assert(self.initialized)
 
         L = self.best_lifts()
