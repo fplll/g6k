@@ -19,8 +19,10 @@ jobs:
         python-version: ["3.10", "3.11", "3.12"]
 
     steps:
-      - name: Setup Python
+      - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
       - name: Check out
         uses: actions/checkout@v2
       - name: Install prerequisites
