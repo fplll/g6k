@@ -1,4 +1,3 @@
-from math import lgamma
 from zgsa_nonsym import ZGSA, ZGSA_old
 from batchCVP import batchCVPP_cost
 from parser import parse_all
@@ -74,7 +73,7 @@ if __name__=="__main__":
             minTcvp = Tcvp
             minbeta = beta
             minkappa = kappa_
-            print(min_rt.n(), minTbkz.n(), minTcvp, minbeta, minkappa)
+            print(min_rt.n(), minTbkz.n(), minTcvp.n(), minbeta, minkappa)
 
     # print(min_rt.n(), minTbkz.n(), minTcvp, minbeta,minkappa)
     print()
