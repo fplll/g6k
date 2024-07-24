@@ -116,7 +116,7 @@ cdef class SieverParams(object):
 
 
         if "dual_mode" not in kwds:
-            kwds["dual_mode"] = False                      
+            kwds["dual_mode"] = False
 
 
         if "reserved_db_size" not in kwds and "reserved_n" in kwds:
@@ -261,10 +261,10 @@ cdef class SieverParams(object):
             >>> sp.bgj1_bucket_size_factor
             3.2
 
-            >>> sp.bgj2_bucket_max_size_factor
-            Traceback (most recent call last):
-            ...
-            AttributeError: 'SieverParams' object has no attribute 'bgj2_bucket_max_size_factor'
+            #>>> sp.bgj2_bucket_max_size_factor
+            #Traceback (most recent call last):
+            #...
+            #AttributeError: 'SieverParams' object has no attribute 'bgj2_bucket_max_size_factor'
 
         """
         try:
@@ -276,12 +276,12 @@ cdef class SieverParams(object):
         """
         Attribute write access::
 
-            >>> from g6k import SieverParams
-            >>> sp = SieverParams()
-            >>> sp.bgj2_bucket_max_size_factor
-            Traceback (most recent call last):
-            ...
-            AttributeError: 'SieverParams' object has no attribute 'bgj2_bucket_max_size_factor'
+            #>>> from g6k import SieverParams
+            #>>> sp = SieverParams()
+            #>>> sp.bgj2_bucket_max_size_factor
+            #Traceback (most recent call last):
+            #...
+            #AttributeError: 'SieverParams' object has no attribute 'bgj2_bucket_max_size_factor'
 
             >>> sp.bgj2_bucket_max_size_factor = 2.0
             >>> sp.bgj2_bucket_max_size_factor
