@@ -13,8 +13,8 @@ def find_beta(d, n, q, st_dev_e):
         r_log = ZGSA(d, n, q, beta)
         #r_log = ZGSA_old(d, n, q, beta)
         # plot_gso(r_log).show()
-        if beta%32==0:
-            plot_gso(r_log).save(f"bkz{beta}.png")
+        # if beta%32==0:
+        #     plot_gso(r_log).save(f"bkz{beta}.png")
         lhs  = 0.5*log(beta)+log(st_dev_e)
         rhs  = r_log[2*n-beta] #counting from 0
         if lhs < rhs:
