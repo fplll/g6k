@@ -37,7 +37,7 @@ if __name__=="__main__":
     dim = 2*n
 
 
-    kappa = 45  #max number of guessed coordiantes
+    # kappa = 45  #max number of guessed coordiantes
     min_rt = infinity
     minTbkz = 0
     minTcvp = 0
