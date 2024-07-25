@@ -12,7 +12,6 @@ def find_beta(d, n, q, st_dev_e):
     for beta in range(minbeta, d//2, 1): #90, 450, 1
         r_log = ZGSA(d, n, q, beta)
         #r_log = ZGSA_old(d, n, q, beta)
-        # plot_gso(r_log).show()
         # if beta%32==0:
         #     plot_gso(r_log).save(f"bkz{beta}.png")
         lhs  = 0.5*log(beta)+log(st_dev_e)
@@ -43,7 +42,7 @@ if __name__=="__main__":
     minTcvp = 0
     minbeta = 0
     minkappa = 0
-    for kappa_ in range(15,kappa+1):
+    for kappa_ in range(0,kappa+1):
         M_log = kappa_*H(CB3)+1 # number of CVP-targets
         beta = find_beta(dim-kappa_, n-kappa_, q, st_dev_e)
         if beta==infinity: continue
