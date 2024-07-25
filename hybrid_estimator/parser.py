@@ -2,12 +2,15 @@ from sys import argv
 from math import sqrt
 from utils import st_dev_central_binomial, CB2, CB3
 
-help_msg ="""Usage: python <kyber> -kmin=<kmin>
+help_msg ="""Usage: sage hybrid_cost.sage <kyber> -kmax=<kmax>
+sage hybrid_cost.sage -h
+Options: -h, print help message.
 Parameters: <kyber>, kyber{160,176,192,208,224,240,256,512,768,1024}
-<kmin>, integer >= 15
+<kmax>, integer. Max. num. of guessing coordinates.
 """
 
-
+class HelpException(Exception):
+    pass
 
 kyber_instances = {
     "kyber160" : {'n': 160, 'q': 3329, 'st_dev_e': st_dev_central_binomial(3), 'dist': CB3},
@@ -25,6 +28,8 @@ kyber_instances = {
 def parse_all():
     if "-h" in argv:
         print(help_msg)
+        he = HelpException("HelpException")
+        raise he
     else:
         if any( "-n=" in tmp for tmp in argv ):
             raise NotImplementedError("Only kyber{160,176,192,208,224,240,256,512,768,1024} instances are currently supported.")
@@ -45,7 +50,7 @@ def parse_all():
                     brk += 1
                     continue
 
-                if "-kmin=" in s:
+                if "-kmax=" in s:
                     # print("kappa found")
                     kappa = int(s[6:])
                     brk += 1
@@ -69,7 +74,7 @@ def parse_all():
                     brk += 1
                     continue
 
-                if "-kmin=" in s:
+                if "-kmax=" in s:
                     # print("kappa found")
                     kappa = int(s[6:])
                     brk += 1
@@ -77,7 +82,7 @@ def parse_all():
                 if brk >= 2:
                     break
 
-            assert brk>=2, "kyber or -kmin flag is not provided."
+            assert brk>=2, "kyber or -kmax flag is not provided."
 
         return n, q, kappa, st_dev_e, dist
 
