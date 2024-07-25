@@ -1,24 +1,20 @@
 from zgsa_nonsym import ZGSA, ZGSA_old
 from batchCVP import batchCVPP_cost
 from parser import parse_all
-
-
-def st_dev_central_binomial(eta):
-    return sqrt(eta / 2.0)
+from utils import st_dev_central_binomial, H, CB2, CB3
 
 def plot_gso(r, *args, **kwds):
     return line([(i, r_,) for i, r_ in enumerate(r)], *args, **kwds)
 
-#entropy
-def H(pr):
-    return -sum([p*log(p,2) for p in pr])
-
 #Thm. 4.1
 def find_beta(d, n, q, st_dev_e):
-    for beta in range(90, 450, 1):
+    minbeta = 50 if d<513 else n//2
+    for beta in range(minbeta, d//2, 1): #90, 450, 1
         r_log = ZGSA(d, n, q, beta)
         #r_log = ZGSA_old(d, n, q, beta)
-        #plot_gso(r_log).show()
+        # plot_gso(r_log).show()
+        if beta%32==0:
+            plot_gso(r_log).save(f"bkz{beta}.png")
         lhs  = 0.5*log(beta)+log(st_dev_e)
         rhs  = r_log[2*n-beta] #counting from 0
         if lhs < rhs:
@@ -36,19 +32,6 @@ def svp_cost(beta, d, alg="BDGL16_real"):
         print("Unrecognized SVP algorithm")
         return 0
 
-#Central Binomial probablity mass functions
-CB2 = [(1/2)**5, 5*(1/2)**5, 10*(1/2)**5, 10*(1/2)**5, 5*(1/2)**5, (1/2)**5 ]
-CB3 = [(1/2)**7, 7*(1/2)**7, 21*(1/2)**7, 35*(1/2)**7, 35*(1/2)**7, 21*(1/2)**7, 7*(1/2)**7, (1/2)**7]
-
-Kyber512 = {'n': 2*256, 'q': 3329, 'st_dev_e': st_dev_central_binomial(3), 'dist': CB3}
-Kyber768 = {'n': 3*256, 'q': 3329, 'st_dev_e': st_dev_central_binomial(2), 'dist': CB2}
-Kyber1024 = {'n': 4*256, 'q': 3329, 'st_dev_e': st_dev_central_binomial(2), 'dist': CB2}
-
-
-# n = Kyber512['n']
-# q = Kyber512['q']
-# st_dev_e = Kyber512['st_dev_e']
-
 if __name__=="__main__":
     n, q, kappa, st_dev_e, dist = parse_all()
     dim = 2*n
@@ -60,7 +43,7 @@ if __name__=="__main__":
     minTcvp = 0
     minbeta = 0
     minkappa = 0
-    for kappa_ in range(1,kappa+1):
+    for kappa_ in range(15,kappa+1):
         M_log = kappa_*H(CB3)+1 # number of CVP-targets
         beta = find_beta(dim-kappa_, n-kappa_, q, st_dev_e)
         if beta==infinity: continue
@@ -73,8 +56,8 @@ if __name__=="__main__":
             minTcvp = Tcvp
             minbeta = beta
             minkappa = kappa_
-            print(min_rt.n(), minTbkz.n(), minTcvp.n(), minbeta, minkappa)
+            print(RR(min_rt), RR(minTbkz), RR(minTcvp), minbeta, minkappa)
 
-    # print(min_rt.n(), minTbkz.n(), minTcvp, minbeta,minkappa)
     print()
-    print(f"Min. cost: {min_rt.n():.4f}, Cost SVP: {minTbkz.n():.4f}, Cost CVP: {RR(minTcvp):.4f}, beta: {minbeta}, guessing coords.: {minkappa}")
+    print(f"n={n}, q={q}")
+    print(f"Est. cost: {RR(min_rt):.4f}, Cost SVP: {RR(minTbkz):.4f}, Cost CVP: {RR(minTcvp):.4f}, beta: {minbeta}, guessing coords.: {minkappa}")

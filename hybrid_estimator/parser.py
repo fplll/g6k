@@ -1,21 +1,11 @@
 from sys import argv
 from math import sqrt
+from utils import st_dev_central_binomial, CB2, CB3
 
-help_msg ="""Usage: python <kyber> -kappa=<kappa>
+help_msg ="""Usage: python <kyber> -kmin=<kmin>
 Parameters: <kyber>, kyber{160,176,192,208,224,240,256,512,768,1024}
-<kappa>, integer >= 15
+<kmin>, integer >= 15
 """
-
-def st_dev_central_binomial(eta):
-    return sqrt(eta / 2.0)
-
-#Central Binomial probablity mass functions
-CB2 = [(1/2)**5, 5*(1/2)**5, 10*(1/2)**5, 10*(1/2)**5, 5*(1/2)**5, (1/2)**5 ]
-CB3 = [(1/2)**7, 7*(1/2)**7, 21*(1/2)**7, 35*(1/2)**7, 35*(1/2)**7, 21*(1/2)**7, 7*(1/2)**7, (1/2)**7]
-
-# Kyber512 = {'n': 2*256, 'q': 3329, 'st_dev_e': st_dev_central_binomial(3), 'dist': CB3}
-# Kyber768 = {'n': 3*256, 'q': 3329, 'st_dev_e': st_dev_central_binomial(2), 'dist': CB2}
-# Kyber1024 = {'n': 4*256, 'q': 3329, 'st_dev_e': st_dev_central_binomial(2), 'dist': CB2}
 
 kyber_instances = {
     "kyber160" : {'n': 160, 'q': 3329, 'st_dev_e': st_dev_central_binomial(3), 'dist': CB3},
@@ -53,9 +43,9 @@ def parse_all():
                     brk += 1
                     continue
 
-                if "-kappa=" in s:
+                if "-kmin=" in s:
                     # print("kappa found")
-                    kappa = int(s[7:])
+                    kappa = int(s[6:])
                     brk += 1
                     continue
                 if brk >= 3:
@@ -77,15 +67,15 @@ def parse_all():
                     brk += 1
                     continue
 
-                if "-kappa=" in s:
+                if "-kmin=" in s:
                     # print("kappa found")
-                    kappa = int(s[7:])
+                    kappa = int(s[6:])
                     brk += 1
                     continue
                 if brk >= 2:
                     break
 
-            assert brk>=2, "kyber or -kappa flag is not provided."
+            assert brk>=2, "kyber or -kmin flag is not provided."
 
         return n, q, kappa, st_dev_e, dist
 
