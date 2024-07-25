@@ -41,13 +41,10 @@ def batchCVPP_cost(d, M, alpha, gamma):
         prob += omega(a, x_[i-1], x_[i])
         #print(i, x_[i].n(), prob)
 
-    T = (a - 2*(a-1)/(1+sqrt(1-1./a)))**(-1/2.)  #base for power-d
+    T = (a - 2*(a-1)/(1+sqrt(1-1./a)))**(-1/2.)  #base for power-d, runtime per instance!
 
     prob = exp(-prob) #1/prob=number of rerandomizations per target, base for power-d
 
-    N_batches = ceil(M - 1./prob) #M and prob are on log2-scale
-
-    T_per_batch_log = d*log(1./prob*T,2)
     T = d*log(1./prob*T,2) + M
     #assert(M<d*(log(alpha,2)+log(1./prob,2))), f"!"
 
