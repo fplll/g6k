@@ -28,8 +28,8 @@ def from_canonical_scaled(M, t, offset):
     param t: target vector
     param offset: number of last coordinates the coordinates are computed for
     """
-    t_ = np.array( M.from_canonical(t)[-offset:], dtype=np.float64 )
-    r_ = np.array( [sqrt(tt) for tt in M.r()[-offset:]], dtype=np.float64 )
+    t_ = np.array( M.from_canonical(t)[-offset:], dtype=np.float128 )
+    r_ = np.array( [sqrt(tt) for tt in M.r()[-offset:]], dtype=np.float128 )
     return t_*r_
 
 def iterative_slicer(db,M,t_0,sieve_dim):
@@ -51,7 +51,7 @@ def iterative_slicer(db,M,t_0,sieve_dim):
     change_made = False
     for b in db: #create list of (coeffs, gso coeffs)
         tmp = from_canonical_scaled(M,M.B[-sieve_dim:].multiply_left(b[-sieve_dim:]),sieve_dim)
-        L.append( [np.array( b[-sieve_dim:], dtype=np.int64 ), np.array( tmp, dtype=np.float64 )] )
+        L.append( [np.array( b[-sieve_dim:], dtype=np.int64 ), np.array( tmp, dtype=np.float128 )] )
         """
         For each L[-1] find min || t_cur - L[-1] ||
         """
@@ -76,7 +76,7 @@ def iterative_slicer(db,M,t_0,sieve_dim):
             """
             For each L[-1] find min || t_cur - L[-1] ||
             """
-            if ind % 12000 == 0:
+            if ind % 100 == 0: #precision fix
                 tmp = M.B[-sieve_dim:].multiply_left( t_cur[0] )
                 tmp = from_canonical_scaled(M,tmp,sieve_dim)
                 t_cur = t_cur[0], tmp
@@ -220,14 +220,14 @@ def try_batch_cvp_w_babai( n, betamax=32, sieve_dim=32 ):
             extra_err_b = from_canonical_scaled(M,extra_err_b,sieve_dim)
         else:
             extra_err_c = np.array( sieve_dim*[0],dtype=np.int64 )
-            extra_err_b = np.array( sieve_dim*[0],dtype=np.float64 )
+            extra_err_b = np.array( sieve_dim*[0],dtype=np.float128 )
 
         """
         t2_ -- coordinates of b_ s.t. b_=t2_*B[-sieve_dim:] and proj_{d-sieve_dim}(t-b_) is small
         t2_gso -- || proj_{d-sieve_dim}(b_) ||
         """
-        t2_, t2_gso = iterative_slicer(g6k.itervalues(),g6k.M,[t_0[0]-extra_err_c,t_0[1]-extra_err_b],sieve_dim)
-        t2_, t2_gso = t2_+extra_err_c, t2_gso+extra_err_b
+        t2_, t2_gso = iterative_slicer(g6k.itervalues(),g6k.M,[t_0[0]-extra_err_c,t_0[1]-extra_err_b],sieve_dim) #rerandomize and call slicer
+        t2_, t2_gso = t2_+extra_err_c, t2_gso+extra_err_b #unrandomize the answer
 
         #Recover x2 inductively via the identity x2_{beta-i} + \sum_{j=1}^i  R_{d-j,d-i} = v2_{beta-i}.
         v2_ = t2_gso * np.array( [1/sqrt(rr) for rr in M.r()[-sieve_dim:]] )
@@ -245,4 +245,7 @@ def try_batch_cvp_w_babai( n, betamax=32, sieve_dim=32 ):
             print(f"NO: {x2-tmp_}")
 
 
-try_batch_cvp_w_babai( 50, betamax=40, sieve_dim=43 )
+try_batch_cvp_w_babai( 70, betamax=36, sieve_dim=36 )
+# try_batch_cvp_w_babai( 80, betamax=38, sieve_dim=39 ) #should pass
+# try_batch_cvp_w_babai( 90, betamax=43, sieve_dim=45 ) #should pass
+# try_batch_cvp_w_babai( 100, betamax=45, sieve_dim=45 ) #this may fail
