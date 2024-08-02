@@ -25,9 +25,36 @@ print(f"fpylll version: {fpylll.__version__}")
 import warnings
 warnings.filterwarnings("ignore", message="Dimension of lattice is larger than maximum supported")
 
-n = 32
+def from_canonical_scaled(M, t, offset=None):
+    """
+    param M: updated GSO.Mat object
+    param t: target vector
+    param offset: number of last coordinates the coordinates are computed for
+                  or None if the dimension is maximal
+    """
+    if offset is None:
+        offset=M.d
+    t_ = np.array( M.from_canonical(t)[-offset:], dtype=np.float128 )
+    r_ = np.array( [sqrt(tt) for tt in M.r()[-offset:]], dtype=np.float128 )
+    return t_*r_
+
+def to_canonical_scaled(M, t, offset=None):
+    """
+    param M: updated GSO.Mat object
+    param t: target vector
+    param offset: number of last coordinates the coordinates are computed for
+                  or None if the dimension is maximal
+    """
+    if offset is None:
+        offset=M.d
+    t_ = np.array( M.from_canonical(t)[-offset:], dtype=np.float128 )
+    r_ = np.array( [sqrt(tt)**(-0.5) for tt in M.r()[-offset:]], dtype=np.float128 )
+    tmp = t_*r_
+    return M.to_canonical(tmp)
+
+n = 25
 B = IntegerMatrix(n,n)
-B.randomize("qary", k=n//2+2, bits=15.2)
+B.randomize("qary", k=n//2+2, bits=17.2)
 G = GSO.Mat(B)
 G.update_gso()
 
@@ -65,10 +92,17 @@ g6k()
 
 print(f"dbsize: {len(g6k)}")
 
+# t_gs = from_canonical_scaled( g6k.M,t )
+t_gs = g6k.M.from_canonical(t)
+
 then = perf_counter()
-out = g6k.randomized_iterative_slice(t,1)
+out_gs = g6k.randomized_iterative_slice(t_gs,100)
 print(f"Slicer done in: {perf_counter()-then}")
 
-print([round(tt) for tt in out])
+# out = to_canonical_scaled(g6k.M,out_gs)
+out = g6k.M.to_canonical(out_gs)
+out = [round(tt) for tt in out]
 print(len(out))
 print(f"Slicer outputs: {out}")
+print(f"out-b={out-b_}")
+print(f"out-t={np.array(out)-np.array(t)}")
