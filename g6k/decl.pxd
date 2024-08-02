@@ -241,6 +241,9 @@ cdef extern from "../kernel/siever.h" nogil:
 
         void hk3_sieve(double alpha)
 
+        # CVPP
+        void randomized_iterative_slice( float* t_yr, size_t max_entries_used, size_t samples )
+
         void best_lifts(long* vecs, double* lens)
         void db_stats(long* cumul_histo)
 

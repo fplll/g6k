@@ -446,7 +446,7 @@ public:
     explicit Siever(unsigned int full_n, double const* mu, const SieverParams &params, unsigned long int seed = 0)
         : Siever(params, seed)
     {
-        
+
         load_gso(full_n, mu);
         r = full_n;
     }
@@ -529,6 +529,13 @@ public:
     void hk3_sieve(double alpha); // in triple_sieve_mt.cpp
 
 /**
+    CVPP
+**/
+    FT iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_entries_used=0 );
+    void randomize_target(std::array<LFT, MAX_SIEVING_DIM>& t_yr, size_t k );
+    void randomized_iterative_slice( float* t_yr, size_t max_entries_used=0, size_t samples=1 );
+
+/**
     Retrieving data about the sieve:
     TODO: Document!!!
 */
@@ -569,7 +576,7 @@ public: // TODO: Make more things private and do not export to Python.
     unsigned int r;                           // current context right position
     unsigned int n;                           // current context dimension, n = r - l
 
-  
+
     // gso_update_postprocessing post-processes the database with the change-of-basis transformation M
     // - Thread-safety ensured by each thread working on different data
     // - Matrix M should have dimension old_n * new_n
@@ -1088,17 +1095,17 @@ private:
 
     bool bdgl_replace_in_db(size_t cdb_index, Entry &e);
 
-    void bdgl_bucketing_task(const size_t t_id, 
+    void bdgl_bucketing_task(const size_t t_id,
                              std::vector<uint32_t> &buckets, std::vector<atomic_size_t_wrapper> &buckets_index,
                              ProductLSH &lsh);
-    void bdgl_bucketing(const size_t blocks, const size_t multi_hash, const size_t nr_buckets_aim, 
+    void bdgl_bucketing(const size_t blocks, const size_t multi_hash, const size_t nr_buckets_aim,
                         std::vector<uint32_t> &buckets, std::vector<atomic_size_t_wrapper> &buckets_index);
 
-    void bdgl_process_buckets_task(const size_t t_id, const std::vector<uint32_t> &buckets, 
+    void bdgl_process_buckets_task(const size_t t_id, const std::vector<uint32_t> &buckets,
                                    const std::vector<atomic_size_t_wrapper> &buckets_index, std::vector<QEntry> &t_queue);
     void bdgl_process_buckets(const std::vector<uint32_t> &buckets, const std::vector<atomic_size_t_wrapper> &buckets_index,
                                 std::vector<std::vector<QEntry>> &t_queues);
-    
+
     void bdgl_queue_create_task( const size_t t_id, const std::vector<QEntry> &queue, std::vector<Entry> &transaction_dbi, int64_t &write_index);
     void bdgl_queue_dup_remove_task( std::vector<QEntry> &queue);
     size_t bdgl_queue_insert_task( const size_t t_id, std::vector<Entry> &transaction_dbi, int64_t write_index);
