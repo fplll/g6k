@@ -92,17 +92,24 @@ g6k()
 
 print(f"dbsize: {len(g6k)}")
 
-# t_gs = from_canonical_scaled( g6k.M,t )
-t_gs = g6k.M.from_canonical(t)
+# t_gs = g6k.M.from_canonical(t)
+t_gs = from_canonical_scaled( g6k.M,t )
 
 then = perf_counter()
-out_gs = g6k.randomized_iterative_slice(t_gs,200)
+out_gs = g6k.randomized_iterative_slice(t_gs,100)
+print(out_gs)
 print(f"Slicer done in: {perf_counter()-then}")
 
-# out = to_canonical_scaled(g6k.M,out_gs)
-out = g6k.M.to_canonical(out_gs)
+out = to_canonical_scaled(g6k.M,out_gs)
+# out = g6k.M.to_canonical(out_gs)
 out = [round(tt) for tt in out]
+
 print(len(out))
-print(f"Slicer outputs: {out}")
+print(f"Slicer outputs: {[float(o) for o in out_gs]}")
+print(f"out: {out}")
 print(f"out-b={out-b_}")
 print(f"out-t={np.array(out)-np.array(t)}")
+
+cout = g6k.M.babai(out)
+babout = g6k.M.B.multiply_left( cout )
+print(np.array(babout),np.array(out))

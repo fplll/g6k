@@ -1309,7 +1309,7 @@ cdef class Siever(object):
             t_yr[i] = target_yr[i]
 
         sig_on()
-        self._core.randomized_iterative_slice( <float*> t_yr.data, samples, max_entries_used)
+        self._core.randomized_iterative_slice( <float*> t_yr.data, max_entries_used, samples)
         sig_off()
 
         return_yr = zeros( (self.n,), dtype=float32)
