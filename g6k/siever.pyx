@@ -1297,7 +1297,7 @@ cdef class Siever(object):
 
     #CVPP
     # Target is expected in normalized gram schmidth coordinates, like the internal yr of the db
-    def randomized_iterative_slice(self, target_yr, size_t samples, size_t max_entries_used=0):
+    def randomized_iterative_slice(self, target_yr, size_t max_entries_used=0, size_t samples=10):
         assert(self.initialized)
         if max_entries_used == 0:
             max_entries_used = self.db_size()
@@ -1317,6 +1317,28 @@ cdef class Siever(object):
         for i in xrange(self.n):
             return_yr[i] = t_yr[i]
         return return_yr
+
+    # def iterative_slice(self, size_t target_yr, size_t max_entries_used=0):
+    #   assert(self.initialized)
+    #   if max_entries_used == 0:
+    #       max_entries_used = self.db_size()
+    #   assert(max_entries_used <= self.db_size())
+    #
+    #   cdef np.ndarray t_yr = zeros( (self.n,), dtype=float32)
+    #
+    #   for i in xrange(self.n):
+    #       t_yr[i] = target_yr[i]
+    #
+    #   sig_on()
+    #   self._core.iterative_slice( <float*> t_yr.data, max_entries_used)
+    #   self._core.
+    #   sig_off()
+    #
+    #   return_yr = zeros( (self.n,), dtype=float32)
+    #
+    #   for i in xrange(self.n):
+    #       return_yr[i] = t_yr[i]
+    #   return return_yr
 
     def __call__(self, alg=None, reset_stats=True, tracer=dummy_tracer):
         assert(self.initialized)

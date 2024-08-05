@@ -96,7 +96,7 @@ print(f"dbsize: {len(g6k)}")
 t_gs = from_canonical_scaled( g6k.M,t )
 
 then = perf_counter()
-out_gs = g6k.randomized_iterative_slice(t_gs,100)
+out_gs = g6k.randomized_iterative_slice(t_gs,samples=10)
 print(out_gs)
 print(f"Slicer done in: {perf_counter()-then}")
 
@@ -112,4 +112,5 @@ print(f"out-t={np.array(out)-np.array(t)}")
 
 cout = g6k.M.babai(out)
 babout = g6k.M.B.multiply_left( cout )
-print(np.array(babout),np.array(out))
+# print(np.array(babout),np.array(out))
+print(f"Vector in lattice: {all(np.array(babout)==np.array(out))}")
