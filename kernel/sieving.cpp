@@ -380,6 +380,8 @@ FT Siever::iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_en
     for( size_t i = 0; i < n; i++ )
         target_len += t_yr[i] * t_yr[i];
 
+    std::cout << "original length:" << target_len <<std::endl;
+
     bool reduced = true;
     while(reduced) {
         reduced = false;
@@ -416,31 +418,35 @@ FT Siever::iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_en
 
             LFT new_l;
             if (UNLIKELY(k != 0.)) {
-              new_l = target_len + fast_cdb[j].len - 2 * k * inner;
-                if (UNLIKELY(new_l < bestl)) {
+              new_l = target_len + k*k*fast_cdb[j].len - 2 * k * inner;
+              if (UNLIKELY(new_l < bestl)) {
                     besti = index;
                     bestk = k;
                     bestl = new_l;
-            }
+                    std::cout << besti << " " << new_l << " " << bestk << std::endl;
+              }
           }
         }
 
         if( besti >= 0 ) {
             reduced = true;
-            /**
+
+            /*
             int index = besti;
             LFT const inner = std::inner_product(t_yr.begin(), t_yr.begin()+n, db[index].yr.begin(),  static_cast<LFT>(0.));
 
             int const sign = inner < 0 ? 1 : -1;
             addmul_vec(t_yr,  db[index].yr, static_cast<LFT>(sign));
-            **/
-            addmul_vec(t_yr,  db[besti].yr, bestk);
+            */
+            addmul_vec(t_yr,  db[besti].yr, -bestk);
 
             // recalculate length for precision
             target_len = 0;
             for( size_t i = 0; i < n; i++ ) {
                 target_len += t_yr[i] * t_yr[i];
             }
+            std::cout << "target_len: " << target_len << std::endl;
+            //assert(false);
         }
     }
     return target_len;
@@ -451,6 +457,7 @@ void Siever::randomize_target(std::array<LFT, MAX_SIEVING_DIM>& t_yr, size_t k )
     for( size_t s = 0; s < k; s++ ) {
         // add random db element
         int index = cdb[rng()%cdb.size()].i;
+        std::cout << "index: " << index << std::endl;
         LFT* db_yr = db[index].yr.data();
         for( size_t i = 0; i < n; i++ )
             t_yr[i] += db_yr[i];
@@ -461,8 +468,10 @@ void Siever::randomized_iterative_slice( float* t_yr, size_t max_entries_used, s
     if( max_entries_used == 0 )
         max_entries_used = cdb.size();
 
+    std::cout << " cdb.size(): " <<  cdb.size() << std::endl;
+
     // #vectors used for rerandomization
-    const size_t k = 10;
+    const size_t k = 3;
 
     std::array<LFT, MAX_SIEVING_DIM> temp_yr;
     std::array<LFT, MAX_SIEVING_DIM> best_yr;
@@ -474,10 +483,11 @@ void Siever::randomized_iterative_slice( float* t_yr, size_t max_entries_used, s
         best_length += best_yr[i] * best_yr[i];
     }
 
+
     for( size_t s = 0; s < samples; s++ ) {
         std::copy(best_yr.begin(), best_yr.begin()+n, temp_yr.begin());
         randomize_target( temp_yr, k );
-
+        std::cout << "finished randimizing" << std::endl;
         tmp_length = iterative_slice( temp_yr, max_entries_used );
         if( tmp_length < best_length ) {
             best_length = tmp_length;

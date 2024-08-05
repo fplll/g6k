@@ -52,9 +52,9 @@ def to_canonical_scaled(M, t, offset=None):
     tmp = t_*r_
     return M.to_canonical(tmp)
 
-n = 25
+n = 42
 B = IntegerMatrix(n,n)
-B.randomize("qary", k=n//2+2, bits=17.2)
+B.randomize("qary", k=n//2, bits=17.2)
 G = GSO.Mat(B)
 G.update_gso()
 
@@ -62,7 +62,7 @@ lll = LLL.Reduction(G)
 lll()
 
 bkz = LatticeReduction(B)
-for beta in range(2,20+1):
+for beta in range(5,36):
     then_round=time.perf_counter()
     bkz.BKZ(beta,tours=5)
     round_time = time.perf_counter()-then_round
@@ -72,7 +72,7 @@ int_type = bkz.gso.B.int_type
 G = GSO.Mat( bkz.gso.B, U=IntegerMatrix.identity(n,int_type=int_type), UinvT=IntegerMatrix.identity(n,int_type=int_type) )
 G.update_gso()
 c = [ randrange(-3,4) for j in range(n) ]
-e = np.array( [ randrange(-3,4) for j in range(n) ],dtype=np.int64 )
+e = np.array( [ randrange(0,2) for j in range(n) ],dtype=np.int64 )
 
 b = G.B.multiply_left( c )
 b_ = np.array(b,dtype=np.int64)
@@ -84,7 +84,7 @@ print(f"ans_coords: {c}")
 print(f"target: {t}")
 
 param_sieve = SieverParams()
-param_sieve['threads'] = 10
+#param_sieve['threads'] = 10
 param_sieve['default_sieve'] = "bgj1"
 g6k = Siever(G,param_sieve)
 g6k.initialize_local(0,0,n)
@@ -96,7 +96,7 @@ print(f"dbsize: {len(g6k)}")
 t_gs = g6k.M.from_canonical(t)
 
 then = perf_counter()
-out_gs = g6k.randomized_iterative_slice(t_gs,100)
+out_gs = g6k.randomized_iterative_slice(t_gs,200)
 print(f"Slicer done in: {perf_counter()-then}")
 
 # out = to_canonical_scaled(g6k.M,out_gs)
