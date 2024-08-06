@@ -34,8 +34,9 @@ def from_canonical_scaled(M, t, offset=None):
     """
     if offset is None:
         offset=M.d
-    t_ = np.array( M.from_canonical(t)[-offset:], dtype=np.float128 )
-    r_ = np.array( [sqrt(tt) for tt in M.r()[-offset:]], dtype=np.float128 )
+    t_ = np.array( M.from_canonical(t)[-offset:], dtype=np.float64 )
+    r_ = np.array( [sqrt(tt) for tt in M.r()[-offset:]], dtype=np.float64 )
+    print("r_ from test:", r_);
     return t_*r_
 
 def to_canonical_scaled(M, t, offset=None):
@@ -47,8 +48,8 @@ def to_canonical_scaled(M, t, offset=None):
     """
     if offset is None:
         offset=M.d
-    t_ = np.array( M.from_canonical(t)[-offset:], dtype=np.float128 )
-    r_ = np.array( [sqrt(tt)**(-0.5) for tt in M.r()[-offset:]], dtype=np.float128 )
+    t_ = np.array( M.from_canonical(t)[-offset:], dtype=np.float64 )
+    r_ = np.array( [sqrt(tt)**(-0.5) for tt in M.r()[-offset:]], dtype=np.float64 )
     tmp = t_*r_
     return M.to_canonical(tmp)
 
@@ -96,7 +97,7 @@ print(f"dbsize: {len(g6k)}")
 t_gs = from_canonical_scaled( g6k.M,t )
 
 then = perf_counter()
-out_gs = g6k.randomized_iterative_slice(t_gs,samples=10)
+out_gs = g6k.randomized_iterative_slice(t_gs, 0, 1)
 print(out_gs)
 print(f"Slicer done in: {perf_counter()-then}")
 

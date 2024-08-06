@@ -380,11 +380,11 @@ FT Siever::iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_en
     for( size_t i = 0; i < n; i++ )
         target_len += t_yr[i] * t_yr[i];
 
-    std::cout << "original length:" << target_len <<std::endl;
+    std::cout << "starting length:" << target_len <<std::endl;
 
     bool reduced = true;
     while(reduced) {
-        reduced = false;
+        //reduced = false;
 
         // find best reduction
         int besti = -1;
@@ -429,7 +429,6 @@ FT Siever::iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_en
         }
 
         if( besti >= 0 ) {
-            reduced = true;
 
             /*
             int index = besti;
@@ -448,6 +447,11 @@ FT Siever::iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_en
             std::cout << "target_len: " << target_len << std::endl;
             //assert(false);
         }
+        else{
+            std::cout << besti << std::endl;
+            reduced = false;
+            //break;
+        }
     }
     return target_len;
 }
@@ -464,10 +468,50 @@ void Siever::randomize_target(std::array<LFT, MAX_SIEVING_DIM>& t_yr, size_t k )
     }
 }
 
+void Siever::randomize_target_small(std::array<LFT, MAX_SIEVING_DIM> &t_yr, size_t k) {
+    size_t fullS = cdb.size();
+    size_t max_trial = 2 + std::pow(fullS, .3);
+    CompressedEntry* fast_cdb = &(cdb.front());
+    size_t partial = 5 * std::pow(fullS, .6);
+
+    std::array<LFT,MAX_SIEVING_DIM> tmp;
+
+    size_t i = (rng() % partial);
+    size_t j = (rng() % partial);
+
+    for (unsigned int trial=0;;++trial) {
+        ++j;
+        unsigned int w1 = 0;
+        unsigned int w2 = 0;
+        for (size_t k = 0; k < XPC_WORD_LEN; ++k) {
+            w1 += __builtin_popcountl(fast_cdb[i].c[k] ^ fast_cdb[j].c[k]);
+        }
+        if (w1 < XPC_SLICER_SAMPLING_THRESHOLD || w1 > (XPC_BIT_LEN - XPC_SLICER_SAMPLING_THRESHOLD) || trial > max_trial) {
+            if (i == j) continue;
+            ZT sign = w1 < XPC_SLICER_SAMPLING_THRESHOLD / 2 ? -1 : 1;
+
+            for( size_t ii = 0; ii < n; ii++ ) {
+                tmp[ii] = db[cdb[i].i].yr[ii];
+            }
+            std::cout << "w1: " << w1 << std::endl;
+            addsub_vec(tmp, db[cdb[j].i].x, static_cast<ZT>(sign));
+
+            //TODO: change to XPC
+            LFT const inner = std::inner_product(t_yr.begin(), t_yr.begin() + n, tmp.begin(), static_cast<LFT>(0.));
+            sign = inner < 0 ? 1 : -1;
+            addsub_vec(t_yr, tmp, static_cast<ZT>(sign));
+            break;
+        }
+    }
+}
+
 void Siever::randomized_iterative_slice( float* t_yr, size_t max_entries_used, size_t samples ) {
     if( max_entries_used == 0 )
         max_entries_used = cdb.size();
 
+    for( size_t i = 0; i < n; i++ ) {
+        std::cout << sqrt_rr[i] << std::endl;
+    }
     std::cout << " cdb.size(): " <<  cdb.size() << std::endl;
 
     // #vectors used for rerandomization
@@ -483,16 +527,18 @@ void Siever::randomized_iterative_slice( float* t_yr, size_t max_entries_used, s
         best_length += best_yr[i] * best_yr[i];
     }
 
+    std::cout << "original length: " << best_length << std::endl;
 
     for( size_t s = 0; s < samples; s++ ) {
         std::copy(best_yr.begin(), best_yr.begin()+n, temp_yr.begin());
-        randomize_target( temp_yr, k );
-        std::cout << "finished randimizing" << std::endl;
-        tmp_length = iterative_slice( temp_yr, max_entries_used );
-        if( tmp_length < best_length ) {
+        //randomize_target_small(temp_yr, k);
+        tmp_length = iterative_slice(temp_yr, max_entries_used);
+        if (tmp_length < best_length) {
             best_length = tmp_length;
-            std::copy(temp_yr.begin(), temp_yr.begin()+n, best_yr.begin());
+            std::copy(temp_yr.begin(), temp_yr.begin() + n, best_yr.begin());
+            std::cout << "best length: " << best_length << std::endl;
         }
+        randomize_target( temp_yr, k );
     }
 
     for( size_t i = 0; i < n; i++ )
