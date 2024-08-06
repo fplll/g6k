@@ -383,7 +383,13 @@ FT Siever::iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_en
     std::cout << "original length:" << target_len <<std::endl;
 
     bool reduced = true;
-    while(reduced) {
+    uint64_t list_rerandomization_num, cntr;
+    list_rerandomization_num = 25; //in theory = 1
+    cntr = 0;
+    while(reduced && (cntr<list_rerandomization_num)) {
+    // while(reduced) {
+        cntr++;
+        // std::cout << "cntr: " << cntr << " cap: " << cap << " " << reduced << " " << (cntr<cap) <<std::endl;
         reduced = false;
 
         // find best reduction
@@ -419,11 +425,11 @@ FT Siever::iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_en
             LFT new_l;
             if (UNLIKELY(k != 0.)) {
               new_l = target_len + k*k*fast_cdb[j].len - 2 * k * inner;
-              if (UNLIKELY(new_l < bestl)) {
+              if (UNLIKELY(new_l < (bestl - 0.00001))) { //precision fix
                     besti = index;
                     bestk = k;
                     bestl = new_l;
-                    std::cout << besti << " " << new_l << " " << bestk << std::endl;
+                    // std::cout << besti << " " << new_l << " " << bestk << std::endl;
               }
           }
         }
@@ -445,7 +451,7 @@ FT Siever::iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_en
             for( size_t i = 0; i < n; i++ ) {
                 target_len += t_yr[i] * t_yr[i];
             }
-            std::cout << "target_len: " << target_len << std::endl;
+            // std::cout << "target_len: " << target_len << std::endl;
             //assert(false);
         }
     }
@@ -457,7 +463,7 @@ void Siever::randomize_target(std::array<LFT, MAX_SIEVING_DIM>& t_yr, size_t k )
     for( size_t s = 0; s < k; s++ ) {
         // add random db element
         int index = cdb[rng()%cdb.size()].i;
-        std::cout << "index: " << index << std::endl;
+        // std::cout << "index: " << index << std::endl;
         LFT* db_yr = db[index].yr.data();
         for( size_t i = 0; i < n; i++ )
             t_yr[i] += db_yr[i];
