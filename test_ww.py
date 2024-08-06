@@ -84,7 +84,7 @@ def to_canonical_scaled(M, t, offset=None):
     tmp = t*r_
     return M.to_canonical(tmp)[-offset:]
 
-n = 64
+n = 42
 B = IntegerMatrix(n,n)
 B.randomize("qary", k=n//2, bits=14.05)
 G = GSO.Mat(B)
@@ -133,7 +133,7 @@ print(f"t_gs: {t_gs} | norm: {(t_gs@t_gs)}")
 
 then = perf_counter()
 
-out_gs = g6k.randomized_iterative_slice([float(tt) for tt in t_gs],samples=1000)
+out_gs = g6k.randomized_iterative_slice([float(tt) for tt in t_gs],samples=50)
 
 print(f"Slicer done in: {perf_counter()-then}")
 

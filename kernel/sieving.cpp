@@ -444,11 +444,10 @@ FT Siever::iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_en
             for( size_t i = 0; i < n; i++ ) {
                 target_len += t_yr[i] * t_yr[i];
             }
-            // std::cout << "target_len: " << target_len << std::endl;
+            std::cout << "new target_len: " << target_len << std::endl;
             //assert(false);
         }
         else{
-            std::cout << besti << std::endl;
             reduced = false;
             //break;
         }
@@ -491,10 +490,10 @@ void Siever::randomize_target_small(std::array<LFT, MAX_SIEVING_DIM> &t_yr, size
             ZT sign = w1 < XPC_SLICER_SAMPLING_THRESHOLD / 2 ? -1 : 1;
 
             for( size_t ii = 0; ii < n; ii++ ) {
-                tmp[ii] = db[cdb[i].i].yr[ii];
+                tmp[ii] = db[cdb[i].i].yr[ii] + sign*db[cdb[j].i].yr[ii];
             }
-            std::cout << "w1: " << w1 << std::endl;
-            addsub_vec(tmp, db[cdb[j].i].x, static_cast<ZT>(sign));
+            //std::cout << "w1: " << w1 << std::endl;
+            //addsub_vec(tmp, db[cdb[j].i].x, static_cast<ZT>(sign));
 
             //TODO: change to XPC
             LFT const inner = std::inner_product(t_yr.begin(), t_yr.begin() + n, tmp.begin(), static_cast<LFT>(0.));
@@ -509,9 +508,9 @@ void Siever::randomized_iterative_slice( float* t_yr, size_t max_entries_used, s
     if( max_entries_used == 0 )
         max_entries_used = cdb.size();
 
-    for( size_t i = 0; i < n; i++ ) {
-        std::cout << sqrt_rr[i] << std::endl;
-    }
+    //for( size_t i = 0; i < n; i++ ) {
+    //    std::cout << sqrt_rr[i] << std::endl;
+    //}
     std::cout << " cdb.size(): " <<  cdb.size() << std::endl;
 
     // #vectors used for rerandomization
@@ -529,16 +528,19 @@ void Siever::randomized_iterative_slice( float* t_yr, size_t max_entries_used, s
 
     std::cout << "original length: " << best_length << std::endl;
 
+    std::copy(best_yr.begin(), best_yr.begin()+n, temp_yr.begin());
+
     for( size_t s = 0; s < samples; s++ ) {
-        std::copy(best_yr.begin(), best_yr.begin()+n, temp_yr.begin());
-        //randomize_target_small(temp_yr, k);
+
         tmp_length = iterative_slice(temp_yr, max_entries_used);
-        if (tmp_length < best_length) {
+        //std::cout << "tmp_length after slicer " << tmp_length << " best_length " << best_length << std::endl;
+        if (tmp_length < best_length-0.0001) { //TODO: handle precision nicer
             best_length = tmp_length;
             std::copy(temp_yr.begin(), temp_yr.begin() + n, best_yr.begin());
-            std::cout << "best length: " << best_length << std::endl;
+            //std::cout << "best length: " << best_length << std::endl;
         }
-        randomize_target( temp_yr, k );
+        //randomize_target( temp_yr, k );
+        randomize_target_small(temp_yr, k);
     }
 
     for( size_t i = 0; i < n; i++ )
