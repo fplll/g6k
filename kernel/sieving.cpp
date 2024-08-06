@@ -534,7 +534,7 @@ void Siever::randomized_iterative_slice( float* t_yr, size_t max_entries_used, s
 
         tmp_length = iterative_slice(temp_yr, max_entries_used);
         //std::cout << "tmp_length after slicer " << tmp_length << " best_length " << best_length << std::endl;
-        if (tmp_length < best_length-0.0001) { //TODO: handle precision nicer
+        if ( UNLIKELY(tmp_length < (best_length - 0.00001))) {
             best_length = tmp_length;
             std::copy(temp_yr.begin(), temp_yr.begin() + n, best_yr.begin());
             //std::cout << "best length: " << best_length << std::endl;
