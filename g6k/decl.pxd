@@ -6,6 +6,9 @@ from libcpp.string cimport string
 from libcpp cimport bool
 from libc.stdint cimport int16_t, int32_t, uint64_t
 
+from cpython cimport array
+import array
+
 cdef extern from "../kernel/siever.h" nogil:
 
     cdef const long int XPC_WORD_LEN
@@ -243,6 +246,10 @@ cdef extern from "../kernel/siever.h" nogil:
 
         # CVPP
         void randomized_iterative_slice( float* t_yr, size_t max_entries_used, size_t samples )
+        # loading from a file
+        # void Siever::append_db( const std::vector< std::array<ZT, MAX_SIEVING_DIM> >& x_arr ){
+        void append_db( vector[ZT[128]]& x_arr )
+        # void append_db(const vector[ZT*]& x_arr)
 
         void best_lifts(long* vecs, double* lens)
         void db_stats(long* cumul_histo)

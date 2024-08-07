@@ -11,6 +11,10 @@ from fpylll.tools.bkz_stats import dummy_tracer
 from cysignals.signals cimport sig_on, sig_off
 from libcpp cimport bool
 from libcpp.string cimport string
+# from cpython cimport array
+# import array
+from libc.stdint cimport int16_t, int32_t, uint64_t
+
 import warnings
 import logging
 import copy
@@ -31,6 +35,47 @@ from scipy.special import betaincinv
 from siever_params import temp_params
 
 from libc.math cimport NAN
+
+import sys, os #TODO: check if open() requires either of these
+import pickle
+from libcpp.vector cimport vector
+
+# cdef extern from "../kernel/siever.h" nogil:
+#
+#     cdef const long int XPC_WORD_LEN
+#     cdef const long int XPC_BIT_LEN
+#     cdef const long int XPC_THRESHOLD
+#     cdef const long int XPC_SAMPLING_THRESHOLD
+#     cdef const long int XPC_BUCKET_THRESHOLD
+#
+#     cdef const long int REDUCE_LEN_MARGIN
+#     cdef const long int REDUCE_LEN_MARGIN_HALF
+#     cdef const long int BGJ1_ALPHA_INIT
+#     cdef const long int BGJ1_ALPHA_STEP
+#     cdef const long int CACHE_BLOCK
+#
+#     cdef const int  MAX_SIEVING_DIM
+#
+#     ctypedef double FT
+#     ctypedef float  LFT
+#     ctypedef int16_t ZT
+#     ctypedef int32_t IT
+#     ctypedef uint64_t UidType
+#
+# cdef extern from "<array>" namespace "std" nogil:
+#     cdef cppclass ARRAY_MAX_SIEVING_DIM "std::array<ZT, MAX_SIEVING_DIM>":
+#         ARRAY_MAX_SIEVING_DIM() except +
+#         double& operator[](size_t)
+#
+# cdef ARRAY_MAX_SIEVING_DIMToNumpy(ARRAY_MAX_SIEVING_DIM arr):
+#     cdef double[::1] view = <ZT[:MAX_SIEVING_DIM]>(&arr[0])
+#     return np.asarray(view.copy())
+#
+# cdef ARRAY_MAX_SIEVING_DIM numpyToARRAY_MAX_SIEVING_DIM(nparr):
+#     nparr = np.asarray(nparr, dtype=np.double)
+#     cdef ZT[:] view = memoryview(nparr)
+#     cdef ARRAY_MAX_SIEVING_DIM *arr = <ARRAY_MAX_SIEVING_DIM *>(&view[0])
+#     return dereference(arr)
 
 class SaturationError(RuntimeError):
     pass
@@ -1317,6 +1362,71 @@ cdef class Siever(object):
         for i in xrange(self.n):
             return_yr[i] = t_yr[i]
         return return_yr
+
+    def dump_on_disk(self, filename):
+      D = {
+        "B":   array( [ array([self.M.B[i,j] for j in range(self.M.B.ncols)]) for i in range(self.M.B.nrows) ] ),
+        "ll":  self.ll,
+        "l":   self.l,
+        "r":   self.r,
+        "default_sieve": self._params["default_sieve"],
+        "coeffs": [ list(tmp) for tmp in self.itervalues() ]
+      }
+      with open( filename, "wb" ) as file:
+          pickle.dump( D,file )
+
+    # Restoring db from pickled data.
+    # The pickled data is consisting of:
+    # > np.array(np.array) B -- reduced basis ;
+    # > int contexts ll, l, r;
+    # > string default_sieve;
+    # > a list coeffs of arrays of (r-ll) integers representing coordinates of db's vectors w.r.t. the local basis
+    #   defined by B, ll and r.
+    # Only Siever objects using bgj1 sieve are currently supported.
+    @classmethod
+    def restore_from_file(cls,filename):
+      raise NotImplementedError("Restoring Siever object from pickled data is not yet implemented.")
+
+      with open( filename, "rb" ) as file:
+          data = pickle.load( file )
+      B = data["B"]
+      ll, l, r = data["ll"], data["l"], data["r"]
+      default_sieve = data["default_sieve"]
+      assert default_sieve == "bgj1", f"Siever type {default_sieve} not supported. Use bgj1."
+      coeffs = data["coeffs"]
+
+      B = IntegerMatrix.from_matrix( B, int_type="long" )
+      U = IntegerMatrix.identity(B.nrows, int_type="long")
+      UinvT = IntegerMatrix.identity(B.nrows, int_type="long")
+      G = GSO.Mat( B, float_type="dd", U=U, UinvT=UinvT ) #TODO: choose the float_type dynamically
+      G.update_gso()
+
+      param_sieve = SieverParams()
+      param_sieve['threads'] = 5 #TODO: pass as an argument?
+      param_sieve['default_sieve'] = default_sieve
+      mySiever =  Siever(G,param_sieve)
+      mySiever.initialize_local(ll,l,r)
+
+      loc_dim = r-ll #the dimension of sieve
+      assert len(coeffs[0]) == r-ll, f"Corrupted siever context: expected {r-ll} got {len(coeffs[0])}."
+      for i in range(len(coeffs)):
+          coeffs[i] += (MAX_SIEVING_DIM-loc_dim)*[0]
+
+      # cdef ARRAY_MAX_SIEVING_DIM c_row #temp vector
+      # cdef vector[ARRAY_MAX_SIEVING_DIM] c_x_arr
+      cdef int[128] c_row #temp vector
+      cdef vector[int[128]] c_x_arr
+
+      if len(coeffs[0]) != MAX_SIEVING_DIM:
+          raise ValueError(f"Each row must have {MAX_SIEVING_DIM} elements")
+      for row in coeffs:
+          for j in range(MAX_SIEVING_DIM):
+              c_row[j] = row[j]
+          c_x_arr.push_back(c_row)
+      print("AAAAA")
+      mySiever._core.append_db(c_x_arr)
+
+      return mySiever
 
     def __call__(self, alg=None, reset_stats=True, tracer=dummy_tracer):
         assert(self.initialized)

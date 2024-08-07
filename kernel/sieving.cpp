@@ -546,3 +546,10 @@ void Siever::randomized_iterative_slice( float* t_yr, size_t max_entries_used, s
     for( size_t i = 0; i < n; i++ )
         t_yr[i] = best_yr[i];
 }
+
+void Siever::append_db( const std::vector< std::array<ZT, MAX_SIEVING_DIM> >& x_arr ){
+  for (const auto& x_cur : x_arr) {
+      // uses insert_in_db_and_uid(std::array<ZT,MAX_SIEVING_DIM> &x)
+      insert_in_db_and_uid(const_cast<std::array<ZT, MAX_SIEVING_DIM>&>(x_cur));
+  }
+}
