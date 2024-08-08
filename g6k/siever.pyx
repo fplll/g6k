@@ -41,19 +41,6 @@ import pickle
 from libcpp.vector cimport vector
 
 # cdef extern from "../kernel/siever.h" nogil:
-#
-#     cdef const long int XPC_WORD_LEN
-#     cdef const long int XPC_BIT_LEN
-#     cdef const long int XPC_THRESHOLD
-#     cdef const long int XPC_SAMPLING_THRESHOLD
-#     cdef const long int XPC_BUCKET_THRESHOLD
-#
-#     cdef const long int REDUCE_LEN_MARGIN
-#     cdef const long int REDUCE_LEN_MARGIN_HALF
-#     cdef const long int BGJ1_ALPHA_INIT
-#     cdef const long int BGJ1_ALPHA_STEP
-#     cdef const long int CACHE_BLOCK
-#
 #     cdef const int  MAX_SIEVING_DIM
 #
 #     ctypedef double FT
@@ -1385,7 +1372,7 @@ cdef class Siever(object):
     # Only Siever objects using bgj1 sieve are currently supported.
     @classmethod
     def restore_from_file(cls,filename):
-      raise NotImplementedError("Restoring Siever object from pickled data is not yet implemented.")
+      # raise NotImplementedError("Restoring Siever object from pickled data is not yet implemented.")
 
       with open( filename, "rb" ) as file:
           data = pickle.load( file )
@@ -1414,16 +1401,20 @@ cdef class Siever(object):
 
       # cdef ARRAY_MAX_SIEVING_DIM c_row #temp vector
       # cdef vector[ARRAY_MAX_SIEVING_DIM] c_x_arr
-      cdef int[128] c_row #temp vector
-      cdef vector[int[128]] c_x_arr
+      # cdef ZT[128] c_row #temp vector
+      cdef vector[ZT*] c_x_arr
 
       if len(coeffs[0]) != MAX_SIEVING_DIM:
           raise ValueError(f"Each row must have {MAX_SIEVING_DIM} elements")
-      for row in coeffs:
+      for row in coeffs[:-1]:
+          cdef ZT[128] c_row #allocate a temp vector
           for j in range(MAX_SIEVING_DIM):
               c_row[j] = row[j]
           c_x_arr.push_back(c_row)
-      print("AAAAA")
+          print(c_row)
+      print(f"- - -")
+      for tmp in c_x_arr:
+        print([ tmp[i] for i in range(64) ])
       mySiever._core.append_db(c_x_arr)
 
       return mySiever

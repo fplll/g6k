@@ -543,7 +543,7 @@ public:
     Sadly, the encapsulation of the c++ layer would be partially violated since x's would be loaded from
     python's pickle and processed with cython.
     */
-    void append_db(const std::vector< std::array<ZT, MAX_SIEVING_DIM> >& x_arr);
+    void append_db(const std::vector< ZT* >& x_arr);
 
 /**
     Retrieving data about the sieve:
