@@ -548,21 +548,24 @@ void Siever::randomized_iterative_slice( float* t_yr, size_t max_entries_used, s
 }
 
 // void Siever::append_db( const std::vector< std::array<ZT, MAX_SIEVING_DIM> >& x_arr ){
-void Siever::append_db( const std::vector< ZT* >& x_arr ){
-  uint32_t cntr = 0;
-  bool succ;
-  // for (const auto& x_cur : x_arr) {
-  for (const auto& x_cur : x_arr) {
-      std::cout << x_cur <<std::endl;
-      std::array<ZT, MAX_SIEVING_DIM> x_cur_arr;
-      std::copy(x_cur, x_cur+MAX_SIEVING_DIM, x_cur_arr.begin());
-      succ = insert_in_db_and_uid(const_cast<std::array<ZT, MAX_SIEVING_DIM>&>(x_cur_arr));
-      // std::cout << cntr++ <<" : " << succ << ", ";
-      // for(int ii=0; ii<MAX_SIEVING_DIM; ii++){
-      //   std::cout << x_cur[ii] <<", ";
-      // }
-      // std::cout << std::endl;
+// void Siever::append_db( const std::vector< ZT* >& x_arr ){
+//   uint32_t cntr = 0;
+//   bool succ;
+//   // for (const auto& x_cur : x_arr) {
+//   for (const auto& x_cur : x_arr) {
+//       std::cout << x_cur <<std::endl;
+//       std::array<ZT, MAX_SIEVING_DIM> x_cur_arr;
+//       std::copy(x_cur, x_cur+MAX_SIEVING_DIM, x_cur_arr.begin());
+//       succ = insert_in_db_and_uid(const_cast<std::array<ZT, MAX_SIEVING_DIM>&>(x_cur_arr));
+//       // std::cout << cntr++ <<" : " << succ << ", ";
+//       // for(int ii=0; ii<MAX_SIEVING_DIM; ii++){
+//       //   std::cout << x_cur[ii] <<", ";
+//       // }
+//       // std::cout << std::endl;
+//   }
+  void Siever::append_db( const ZT* x_arr ){
+    bool succ;
+    std::array<ZT, MAX_SIEVING_DIM> x_cur_arr;
+    std::copy(x_arr, x_arr+MAX_SIEVING_DIM, x_cur_arr.begin());
+    succ = insert_in_db_and_uid(const_cast<std::array<ZT, MAX_SIEVING_DIM>&>(x_cur_arr));
   }
-
-  std::cout << "Size of db: " << db.size() <<std::endl;
-}

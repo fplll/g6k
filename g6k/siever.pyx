@@ -1401,21 +1401,27 @@ cdef class Siever(object):
 
       # cdef ARRAY_MAX_SIEVING_DIM c_row #temp vector
       # cdef vector[ARRAY_MAX_SIEVING_DIM] c_x_arr
-      # cdef ZT[128] c_row #temp vector
+      cdef ZT[128] c_row #temp vector
       cdef vector[ZT*] c_x_arr
 
       if len(coeffs[0]) != MAX_SIEVING_DIM:
           raise ValueError(f"Each row must have {MAX_SIEVING_DIM} elements")
-      for row in coeffs[:-1]:
-          cdef ZT[128] c_row #allocate a temp vector
+      # for row in coeffs[:-1]:
+      #     cdef ZT[128] c_row #allocate a temp vector
+      #     for j in range(MAX_SIEVING_DIM):
+      #         c_row[j] = row[j]
+      #     c_x_arr.push_back(c_row)
+      #     print(c_row)
+      # print(f"- - -")
+      # for tmp in c_x_arr:
+      #   print([ tmp[i] for i in range(64) ])
+      # mySiever._core.append_db(c_x_arr)
+      for row in coeffs:
           for j in range(MAX_SIEVING_DIM):
               c_row[j] = row[j]
-          c_x_arr.push_back(c_row)
-          print(c_row)
-      print(f"- - -")
-      for tmp in c_x_arr:
-        print([ tmp[i] for i in range(64) ])
-      mySiever._core.append_db(c_x_arr)
+          # c_x_arr.push_back(c_row)
+          # print(c_row)
+          mySiever._core.append_db(c_row)
 
       return mySiever
 

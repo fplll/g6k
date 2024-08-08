@@ -538,12 +538,13 @@ public:
     void randomize_target_small(std::array<LFT, MAX_SIEVING_DIM> &t_yr, size_t k);
     void randomized_iterative_slice( float* t_yr, size_t max_entries_used=0, size_t samples=1 );
 
-    /*
+    /* outdated
     append_db receives a vector of arrays std::array<LFT, MAX_SIEVING_DIM> each storing corresponding x.
     Sadly, the encapsulation of the c++ layer would be partially violated since x's would be loaded from
     python's pickle and processed with cython.
     */
-    void append_db(const std::vector< ZT* >& x_arr);
+    // void append_db(const std::vector< ZT* >& x_arr);
+    void append_db(const ZT* x_arr);
 
 /**
     Retrieving data about the sieve:

@@ -249,7 +249,8 @@ cdef extern from "../kernel/siever.h" nogil:
         # loading from a vector of arrays
         # void Siever::append_db( const std::vector< ZT* >& x_arr ){
         # void append_db( vector[ZT*]& x_arr )
-        void append_db( vector[ZT*] x_arr )
+        # void append_db( vector[ZT*] x_arr )
+        void append_db( ZT* x_arr )
 
         void best_lifts(long* vecs, double* lens)
         void db_stats(long* cumul_histo)
