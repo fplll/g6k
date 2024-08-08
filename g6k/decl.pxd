@@ -246,10 +246,7 @@ cdef extern from "../kernel/siever.h" nogil:
 
         # CVPP
         void randomized_iterative_slice( float* t_yr, size_t max_entries_used, size_t samples )
-        # loading from a vector of arrays
-        # void Siever::append_db( const std::vector< ZT* >& x_arr ){
-        # void append_db( vector[ZT*]& x_arr )
-        # void append_db( vector[ZT*] x_arr )
+        # loading db from array item by item
         void append_db( ZT* x_arr )
 
         void best_lifts(long* vecs, double* lens)
