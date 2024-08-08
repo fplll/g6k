@@ -536,8 +536,7 @@ public:
     FT iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_entries_used=0 ); //in sieving.cpp
     void randomize_target(std::array<LFT, MAX_SIEVING_DIM>& t_yr, size_t k );
     void randomize_target_small(std::array<LFT, MAX_SIEVING_DIM> &t_yr, size_t k);
-    void randomized_iterative_slice( float* t_yr, size_t max_entries_used=0, size_t samples=1 );
-
+    void randomized_iterative_slice( float* t_yr, size_t max_entries_used=0, size_t samples=1, float dist_sq_bnd=-1.0 );
     /*
     append_db receives an array storing corresponding x and appends it to the db.
     Sadly, the encapsulation of the c++ layer would be partially violated since x's would be loaded from
@@ -585,6 +584,7 @@ public: // TODO: Make more things private and do not export to Python.
     unsigned int l;                           // current context left position
     unsigned int r;                           // current context right position
     unsigned int n;                           // current context dimension, n = r - l
+    unsigned int n_rerand_sli = 0; //number of rerandomizations last randomized_iterative_slice of slicer did
 
 
     // gso_update_postprocessing post-processes the database with the change-of-basis transformation M

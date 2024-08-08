@@ -40,30 +40,6 @@ import sys, os #TODO: check if open() requires either of these
 import pickle
 from libcpp.vector cimport vector
 
-# cdef extern from "../kernel/siever.h" nogil:
-#     cdef const int  MAX_SIEVING_DIM
-#
-#     ctypedef double FT
-#     ctypedef float  LFT
-#     ctypedef int16_t ZT
-#     ctypedef int32_t IT
-#     ctypedef uint64_t UidType
-#
-# cdef extern from "<array>" namespace "std" nogil:
-#     cdef cppclass ARRAY_MAX_SIEVING_DIM "std::array<ZT, MAX_SIEVING_DIM>":
-#         ARRAY_MAX_SIEVING_DIM() except +
-#         double& operator[](size_t)
-#
-# cdef ARRAY_MAX_SIEVING_DIMToNumpy(ARRAY_MAX_SIEVING_DIM arr):
-#     cdef double[::1] view = <ZT[:MAX_SIEVING_DIM]>(&arr[0])
-#     return np.asarray(view.copy())
-#
-# cdef ARRAY_MAX_SIEVING_DIM numpyToARRAY_MAX_SIEVING_DIM(nparr):
-#     nparr = np.asarray(nparr, dtype=np.double)
-#     cdef ZT[:] view = memoryview(nparr)
-#     cdef ARRAY_MAX_SIEVING_DIM *arr = <ARRAY_MAX_SIEVING_DIM *>(&view[0])
-#     return dereference(arr)
-
 class SaturationError(RuntimeError):
     pass
 
@@ -1329,7 +1305,8 @@ cdef class Siever(object):
 
     #CVPP
     # Target is expected in normalized gram schmidth coordinates, like the internal yr of the db
-    def randomized_iterative_slice(self, target_yr, size_t max_entries_used=0, size_t samples=10):
+    # If mad_dist_sq<=0 no radius constraints enforced
+    def randomized_iterative_slice(self, target_yr, size_t max_entries_used=0, size_t samples=10, float dist_sq_bnd=-1.0, stats_accumulator=None):
         assert(self.initialized)
         if max_entries_used == 0:
             max_entries_used = self.db_size()
@@ -1341,13 +1318,15 @@ cdef class Siever(object):
             t_yr[i] = target_yr[i]
 
         sig_on()
-        self._core.randomized_iterative_slice( <float*> t_yr.data, max_entries_used, samples)
+        self._core.randomized_iterative_slice( <float*> t_yr.data, max_entries_used, samples, dist_sq_bnd)
         sig_off()
 
         return_yr = zeros( (self.n,), dtype=float32)
 
         for i in xrange(self.n):
             return_yr[i] = t_yr[i]
+        if not stats_accumulator is None:
+            stats_accumulator["n_rerand_sli"] = self._core.n_rerand_sli
         return return_yr
 
     def dump_on_disk(self, filename):
