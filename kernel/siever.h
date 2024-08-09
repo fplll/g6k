@@ -584,6 +584,7 @@ public: // TODO: Make more things private and do not export to Python.
     unsigned int l;                           // current context left position
     unsigned int r;                           // current context right position
     unsigned int n;                           // current context dimension, n = r - l
+    //Not thread-safe. Probably, needs reimplementation with stats.
     unsigned int n_rerand_sli = 0; //number of rerandomizations last randomized_iterative_slice of slicer did
 
 

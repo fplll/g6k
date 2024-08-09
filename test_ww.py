@@ -1,5 +1,5 @@
 """
-This file requires LatticeReduction.py and generateLWEInstance.py files in the root of repo.
+This file requires LatticeReduction.py file in the root of repo.
 """
 # from __future__ import absolute_import
 
@@ -78,11 +78,15 @@ def to_canonical_scaled(M, t, offset=None):
     tmp = t*r_
     return M.to_canonical(tmp, start=M.d-offset)
 
-n, betamax, sieve_dim = 140, 30, 30
+n, betamax, sieve_dim = 65, 40, 65
 B = IntegerMatrix(n,n)
 B.randomize("qary", k=n//2, bits=11.705)
 ft = "ld" if n<193 else "dd"
-G = GSO.Mat(B, float_type=ft)
+try:
+    G = GSO.Mat(B, float_type=ft)
+except: #if "dd" is not available
+    FPLLL.set_precision(208)
+    G = GSO.Mat(B, float_type="mpfr")
 G.update_gso()
 
 lll = LLL.Reduction(G)
@@ -115,7 +119,7 @@ print(f"target: {t}")
 
 param_sieve = SieverParams()
 param_sieve['threads'] = 5
-# param_sieve['db_size_factor'] = 3.75
+param_sieve['db_size_factor'] = 3.75
 param_sieve['default_sieve'] = "bgj1"
 g6k = Siever(G,param_sieve)
 g6k.initialize_local(n-sieve_dim,n-sieve_dim,n)
@@ -130,7 +134,7 @@ print(f"t_gs: {t_gs} | norm: {(t_gs@t_gs)}")
 
 then = perf_counter()
 
-out_gs = g6k.randomized_iterative_slice([float(tt) for tt in t_gs],samples=1000)
+out_gs = g6k.randomized_iterative_slice([float(tt) for tt in t_gs],samples=144)
 
 print(f"Slicer done in: {perf_counter()-then}")
 
@@ -190,7 +194,7 @@ for i in range(len(g6k)):
     c0, c1 = np.array(l0[i]), np.array(l1[i])
     assert ( all( c0==c1 ) ), f"DB corrupted!"
 
-projerr = from_canonical_scaled( G,t,offset=sieve_dim )
+projerr = from_canonical_scaled( G,e,offset=sieve_dim )
 projerr_sq_nrm = projerr@projerr / gaussian_heuristic( G.r()[-sieve_dim:] )
 print(f"projerr_sq_nrm: {projerr_sq_nrm}")
 my_dist = projerr_sq_nrm #**0.5 / 2
@@ -198,7 +202,7 @@ print(f"my_dist {my_dist}")
 then = perf_counter()
 
 stats_accumulator = {}
-out_gs = g6k_.randomized_iterative_slice([float(tt) for tt in t_gs],samples=1000, dist_sq_bnd = my_dist, stats_accumulator=stats_accumulator) #1.01*projerr_sq_nrm
+out_gs = g6k_.randomized_iterative_slice([float(tt) for tt in t_gs],samples=144, dist_sq_bnd = my_dist, stats_accumulator=stats_accumulator) #1.01*projerr_sq_nrm
 
 print(f"Slicer done in: {perf_counter()-then}")
 print(stats_accumulator)
