@@ -203,7 +203,7 @@ def run_exp(g6k_obj, approx_fact=0.5, n_targets=1):
 if __name__ == "__main__":
     n_workers = 2
     n_lats = 5
-    n_instances_per_lattice = 5
+    n_instances_per_lattice = 100
     n, k, bits, betamax = 70, 35, 13.8, 40
 
     # - - - Generate lattices - - -
@@ -222,7 +222,7 @@ if __name__ == "__main__":
 
     l = []
     for g6k_obj in lats:
-        l.append( run_exp(g6k_obj, approx_fact=0.5, n_targets=100) )
+        l.append( run_exp(g6k_obj, approx_fact=0.5, n_targets=n_instances_per_lattice) )
 
     for ll in l:
         print(ll)
