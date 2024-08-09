@@ -541,20 +541,23 @@ void Siever::randomized_iterative_slice( float* t_yr, size_t max_entries_used, s
             std::copy(temp_yr.begin(), temp_yr.begin() + n, best_yr.begin());
             //std::cout << "best length: " << best_length << std::endl;
             if ( check_dist && UNLIKELY( tmp_length < (dist_sq_bnd + 0.00001))) { //TODO: handle precision issues better?
-              goto end_rerand;
+              break;
             }
         }
         //randomize_target( temp_yr, k );
         randomize_target_small(temp_yr, k);
     }
-end_rerand:
+
     for( size_t i = 0; i < n; i++ )
         t_yr[i] = best_yr[i];
 }
 
   void Siever::append_db( const ZT* x_arr ){
-    bool succ;
     std::array<ZT, MAX_SIEVING_DIM> x_cur_arr;
-    std::copy(x_arr, x_arr+MAX_SIEVING_DIM, x_cur_arr.begin());
-    succ = insert_in_db_and_uid(const_cast<std::array<ZT, MAX_SIEVING_DIM>&>(x_cur_arr));
+    // std::copy(x_arr, x_arr+MAX_SIEVING_DIM, x_cur_arr.begin());
+    // insert_in_db_and_uid(const_cast<std::array<ZT, MAX_SIEVING_DIM>&>(x_cur_arr));
+
+    std::move(x_arr, x_arr+MAX_SIEVING_DIM, x_cur_arr.begin());
+    insert_in_db_and_uid(x_cur_arr);
+
   }
