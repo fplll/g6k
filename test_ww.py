@@ -195,7 +195,7 @@ for i in range(len(g6k)):
     assert ( all( c0==c1 ) ), f"DB corrupted!"
 
 projerr = from_canonical_scaled( G,e,offset=sieve_dim )
-projerr_sq_nrm = projerr@projerr / gaussian_heuristic( G.r()[-sieve_dim:] )
+projerr_sq_nrm = projerr@projerr * 1.01
 print(f"projerr_sq_nrm: {projerr_sq_nrm}")
 my_dist = projerr_sq_nrm #**0.5 / 2
 print(f"my_dist {my_dist}")
