@@ -28,6 +28,8 @@ try:
 except ModuleNotFoundError:
     from multiprocessing import Pool
 
+from g6k.siever import SaturationError
+
 save_folder = "./saved_lattices/"
 
 def gsomat_copy(M):
@@ -134,7 +136,11 @@ def gen_and_pickle_lattice(n, k=None, bits=None, betamax=None, seed=None):
     g6k = Siever(G,param_sieve)
     g6k.initialize_local(0,0,n)
     then = perf_counter()
-    g6k()
+    try:
+        g6k()
+    except SaturationError as saterr:
+        print(saterr)
+        pass
     print(f"Sieving in dim-{n} done in {perf_counter()-then}")
     g6k.M.update_gso()
 
@@ -260,8 +266,9 @@ def batchCVPP_prob(d, alpha, gamma):
 if __name__ == "__main__":
     n_workers = 5
     n_lats = 10
-    n_instances_per_lattice = 100
-    n, k, bits, betamax = 80, 35, 13.8, 55
+    n_instances_per_lattice = 20
+    n, bits, betamax = 80, 13.8, 55
+    k = n//2
 
     # - - - Generate lattices - - -
     # pool = Pool(processes = n_workers )

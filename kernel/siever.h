@@ -102,7 +102,7 @@ static constexpr unsigned int XPC_THRESHOLD_TRIPLE = 97; // XPC Threshold for tr
 static constexpr unsigned int XPC_THRESHOLD_TRIPLE_INNER_CHECK = 133; // XPC Threshold for triple sieve in the inner-loop
 static constexpr float X1X2 = 0.108;  // Threshold to put vector in filtered list ~(1/3)^2
 
-static constexpr unsigned int XPC_SLICER_SAMPLING_THRESHOLD = 105; // XPC Threshold for iterative slicer sampling
+static constexpr unsigned int XPC_SLICER_SAMPLING_THRESHOLD = 105; // XPC Threshold for iterative slicer sampling //105
 
 static constexpr unsigned int MIN_ENTRY_PER_THREAD = 100; // factor that determines minimum size of work batch to distribute to a thread.
 

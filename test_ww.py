@@ -78,7 +78,7 @@ def to_canonical_scaled(M, t, offset=None):
     tmp = t*r_
     return M.to_canonical(tmp, start=M.d-offset)
 
-n, betamax, sieve_dim = 65, 40, 65
+n, betamax, sieve_dim = 220, 62, 75
 B = IntegerMatrix(n,n)
 B.randomize("qary", k=n//2, bits=11.705)
 ft = "ld" if n<193 else "dd"
@@ -86,7 +86,8 @@ try:
     G = GSO.Mat(B, float_type=ft)
 except: #if "dd" is not available
     FPLLL.set_precision(208)
-    G = GSO.Mat(B, float_type="mpfr")
+    ft = "mpfr"
+    G = GSO.Mat(B, float_type=ft)
 G.update_gso()
 
 lll = LLL.Reduction(G)
