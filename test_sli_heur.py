@@ -1,12 +1,12 @@
 """
-This file requires LatticeReduction.py file in the root of repo.
+This file requires LatticeReduction.py, lwe_gen.py files in the root of repo.
 """
 # from __future__ import absolute_import
 
 import sys, os
 import glob #for automated search in subfolders
 import numpy as np
-# from lwe_gen import generateLWEInstance
+from lwe_gen import generateLWEInstance, binomial_vec, uniform_vec
 from LatticeReduction import LatticeReduction
 import time
 from time import perf_counter
@@ -19,6 +19,8 @@ from g6k.siever_params import SieverParams
 from math import sqrt, ceil, floor, log, exp
 from copy import deepcopy
 from random import shuffle, randrange
+
+from discretegauss import sample_dgauss
 
 import pickle
 try:
@@ -153,16 +155,19 @@ def load_lattices(n):
             # lats.append(L)
         print(filename)
 
-def run_exp(g6k_obj, approx_fact=0.5, n_targets=1):
+def run_exp(g6k_obj, approx_fact=1.0, n_targets=1):
     B, G, n = g6k_obj.M.B, g6k_obj.M, g6k_obj.M.d
     gh = gaussian_heuristic(g6k_obj.M.r())
-    max_unif = floor( gh / (8*n) * approx_fact ) #||e|| ~ approx_fact * E(\lambda_1(B)/2)
-    assert max_unif, f"Zero error!"
+    sigma2 = ( gh / (4*n) ) * approx_fact**2 #||e|| ~ approx_fact * E(\lambda_1(B)/2)
+    print(f"approx_fact: {approx_fact}")
+    # assert max_unif > 0, f"Zero error!"
 
     exp_results = {(n,approx_fact): []}
     for bdds in range(n_targets):
         c = [ randrange(-3,4) for j in range(n) ] #coeffs of answer w.r.t. B
-        e = np.array( [ randrange(-max_unif,max_unif+1) for j in range(n) ],dtype=np.int64 )
+        e = np.array( [ sample_dgauss(sigma2) for j in range(n) ], dtype=np.int64 )
+        # e = binomial_vec( n,eta )
+        # e = np.array( [ randrange(-max_unif,max_unif+1) for j in range(n) ],dtype=np.int64 )
         print(f"gauss: {gaussian_heuristic(G.r())**0.5} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
 
         b = G.B.multiply_left( c )
@@ -253,10 +258,10 @@ def batchCVPP_prob(d, alpha, gamma):
     return prob
 
 if __name__ == "__main__":
-    n_workers = 2
-    n_lats = 5
-    n_instances_per_lattice = 10
-    n, k, bits, betamax = 70, 35, 13.8, 40
+    n_workers = 5
+    n_lats = 10
+    n_instances_per_lattice = 100
+    n, k, bits, betamax = 80, 35, 13.8, 55
 
     # - - - Generate lattices - - -
     # pool = Pool(processes = n_workers )
@@ -274,7 +279,7 @@ if __name__ == "__main__":
 
     l = []
     for g6k_obj in lats:
-        l.append( run_exp(g6k_obj, approx_fact=0.5, n_targets=n_instances_per_lattice) )
+        l.append( run_exp(g6k_obj, approx_fact=0.98, n_targets=n_instances_per_lattice) )
 
     for ll in l:
         print(ll)
