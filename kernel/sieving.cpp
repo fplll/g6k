@@ -508,7 +508,9 @@ void Siever::randomize_target_small(std::array<LFT, MAX_SIEVING_DIM> &t_yr, size
     }
 }
 
-void Siever::randomized_iterative_slice( float* t_yr, size_t max_entries_used, size_t samples, unsigned int debug_directives ) {
+void Siever::randomized_iterative_slice( float* t_yr, size_t max_entries_used, size_t samples, float dist_sq_bnd, unsigned int debug_directives ) {
+  n_rerand_sli = 0;
+  bool check_dist = dist_sq_bnd > 0;
     if( max_entries_used == 0 )
         max_entries_used = cdb.size();
 
@@ -546,6 +548,9 @@ void Siever::randomized_iterative_slice( float* t_yr, size_t max_entries_used, s
             best_length = tmp_length;
             std::copy(temp_yr.begin(), temp_yr.begin() + n, best_yr.begin());
             //std::cout << "best length: " << best_length << std::endl;
+            if ( check_dist && UNLIKELY( tmp_length < (dist_sq_bnd + 0.00001))) { //TODO: handle precision issues better?
+              break;
+            }
         }
         if (SAMPLER_VECT){ //if SAMPLER_VECT==0, use WW sampler
           randomize_target( temp_yr, k );
