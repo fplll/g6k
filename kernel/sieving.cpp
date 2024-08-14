@@ -380,7 +380,7 @@ FT Siever::iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_en
     for( size_t i = 0; i < n; i++ )
         target_len += t_yr[i] * t_yr[i];
 
-    std::cout << "starting length:" << target_len <<std::endl;
+    // std::cout << "starting length:" << target_len <<std::endl;
 
     bool reduced = true;
     while(reduced) {
@@ -444,7 +444,7 @@ FT Siever::iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_en
             for( size_t i = 0; i < n; i++ ) {
                 target_len += t_yr[i] * t_yr[i];
             }
-            std::cout << "new target_len: " << target_len << std::endl;
+            // std::cout << "new target_len: " << target_len << std::endl;
             //assert(false);
         }
         else{
@@ -467,7 +467,11 @@ void Siever::randomize_target(std::array<LFT, MAX_SIEVING_DIM>& t_yr, size_t k )
     }
 }
 
-void Siever::randomize_target_small(std::array<LFT, MAX_SIEVING_DIM> &t_yr, size_t k) {
+void Siever::randomize_target_small(std::array<LFT, MAX_SIEVING_DIM> &t_yr, size_t k, unsigned int debug_directives) {
+    unsigned int XPC_SLICER_SAMPLING_THRESHOLD_OVERRIDE = debug_directives & 0xFF;
+    // XPC_SLICER_SAMPLING_THRESHOLD_OVERRIDE = XPC_SLICER_SAMPLING_THRESHOLD_OVERRIDE ? XPC_SLICER_SAMPLING_THRESHOLD_OVERRIDE : XPC_SLICER_SAMPLING_THRESHOLD;
+    XPC_SLICER_SAMPLING_THRESHOLD_OVERRIDE = XPC_SLICER_SAMPLING_THRESHOLD_OVERRIDE ? XPC_SLICER_SAMPLING_THRESHOLD : XPC_SLICER_SAMPLING_THRESHOLD;
+
     size_t fullS = cdb.size();
     size_t max_trial = 2 + std::pow(fullS, .3);
     CompressedEntry* fast_cdb = &(cdb.front());
@@ -485,9 +489,9 @@ void Siever::randomize_target_small(std::array<LFT, MAX_SIEVING_DIM> &t_yr, size
         for (size_t k = 0; k < XPC_WORD_LEN; ++k) {
             w1 += __builtin_popcountl(fast_cdb[i].c[k] ^ fast_cdb[j].c[k]);
         }
-        if (w1 < XPC_SLICER_SAMPLING_THRESHOLD || w1 > (XPC_BIT_LEN - XPC_SLICER_SAMPLING_THRESHOLD) || trial > max_trial) {
+        if (w1 < XPC_SLICER_SAMPLING_THRESHOLD_OVERRIDE || w1 > (XPC_BIT_LEN - XPC_SLICER_SAMPLING_THRESHOLD_OVERRIDE) || trial > max_trial) {
             if (i == j) continue;
-            ZT sign = w1 < XPC_SLICER_SAMPLING_THRESHOLD / 2 ? -1 : 1;
+            ZT sign = w1 < XPC_SLICER_SAMPLING_THRESHOLD_OVERRIDE / 2 ? -1 : 1;
 
             for( size_t ii = 0; ii < n; ii++ ) {
                 tmp[ii] = db[cdb[i].i].yr[ii] + sign*db[cdb[j].i].yr[ii];
@@ -504,9 +508,13 @@ void Siever::randomize_target_small(std::array<LFT, MAX_SIEVING_DIM> &t_yr, size
     }
 }
 
-void Siever::randomized_iterative_slice( float* t_yr, size_t max_entries_used, size_t samples ) {
+void Siever::randomized_iterative_slice( float* t_yr, size_t max_entries_used, size_t samples, unsigned int debug_directives ) {
     if( max_entries_used == 0 )
         max_entries_used = cdb.size();
+
+    unsigned int SAMPLER_VECT = (debug_directives & 0xFF00) >> 8; //retrieve bits 8-15
+    unsigned int XPC_SLICER_SAMPLING_THRESHOLD_OVERRIDE = debug_directives & 0xFF;
+    std::cout << debug_directives << " SAMPLER_VECT: " << SAMPLER_VECT << " XPC_SLICER " << XPC_SLICER_SAMPLING_THRESHOLD_OVERRIDE << std::endl;
 
     //for( size_t i = 0; i < n; i++ ) {
     //    std::cout << sqrt_rr[i] << std::endl;
@@ -514,7 +522,7 @@ void Siever::randomized_iterative_slice( float* t_yr, size_t max_entries_used, s
     std::cout << " cdb.size(): " <<  cdb.size() << std::endl;
 
     // #vectors used for rerandomization
-    const size_t k = 3;
+    size_t k = 3;
 
     std::array<LFT, MAX_SIEVING_DIM> temp_yr;
     std::array<LFT, MAX_SIEVING_DIM> best_yr;
@@ -539,8 +547,13 @@ void Siever::randomized_iterative_slice( float* t_yr, size_t max_entries_used, s
             std::copy(temp_yr.begin(), temp_yr.begin() + n, best_yr.begin());
             //std::cout << "best length: " << best_length << std::endl;
         }
-        //randomize_target( temp_yr, k );
-        randomize_target_small(temp_yr, k);
+        if (SAMPLER_VECT){ //if SAMPLER_VECT==0, use WW sampler
+          randomize_target( temp_yr, k );
+        }
+        else{ //else 1<= SAMPLER_VECT <256. Set k = SAMPLER_VECT and invoke
+          k = SAMPLER_VECT;
+          randomize_target_small(temp_yr, k, debug_directives);
+        }
     }
 
     for( size_t i = 0; i < n; i++ )

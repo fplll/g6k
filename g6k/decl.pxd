@@ -245,7 +245,8 @@ cdef extern from "../kernel/siever.h" nogil:
         void hk3_sieve(double alpha)
 
         # CVPP
-        void randomized_iterative_slice( float* t_yr, size_t max_entries_used, size_t samples )
+        # void randomized_iterative_slice( float* t_yr, size_t max_entries_used, size_t samples, unsigned int debug_directives = 873 )
+        void randomized_iterative_slice( float* t_yr, size_t max_entries_used, size_t samples, unsigned int debug_directives )
         # loading db from array item by item
         void append_db( ZT* x_arr )
 

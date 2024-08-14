@@ -78,7 +78,7 @@ def to_canonical_scaled(M, t, offset=None):
     tmp = t*r_
     return M.to_canonical(tmp, start=M.d-offset)
 
-n, betamax, sieve_dim = 160, 32, 32
+n, betamax, sieve_dim = 96, 50, 50
 B = IntegerMatrix(n,n)
 B.randomize("qary", k=n//2, bits=11.705)
 ft = "ld" if n<193 else "dd"
@@ -130,7 +130,8 @@ print(f"t_gs: {t_gs} | norm: {(t_gs@t_gs)}")
 
 then = perf_counter()
 
-out_gs = g6k.randomized_iterative_slice([float(tt) for tt in t_gs],samples=1000)
+debug_directives = 768 + 100 #768 + 105
+out_gs = g6k.randomized_iterative_slice([float(tt) for tt in t_gs],samples=1000, debug_directives=debug_directives)
 
 print(f"Slicer done in: {perf_counter()-then}")
 
