@@ -1329,7 +1329,7 @@ cdef class Siever(object):
 
     #CVPP
     # Target is expected in normalized gram schmidth coordinates, like the internal yr of the db
-    def randomized_iterative_slice(self, target_yr, size_t max_entries_used=0, size_t samples=10, size_t debug_directives=873):
+    def randomized_iterative_slice(self, target_yr, size_t max_entries_used=0, size_t samples=10, float dist_sq_bnd=0, size_t debug_directives=873):
         assert(self.initialized)
         if max_entries_used == 0:
             max_entries_used = self.db_size()
@@ -1344,7 +1344,7 @@ cdef class Siever(object):
 
         sig_on()
         # self._core.randomized_iterative_slice( <float*> t_yr.data, max_entries_used, samples)
-        self._core.randomized_iterative_slice( <float*> t_yr.data, max_entries_used, samples, debug_directives_)
+        self._core.randomized_iterative_slice( <float*> t_yr.data, max_entries_used, samples, dist_sq_bnd, debug_directives_)
         sig_off()
 
         return_yr = zeros( (self.n,), dtype=float32)
