@@ -271,6 +271,7 @@ cdef extern from "../kernel/siever.h" nogil:
         unsigned int l
         unsigned int r
         unsigned int n
+        unsigned int n_rerand_sli
 
         void gso_update_postprocessing(const unsigned int l_, const unsigned int r_, long* M)
 

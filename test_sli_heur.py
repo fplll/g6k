@@ -161,14 +161,17 @@ def load_lattices(n):
             # lats.append(L)
         print(filename)
 
-def run_exp(g6k_obj, approx_fact=1.0, n_targets=1):
+def run_exp(g6k_obj, approx_fact=1.0, n_targets=1, debug_directives = 873):
+    size_t_k = ( debug_directives & 0xFF00 ) >> 8
+    XPC_SLICER_SAMPLING_THRESHOLD_OVERRIDE = debug_directives & 0xFF
+
     B, G, n = g6k_obj.M.B, g6k_obj.M, g6k_obj.M.d
     gh = gaussian_heuristic(g6k_obj.M.r())
     sigma2 = ( gh / (4*n) ) * approx_fact**2 #||e|| ~ approx_fact * E(\lambda_1(B)/2)
     print(f"approx_fact: {approx_fact}")
     # assert max_unif > 0, f"Zero error!"
 
-    exp_results = {(n,approx_fact): []}
+    exp_results = {(n,approx_fact,size_t_k,XPC_SLICER_SAMPLING_THRESHOLD): []}
     for bdds in range(n_targets):
         c = [ randrange(-3,4) for j in range(n) ] #coeffs of answer w.r.t. B
         e = np.array( [ sample_dgauss(sigma2) for j in range(n) ], dtype=np.int64 )
@@ -189,7 +192,7 @@ def run_exp(g6k_obj, approx_fact=1.0, n_targets=1):
         then = perf_counter()
 
         stats_accumulator = {}
-        out_gs = g6k_obj.randomized_iterative_slice([float(tt) for tt in t_gs],samples=10**5, dist_sq_bnd = projerr_sq_nrm, stats_accumulator=stats_accumulator) #1.01*projerr_sq_nrm
+        out_gs = g6k_obj.randomized_iterative_slice([float(tt) for tt in t_gs],samples=10**5, dist_sq_bnd = projerr_sq_nrm, stats_accumulator=stats_accumulator, debug_directives=debug_directives) #1.01*projerr_sq_nrm
 
         sli_time = perf_counter()-then
         print(f"Slicer done in: {sli_time}")
@@ -206,7 +209,7 @@ def run_exp(g6k_obj, approx_fact=1.0, n_targets=1):
         succ = all(out==e)
         print(f"Error vector has been found: {succ}")
 
-        exp_results[(n,approx_fact)].append( [n_rerand_sli, succ, sli_time] )
+        exp_results[(n,approx_fact,size_t_k,XPC_SLICER_SAMPLING_THRESHOLD)].append( [n_rerand_sli, succ, sli_time] )
     print( exp_results )
     return exp_results
 
@@ -267,7 +270,7 @@ if __name__ == "__main__":
     n_workers = 5
     n_lats = 10
     n_instances_per_lattice = 20
-    n, bits, betamax = 80, 13.8, 55
+    n, bits, betamax = 70, 13.8, 55
     k = n//2
 
     # - - - Generate lattices - - -
@@ -286,7 +289,8 @@ if __name__ == "__main__":
 
     l = []
     for g6k_obj in lats:
-        l.append( run_exp(g6k_obj, approx_fact=0.98, n_targets=n_instances_per_lattice) )
+        for XPC_SLICER_SAMPLING_THRESHOLD in [100, 105, 110]:
+            l.append( run_exp(g6k_obj, approx_fact=0.98, n_targets=n_instances_per_lattice, debug_directives = XPC_SLICER_SAMPLING_THRESHOLD+0x300) )
 
     for ll in l:
         print(ll)
@@ -301,6 +305,7 @@ if __name__ == "__main__":
     n_rerand_sli_list, sli_time_list = [], []
     for key in D.keys():
         stats = D[key]
+        print(key)
 
         n_rerand_sli_list += [ tt[0] for tt in stats]
         sli_time_list += [ tt[2] for tt in stats]
