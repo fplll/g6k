@@ -532,12 +532,19 @@ public:
 
 /**
     CVPP
+    a = debug_directives & oxFF:
+        if 0, use defauld XPC_SLICER_SAMPLING_THRESHOLD
+        if 0 < a < 256, override XPC_SLICER_SAMPLING_THRESHOLD with a
+    b = (debug_directives & oxFF00) >>> 8:
+        if 0, use WW sampler
+        if 0 < b < 256, use randomize_target_small with size_t k = b
 **/
-    FT iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_entries_used=0 ); //in sieving.cpp
-    FT interative_slice_task(std::array<LFT,MAX_SIEVING_DIM>& t_yr); //in sieving.cpp
+
+    FT iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_entries_used=0); //in sieving.cpp
     void randomize_target(std::array<LFT, MAX_SIEVING_DIM>& t_yr, size_t k );
-    void randomize_target_small(std::array<LFT, MAX_SIEVING_DIM> &t_yr, size_t k);
-    void randomized_iterative_slice( float* t_yr, size_t max_entries_used=0, size_t samples=1, float dist_sq_bnd=-1.0 );
+    void randomize_target_small(std::array<LFT, MAX_SIEVING_DIM> &t_yr, size_t k, unsigned int debug_directives);
+    void randomized_iterative_slice( float* t_yr, size_t max_entries_used=0, size_t samples=1, float dist_sq_bnd=-1.0, unsigned int debug_directives = 873 );
+
     /*
     append_db receives an array storing corresponding x and appends it to the db.
     Sadly, the encapsulation of the c++ layer would be partially violated since x's would be loaded from
@@ -585,7 +592,6 @@ public: // TODO: Make more things private and do not export to Python.
     unsigned int l;                           // current context left position
     unsigned int r;                           // current context right position
     unsigned int n;                           // current context dimension, n = r - l
-    //Not thread-safe. Probably, needs reimplementation with stats.
     unsigned int n_rerand_sli = 0; //number of rerandomizations last randomized_iterative_slice of slicer did
     //TODO @Sasha n_rerand_sli should be implemented as any other stat sata
 
