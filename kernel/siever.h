@@ -534,6 +534,7 @@ public:
     CVPP
 **/
     FT iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_entries_used=0 ); //in sieving.cpp
+    FT interative_slice_task(std::array<LFT,MAX_SIEVING_DIM>& t_yr); //in sieving.cpp
     void randomize_target(std::array<LFT, MAX_SIEVING_DIM>& t_yr, size_t k );
     void randomize_target_small(std::array<LFT, MAX_SIEVING_DIM> &t_yr, size_t k);
     void randomized_iterative_slice( float* t_yr, size_t max_entries_used=0, size_t samples=1, float dist_sq_bnd=-1.0 );
@@ -586,7 +587,7 @@ public: // TODO: Make more things private and do not export to Python.
     unsigned int n;                           // current context dimension, n = r - l
     //Not thread-safe. Probably, needs reimplementation with stats.
     unsigned int n_rerand_sli = 0; //number of rerandomizations last randomized_iterative_slice of slicer did
-
+    //TODO @Sasha n_rerand_sli should be implemented as any other stat sata
 
     // gso_update_postprocessing post-processes the database with the change-of-basis transformation M
     // - Thread-safety ensured by each thread working on different data

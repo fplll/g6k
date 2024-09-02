@@ -371,11 +371,13 @@ CompressedEntry* Siever::reduce_in_db(CompressedEntry *ce1, CompressedEntry *ce2
     }
 }
 
+
 FT Siever::iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_entries_used ) {
     if( max_entries_used == 0)
         max_entries_used = cdb.size();
     CompressedEntry* const fast_cdb = cdb.data(); // atomic load
 
+    //TODO: already computed inside the caller, pass to the function
     FT target_len = 0;
     for( size_t i = 0; i < n; i++ )
         target_len += t_yr[i] * t_yr[i];
@@ -392,7 +394,7 @@ FT Siever::iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_en
         FT bestl = target_len;
         for (size_t j = 0; j < max_entries_used; ++j)
         {
-            // ADD POPCOUNT HERE
+            // TODO:ADD POPCOUNT HERE
 
             int index = fast_cdb[j].i;
             LFT const inner = std::inner_product(t_yr.begin(), t_yr.begin()+n, db[index].yr.begin(),  static_cast<LFT>(0.));
@@ -513,7 +515,7 @@ void Siever::randomized_iterative_slice( float* t_yr, size_t max_entries_used, s
     //for( size_t i = 0; i < n; i++ ) {
     //    std::cout << sqrt_rr[i] << std::endl;
     //}
-    std::cout << " cdb.size(): " <<  cdb.size() << std::endl;
+    //std::cout << " cdb.size(): " <<  cdb.size() << std::endl;
 
     // #vectors used for rerandomization
     const size_t k = 3;
