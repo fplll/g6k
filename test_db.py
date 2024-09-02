@@ -35,14 +35,8 @@ def from_canonical_scaled(M, t, offset):
 def iterative_slicer(db,M,t_0,sieve_dim):
     M = M
     n,d = M.B.nrows, M.B.ncols
-    # t_ = M.from_canonical(t)
-    # t_1 = t_[:d-sieve_dim]
-    # t_2 = t_[d-sieve_dim:]
-
-    # db = g6k.itervalues() #get coeffs of short vectors
 
     L = []
-    # t_cur = [ np.array( sieve_dim*[0], dtype=np.int64 ), from_canonical_scaled(M,t,sieve_dim) ]
     t_cur = deepcopy(t_0)
     t_cur_nrm = t_cur[1]@t_cur[1]
     min_nrm_diff_sq = 2**65
@@ -55,24 +49,11 @@ def iterative_slicer(db,M,t_0,sieve_dim):
         """
         For each L[-1] find min || t_cur - L[-1] ||
         """
-    #     tmp = t_cur[1] - L[-1][1]
-    #     tmp_nrm_sq = tmp@tmp
-    #     if tmp_nrm_sq < min_nrm_diff_sq:
-    #         min_nrm_diff_sq = tmp_nrm_sq
-    #         ind_min = ind
-    #         tmp_min = tmp
-    #         change_made = True
-    #     ind += 1
-    # if change_made:
-    #     t_cur = t_cur[0] - L[ind_min][0], tmp_min #substract closest to t vector from L
-    #     change_made = False
-    # print(f"Init. nrm. diff: {print(min_nrm_diff_sq**0.5)}")
 
     indmin = None
     ind = 0
     for reductions in range(2**10):
         for ind in range(len(L)): #create list of (coeffs, gso coeffs)
-            # b = L[ind]
             """
             For each L[-1] find min || t_cur - L[-1] ||
             """
@@ -105,14 +86,11 @@ def iterative_slicer(db,M,t_0,sieve_dim):
 
             ind += 1
         if change_made: #if vector became closer, apply the most suitable transform
-            # if (reductions%20)==0:
-                # print(f"Cur. nrm. diff: {min_nrm_diff_sq**0.5}")
             t_cur = t_cur[0] + sign*L[ind_min][0], tmp_min #substract closest to t vector from L
             change_made = False
         else: #else, we're done
             print(f"breaking!!!!!!!!!!!!!!!!!!!!!!!!!!!! {reductions}")
             break
-    # print( t_cur )
     print(f"min nrm diff: {min_nrm_diff_sq**0.5}")
     return t_0[0] - t_cur[0], t_0[1] - t_cur[1]
 
@@ -164,8 +142,6 @@ def try_batch_cvp_w_babai( n, betamax=32, sieve_dim=32 ):
     A = M.B
     param_sieve = SieverParams()
     param_sieve['threads'] = 10
-    # param_sieve['db_size_base'] = 1.52
-    # param_sieve['db_size_factor'] = 3.75
     g6k = Siever(M,param_sieve)
     llft, lft, rft = n-sieve_dim, n-min(45,sieve_dim), n
     g6k.initialize_local(llft, lft, rft)
@@ -181,9 +157,6 @@ def try_batch_cvp_w_babai( n, betamax=32, sieve_dim=32 ):
         g6k()
     g6k.update_gso(llft,rft)
     print( f"g6k db size: {len(g6k)} | curtime: {perf_counter()-then}" )
-    # g6k.resize_db( ceil(2.44*len(g6k)), large=round(0.05*len(g6k)) )
-    # g6k()
-    # print( f"g6k db resize: {len(g6k)} | curtime: {perf_counter()-then}" )
     print(f"Left context: {g6k.l}; right context: {g6k.r}")
 
     print(f"e: {e}")
