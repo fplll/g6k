@@ -49,6 +49,13 @@ inline UidType UidHashTable::compute_uid(std::array<ZT,MAX_SIEVING_DIM> const &x
     return std::inner_product(x.cbegin(), x.cbegin()+n, uid_coeffs.cbegin(), static_cast<UidType>(0));
 }
 
+// Compute the uid of y using the current hash function.
+inline UidType UidHashTable::compute_uid_t(std::array<LFT,MAX_SIEVING_DIM> const &y) const
+{
+    //ATOMIC_CPUCOUNT(250);
+    return std::inner_product(y.cbegin(), y.cbegin()+n, uid_coeffs.cbegin(), static_cast<UidType>(0));
+}
+
 // resets the collision counter to 0. Returns its old value. NOT THEAD-SAFE
 //inline unsigned long UidHashTable::reset_collision_counter()
 //{

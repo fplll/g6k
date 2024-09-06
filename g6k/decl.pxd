@@ -246,7 +246,7 @@ cdef extern from "../kernel/siever.h" nogil:
 
         # CVPP
         # void randomized_iterative_slice( float* t_yr, size_t max_entries_used, size_t samples, unsigned int debug_directives = 873 )
-        void randomized_iterative_slice( float* t_yr, size_t max_entries_used, size_t samples, float dist_sq_bnd, unsigned int debug_directives )
+        # void randomized_iterative_slice( float* t_yr, size_t max_entries_used, size_t samples, float dist_sq_bnd, unsigned int debug_directives )
         # loading db from array item by item
         void append_db( ZT* x_arr )
 
@@ -286,3 +286,10 @@ cdef extern from "../kernel/siever.h" nogil:
         vector[CompressedEntry] cdb
 
         # best_lifts_so_far is private
+
+    cdef cppclass Randomized_slicer:
+        Randomized_slicer(unsigned long int seed)
+        #grow_db_with_target( vector[LFT] t_yr, size_t n_per_target);
+        void grow_db_with_target( float* t_yr, size_t n_per_target);
+
+

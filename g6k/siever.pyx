@@ -1305,31 +1305,31 @@ cdef class Siever(object):
 
     #CVPP
     # Target is expected in normalized gram schmidth coordinates, like the internal yr of the db
-    def randomized_iterative_slice(self, target_yr, size_t max_entries_used=0, size_t samples=10, float dist_sq_bnd=0, stats_accumulator=None, size_t debug_directives=873):
-        assert(self.initialized)
-        if max_entries_used == 0:
-            max_entries_used = self.db_size()
-        assert(max_entries_used <= self.db_size())
-
-        cdef np.ndarray t_yr = zeros( (self.n,), dtype=float32)
-
-        for i in xrange(self.n):
-            t_yr[i] = target_yr[i]
-
-        cdef unsigned int debug_directives_ = debug_directives
-
-        sig_on()
-        # self._core.randomized_iterative_slice( <float*> t_yr.data, max_entries_used, samples)
-        self._core.randomized_iterative_slice( <float*> t_yr.data, max_entries_used, samples, dist_sq_bnd, debug_directives_)
-        sig_off()
-
-        return_yr = zeros( (self.n,), dtype=float32)
-
-        for i in xrange(self.n):
-            return_yr[i] = t_yr[i]
-        if not stats_accumulator is None:
-            stats_accumulator["n_rerand_sli"] = self._core.n_rerand_sli
-        return return_yr
+    # def randomized_iterative_slice(self, target_yr, size_t max_entries_used=0, size_t samples=10, float dist_sq_bnd=0, stats_accumulator=None, size_t debug_directives=873):
+    #     assert(self.initialized)
+    #     if max_entries_used == 0:
+    #         max_entries_used = self.db_size()
+    #     assert(max_entries_used <= self.db_size())
+    #
+    #     cdef np.ndarray t_yr = zeros( (self.n,), dtype=float32)
+    #
+    #     for i in xrange(self.n):
+    #         t_yr[i] = target_yr[i]
+    #
+    #     cdef unsigned int debug_directives_ = debug_directives
+    #
+    #     sig_on()
+    #     # self._core.randomized_iterative_slice( <float*> t_yr.data, max_entries_used, samples)
+    #     self._core.randomized_iterative_slice( <float*> t_yr.data, max_entries_used, samples, dist_sq_bnd, debug_directives_)
+    #     sig_off()
+    #
+    #     return_yr = zeros( (self.n,), dtype=float32)
+    #
+    #     for i in xrange(self.n):
+    #         return_yr[i] = t_yr[i]
+    #     if not stats_accumulator is None:
+    #         stats_accumulator["n_rerand_sli"] = self._core.n_rerand_sli
+    #     return return_yr
 
     def dump_on_disk(self, filename):
       D = {

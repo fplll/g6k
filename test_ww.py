@@ -70,8 +70,8 @@ if __name__ == "__main__":
 
     then = perf_counter()
 
-    debug_directives = 768 + 105
-    out_gs = g6k.randomized_iterative_slice([float(tt) for tt in t_gs],samples=1000, debug_directives=debug_directives)
+    #debug_directives = 768 + 105
+    out_gs = g6k.randomized_iterative_slice([float(tt) for tt in t_gs],samples=1000)
 
     print(f"Slicer done in: {perf_counter()-then}")
 

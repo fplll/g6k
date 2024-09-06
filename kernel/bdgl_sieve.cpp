@@ -232,6 +232,7 @@ void Siever::bdgl_process_buckets_task(const size_t t_id,
     {
         const size_t i_start = bsize * b;
         const size_t i_end = bsize * b + buckets_index[b].val;
+
         B +=( (i_end - i_start) * (i_end-i_start-1)) / 2;
         for( size_t i = i_start; i < i_end; ++i ) 
         {

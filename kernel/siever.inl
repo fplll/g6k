@@ -275,5 +275,58 @@ inline void Siever::recompute_data_for_entry_babai(Entry &e, int babai_index)
 
     return;
 }
+//TODO:move to slicer?
+template<Siever::Recompute what_to_recompute>
+inline void Siever::recompute_data_for_entry_t(Entry_t &e)
+{
+    //ATOMIC_CPUCOUNT(214);
+    bool constexpr rec_yr = (what_to_recompute & Recompute::recompute_yr) != Recompute::none;
+    bool constexpr rec_len = (what_to_recompute & Recompute::recompute_len) != Recompute::none;
+    bool constexpr rec_c = (what_to_recompute & Recompute::recompute_c) != Recompute::none;
+    bool constexpr rec_uid = (what_to_recompute & Recompute::recompute_uid) != Recompute::none;
+    bool constexpr consider_lift = (what_to_recompute & Recompute::consider_otf_lift) != Recompute::none;
+    bool constexpr rec_otf_helper = (what_to_recompute & Recompute::recompute_otf_helper) != Recompute::none;
+
+
+    CPP17CONSTEXPRIF(rec_len) e.len = 0.;
+    if (rec_len)
+    {
+        for (unsigned int i = 0; i < n; ++i)
+        {
+            e.yr[i] = static_cast<FT>(e.yr[i]);
+            e.len+=e.yr[i] * e.yr[i]; // slightly inefficient if we only compute the lenght and not yr, but that does not happen anyway.
+        }
+    }
+
+    CPP17CONSTEXPRIF (rec_uid)
+    {
+        e.uid  = uid_hash_table.compute_uid_t(e.yr);
+    }
+
+    CPP17CONSTEXPRIF (rec_c)
+    {
+        e.c = sim_hashes.compress(e.yr);
+    }
+
+    /*
+    CPP17CONSTEXPRIF (rec_otf_helper)
+    {
+        for (int k = 0; k < OTF_LIFT_HELPER_DIM; ++k)
+        {
+            int const i = l - (k + 1);
+            if (i < static_cast<signed int>(ll)) break;
+            e.otf_helper[k] = std::inner_product(e.x.cbegin(), e.x.cbegin()+n, full_muT[i].cbegin()+l,  static_cast<FT>(0.));
+        }
+    }
+
+    if (consider_lift && params.otf_lift && e.len < params.lift_radius)
+    {
+        lift_and_compare(e);
+    }
+    */
+
+    return;
+}
+
 
 #endif
