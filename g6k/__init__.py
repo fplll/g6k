@@ -22,6 +22,6 @@
 from __future__ import absolute_import
 from .siever_params import SieverParams  # noqa
 from .siever import Siever  # noqa
-from .slicer import Randomized_slicer
+from .slicer import RandomizedSlicer # noqa
 
 __version__ = "0.1.2"

@@ -32,7 +32,7 @@ cdef extern from "../kernel/siever.h" nogil:
     ctypedef uint64_t UidType
 
     # TODO no libcpp.array, but if need be we could define it ourselves
-    # typedef std::array<uint64_t, XPC_WORD_LEN> CompressedVector
+    #typedef std::array<uint64_t, XPC_WORD_LEN> CompressedVector
 
     cdef cppclass SieveStatistics:
         void clear_statistics()
@@ -287,9 +287,11 @@ cdef extern from "../kernel/siever.h" nogil:
 
         # best_lifts_so_far is private
 
-    cdef cppclass Randomized_slicer:
-        Randomized_slicer(unsigned long int seed)
-        #grow_db_with_target( vector[LFT] t_yr, size_t n_per_target);
+cdef extern from "../kernel/slicer.h" nogil:
+
+    cdef cppclass RandomizedSlicer:
+        RandomizedSlicer(Siever &sieve, unsigned long int seed)
+        #void grow_db_with_target( std::array<LFT,128> &t_yr, size_t n_per_target);
         void grow_db_with_target( float* t_yr, size_t n_per_target);
 
 

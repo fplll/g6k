@@ -2,7 +2,7 @@ from fpylll import *
 FPLLL.set_random_seed(0x1337)
 from g6k.siever import Siever
 from g6k.siever_params import SieverParams
-from g6k.slicer import Randomized_slicer
+from g6k.slicer import RandomizedSlicer
 from utils import *
 
 if __name__ == "__main__":
@@ -52,6 +52,6 @@ if __name__ == "__main__":
     then = perf_counter()
 
     #out_gs = g6k.randomized_iterative_slice([float(tt) for tt in t_gs],samples=1000)
-    slicer = Randomized_slicer()
+    slicer = RandomizedSlicer(g6k)
 
-    slicer.grow_db_with_target([float(tt) for tt in t_gs], n_per_target=100)
+    #slicer.grow_db_with_target([float(tt) for tt in t_gs], n_per_target=100)
