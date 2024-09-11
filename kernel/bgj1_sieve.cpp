@@ -58,6 +58,7 @@
 void Siever::bgj1_sieve(double alpha)
 {
     CPUCOUNT(100);
+    std::cout << "in bgj1_sieve" << std::endl;
     switch_mode_to(SieveStatus::bgj1);
     assert(alpha >= 0); // negative alpha would work, but not match the documentation.
 
@@ -109,6 +110,7 @@ void Siever::bgj1_sieve(double alpha)
         return;
     GBL_saturation_count -= cur_sat;
 
+
     for (size_t c = 0; c < params.threads; ++c)
     {
         threadpool.push([this,alpha,task](){((*this).*task)(alpha);});
@@ -121,6 +123,7 @@ void Siever::bgj1_sieve(double alpha)
     status_data.plain_data.sorted_until = 0;
     // we set histo for statistical purposes
     recompute_histo(); // TODO: Remove?
+
     return;
 }
 
@@ -180,8 +183,10 @@ void Siever::bgj1_sieve_task(double alpha)
         LFT const alpha_square_times_len = alpha * alpha * aux.len;
         LFT maxlen = GBL_max_len;
 
+
         for (size_t j = 0; j < fullS; ++j)
         {
+
             if (UNLIKELY(is_reducible_maybe<XPC_BUCKET_THRESHOLD>(cv, fast_cdb[j].c)))
             {
                 #if COLLECT_STATISTICS_XORPOPCNT_PASS || COLLECT_STATISTICS_FULLSCPRODS

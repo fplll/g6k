@@ -1,7 +1,7 @@
 import sys, os
 import glob #for automated search in subfolders
 import numpy as np
-from lwe_gen import generateLWEInstance, binomial_vec, uniform_vec
+from experiments.lwe_gen import generateLWEInstance, binomial_vec, uniform_vec
 from LatticeReduction import LatticeReduction
 import time
 from time import perf_counter

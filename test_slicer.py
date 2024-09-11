@@ -6,12 +6,14 @@ from g6k.slicer import RandomizedSlicer
 from utils import *
 
 if __name__ == "__main__":
-    n, betamax, sieve_dim = 50, 35, 50
+    n, betamax, sieve_dim = 55, 40, 30
     B = IntegerMatrix(n,n)
     B.randomize("qary", k=n//2, bits=11.705)
     ft = "ld" if n<193 else "dd"
     G = GSO.Mat(B, float_type=ft)
     G.update_gso()
+
+    if sieve_dim<30: print("Slicer is not implemented on dim < 30")
 
     lll = LLL.Reduction(G)
     lll()
@@ -36,22 +38,25 @@ if __name__ == "__main__":
     t = [ int(tt) for tt in t_ ]
 
     param_sieve = SieverParams()
-    param_sieve['threads'] = 5
+    param_sieve['threads'] = 1
     # param_sieve['db_size_factor'] = 3.75
-    param_sieve['default_sieve'] = "bgj1"
+    #param_sieve['default_sieve'] = "bdgl1"
     g6k = Siever(G,param_sieve)
     g6k.initialize_local(n-sieve_dim,n-sieve_dim,n)
-    g6k()
-    g6k.M.update_gso()
+    g6k(alg="bgj1")
+    #g6k.M.update_gso()
 
-    print(f"dbsize: {len(g6k)}")
+    #print(f"dbsize: {len(g6k)}")
 
     t_gs = from_canonical_scaled( G,t,offset=sieve_dim )
     print(f"t_gs: {t_gs} | norm: {(t_gs@t_gs)}")
 
-    then = perf_counter()
+    #then = perf_counter()
 
     #out_gs = g6k.randomized_iterative_slice([float(tt) for tt in t_gs],samples=1000)
     slicer = RandomizedSlicer(g6k)
 
-    #slicer.grow_db_with_target([float(tt) for tt in t_gs], n_per_target=100)
+    print("target:", [float(tt) for tt in t_gs])
+    print("dbsize", g6k.db_size())
+
+    slicer.grow_db_with_target([float(tt) for tt in t_gs], n_per_target=2)

@@ -41,6 +41,22 @@ inline void UidHashTable::reset_hash_function(Siever& siever)
     insert_uid(0);
     return;
 }
+/*
+inline void UidHashTable::reset_hash_function_t(rng::threadsafe_rng& rng, unsigned int n)
+{
+    //n = siever.n;
+    uid_coeffs.resize(n);
+    for (unsigned i = 0; i < n; i++)
+        uid_coeffs[i] = rng.rng_nolock();
+    siever.threadpool.run([this](int th_i, int th_n)
+                          {
+                              for (auto j : pa::subrange(DB_UID_SPLIT, th_i, th_n))
+                                  db_uid[j].clear();
+                          });
+    insert_uid(0);
+    return;
+}
+*/
 
 // Compute the uid of x using the current hash function.
 inline UidType UidHashTable::compute_uid(std::array<ZT,MAX_SIEVING_DIM> const &x) const
@@ -71,10 +87,6 @@ inline bool UidHashTable::insert_uid(UidType uid)
     normalize_uid(uid);
     std::lock_guard<std::mutex> lockguard(db_mut[uid % DB_UID_SPLIT]);
     bool success = db_uid[uid % DB_UID_SPLIT].insert(uid).second;
-    if (success==false)
-    {
-//        STATS(++stat_C);
-    }
     return success;
 }
 

@@ -11,7 +11,17 @@ public:
     explicit RandomizedSlicer(Siever &sieve, unsigned long int seed = 0) :
             sieve(sieve), db_t(), cdb_t(), n(0), rng_t(seed), sim_hashes_t(rng_t.rng_nolock())
     {
-        //this->sieve = sieve;
+        /*
+        size_t fullS = this->sieve.cdb.size();
+        Entry* e_db = &(this->sieve.db.front());
+        for (size_t ii = 0; ii<fullS; ii++) {
+            for (const auto &e: e_db[ii].c) { std::cout << e << " "; }
+            std::cout <<e_db[ii].len << std::endl;
+        }
+        */
+        this->n = this->sieve.n;
+        sim_hashes_t.reset_compress_pos(this->sieve);
+        uid_hash_table_t.reset_hash_function(this->sieve);
         std::cout << "initialized randomized slicer" << std::endl;
     }
 
@@ -32,7 +42,7 @@ public:
 
     void randomize_target_small_task(Entry_t &t);
     //void grow_db_with_target(std::array<LFT,MAX_SIEVING_DIM> &t_yr, size_t n_per_target);
-    void grow_db_with_target(float* t_yr, size_t n_per_target);
+    void grow_db_with_target(const double t_yr[], size_t n_per_target);
 
 
     //FT iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_entries_used=0);
