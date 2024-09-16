@@ -5,6 +5,9 @@
 #ifndef G6K_HYBRID_SLICER_H
 #define G6K_HYBRID_SLICER_H
 
+struct QEntry;
+class ProductLSH;
+
 class RandomizedSlicer{
 
 public:
@@ -40,10 +43,19 @@ public:
     UidHashTable uid_hash_table_t; //hash table for db_t -- the database of targets
     //Siever* sieve;
 
+    FT dist_sq_bnd = 0;
+    size_t threads = 1;
+
+    thread_pool::thread_pool threadpool;
+
+
     void randomize_target_small_task(Entry_t &t);
     //void grow_db_with_target(std::array<LFT,MAX_SIEVING_DIM> &t_yr, size_t n_per_target);
     void grow_db_with_target(const double t_yr[], size_t n_per_target);
 
+    bool bdgl_like_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t multi_hash );
+    void slicer_bucketing(const size_t blocks, const size_t multi_hash, const size_t nr_buckets_aim,
+                                            std::vector<uint32_t> &buckets, std::vector<atomic_size_t_wrapper> &buckets_index);
 
     //FT iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_entries_used=0);
     //void randomize_target(std::array<LFT, MAX_SIEVING_DIM>& t_yr, size_t k );

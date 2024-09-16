@@ -134,6 +134,13 @@ class ProductLSH
             template<int blocks_> 
         void hash_templated(const float * vv, int32_t * res);
 
+        void pprint(const Simd::SmallVecType x)
+        {
+            int8_t* f = (int8_t*) &x;
+            printf("%4i %4i %4i %4i %4i %4i %4i %4i \n",
+                   f[  0], f[  1], f[  2], f[  3], f[  4], f[  5], f[  6], f[  7]);
+        }
+
     public: 
         
         // n denotes the dimension of the lattice, blocks denotes the width of each hash block
@@ -153,33 +160,45 @@ class ProductLSH
         {
         // Set up our permutation randomness    
             aes_key =   Simd::m128_set_epi64x(0xFACEFEED * _seed + 0xDEAD10CC, 0xFFBADD11 * _seed + 0xDEADBEEF);
-	    extra_state = aes_key;
-	    full_seed = Simd::m128_set_epi64x(0xD0D0FA11 * _seed + 0xD15EA5E5, 0xFEE1DEAD * _seed + 0xB105F00D);
-	    Simd::SmallVecType prg_state = full_seed;
+            extra_state = aes_key;
+            full_seed = Simd::m128_set_epi64x(0xD0D0FA11 * _seed + 0xD15EA5E5, 0xFEE1DEAD * _seed + 0xB105F00D);
+            Simd::SmallVecType prg_state = full_seed;
 
-        // Taken is a vector denoting if we've used this position in our permutation before
+            pprint(aes_key);
+            pprint(extra_state);
+            pprint(full_seed);
+            std::cout << "-----------------------" << std::endl;
+
+            // Taken is a vector denoting if we've used this position in our permutation before
             std::vector<bool> taken(n,false);
-        
-        // Build the permutation that's applied to each vector upon hashing
+
+            // Build the permutation that's applied to each vector upon hashing
             for (size_t i = 0; i < n;)
             {
-        // produce a new prng state & take the first 64-bits as output
-        // We then use this to correspond to an array position - repeating if we fail
-        // to find an unused element
-	     
-	      prg_state = Simd::m128_random_state(prg_state, aes_key, &extra_state);
-	      size_t pos = Simd::m128_extract_epi64<0>(prg_state) % n;
-	     
+            // produce a new prng state & take the first 64-bits as output
+            // We then use this to correspond to an array position - repeating if we fail
+            // to find an unused element
+
+                prg_state = Simd::m128_random_state(prg_state, aes_key, &extra_state);
+                size_t pos = Simd::m128_extract_epi64<0>(prg_state) % n;
+
+              //pprint(prg_state);
+              //std::cout << "pos: " << pos << std::endl;
+
                 if (taken[pos]) continue;
-        // Note that we've used this element, and put it in the permutation array
+            // Note that we've used this element, and put it in the permutation array
                 taken[pos] = true;
                 permutation[i] = pos;
-        // We also take this chance to permute the signs too - if the second 64-bit number is odd then 
-        // we will negate in future. Then, just continue producing the permutation
-		  sign[pos] = Simd::m128_extract_epi64<1>(prg_state) % 2 ? 1 : -1;
+            // We also take this chance to permute the signs too - if the second 64-bit number is odd then
+            // we will negate in future. Then, just continue producing the permutation
+                sign[pos] = Simd::m128_extract_epi64<1>(prg_state) % 2 ? 1 : -1;
                 ++i;
-	
+                if (i%10==0) pprint(prg_state);
             }
+            //for (size_t ii = 0; ii<n;){
+            //    std::cout << permutation[ii] << " " << sign[ii] << " ";
+            //}
+            std::cout << "n = " << n << " END OF LSH PRINT" << std::endl;
 
 	
         // rn is the number of remaining dimensions we have to divide up

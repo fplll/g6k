@@ -22,7 +22,12 @@ cdef class RandomizedSlicer(object):
 
         for i in range(len(target)):
             target_f[i] = target[i]
-        #sig_on()
+        sig_on()
         #print("target_f:", target_f)
         self._core.grow_db_with_target(<double*> target_f.data, n_per_target)
-        #sig_off()
+        sig_off()
+
+    def bdgl_like_sieve(self, size_t nr_buckets, size_t blocks, size_t multi_hash):
+        sig_on()
+        self._core.bdgl_like_sieve(nr_buckets, blocks, multi_hash)
+        sig_off()

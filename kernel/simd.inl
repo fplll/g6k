@@ -514,11 +514,13 @@ inline Simd::SmallVecType Simd::m128_random_state(SmallVecType prg_state,
 #else
   // Silence the fact it isn't used.
   (void)key;
-  (void)prg_state;
+  //(void)prg_state;
 
   // Rand should be fine here: it stops us falling into random cycles.
+  srand(m128_extract_epi64<0>(prg_state));
   *extra_state = m128_set_epi64x(static_cast<uint64_t>(rand()),
                                  static_cast<uint64_t>(rand()));
+
   return *extra_state;
 #endif
 }

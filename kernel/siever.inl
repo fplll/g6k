@@ -275,7 +275,7 @@ inline void Siever::recompute_data_for_entry_babai(Entry &e, int babai_index)
 
     return;
 }
-//TODO:move to slicer?
+//TODO:move to slicer
 template<Siever::Recompute what_to_recompute>
 inline void Siever::recompute_data_for_entry_t(Entry_t &e)
 {
@@ -294,7 +294,7 @@ inline void Siever::recompute_data_for_entry_t(Entry_t &e)
         for (unsigned int i = 0; i < n; ++i)
         {
             e.yr[i] = static_cast<FT>(e.yr[i]);
-            e.len+=e.yr[i] * e.yr[i]; // slightly inefficient if we only compute the lenght and not yr, but that does not happen anyway.
+            e.len+=e.yr[i] * e.yr[i]; // slightly inefficient if we only compute the length and not yr, but that does not happen anyway.
         }
     }
 

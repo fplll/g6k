@@ -62,6 +62,13 @@ inline void UidHashTable::reset_hash_function_t(rng::threadsafe_rng& rng, unsign
 inline UidType UidHashTable::compute_uid(std::array<ZT,MAX_SIEVING_DIM> const &x) const
 {
     ATOMIC_CPUCOUNT(250);
+    /*
+    for (size_t i=0; i<n; i++){
+        std::cout << x[i] << " " << uid_coeffs[i] << std::endl;
+    }
+    std::cout << std::inner_product(x.cbegin(), x.cbegin()+n, uid_coeffs.cbegin(), static_cast<UidType>(0)) << std::endl;
+    exit(1);
+    */
     return std::inner_product(x.cbegin(), x.cbegin()+n, uid_coeffs.cbegin(), static_cast<UidType>(0));
 }
 
@@ -69,7 +76,13 @@ inline UidType UidHashTable::compute_uid(std::array<ZT,MAX_SIEVING_DIM> const &x
 inline UidType UidHashTable::compute_uid_t(std::array<LFT,MAX_SIEVING_DIM> const &y) const
 {
     //ATOMIC_CPUCOUNT(250);
-    return std::inner_product(y.cbegin(), y.cbegin()+n, uid_coeffs.cbegin(), static_cast<UidType>(0));
+    UidType res = 0;
+    for (size_t i=0; i<n; i++){
+        res+=static_cast<int16_t>(y[i])*uid_coeffs[i]; //TODO:use move from https://en.cppreference.com/w/cpp/algorithm/inner_product ?
+        //std::cout << " " << static_cast<int16_t>(y[i]) << " " <<uid_coeffs[i] << " " << res << std::endl;
+    }
+
+    return res;
 }
 
 // resets the collision counter to 0. Returns its old value. NOT THEAD-SAFE

@@ -43,7 +43,7 @@ if __name__ == "__main__":
     #param_sieve['default_sieve'] = "bdgl1"
     g6k = Siever(G,param_sieve)
     g6k.initialize_local(n-sieve_dim,n-sieve_dim,n)
-    g6k(alg="bgj1")
+    g6k(alg="bdgl2")
     #g6k.M.update_gso()
 
     #print(f"dbsize: {len(g6k)}")
@@ -59,4 +59,17 @@ if __name__ == "__main__":
     print("target:", [float(tt) for tt in t_gs])
     print("dbsize", g6k.db_size())
 
-    slicer.grow_db_with_target([float(tt) for tt in t_gs], n_per_target=2)
+    slicer.grow_db_with_target([float(tt) for tt in t_gs], n_per_target=10)
+
+    blocks = 2
+    sp = SieverParams()
+    print(sp["db_size_factor"])
+    print(sp["db_size_base"])
+    print(sp["bdgl_bucket_size_factor"])
+    print(sp["bdgl_multi_hash"])
+    print(sp["bdgl_min_bucket_size"])
+    #N = g6k.params.
+    #buckets = bdgl_bucket_size_factor * 2.**((blocks-1.)/(blocks+1.)) * bdgl_multi_hash**((2.*blocks)/(blocks+1.)) * (N ** (blocks/(1.0+blocks)))
+    N = sp["db_size_factor"] * sp["db_size_base"] ** sieve_dim
+    buckets = sp["bdgl_bucket_size_factor"]* 2.**((blocks-1.)/(blocks+1.)) * sp["bdgl_multi_hash"]**((2.*blocks)/(blocks+1.)) * (N ** (blocks/(1.0+blocks)))
+    slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"])

@@ -296,6 +296,21 @@ struct Entry_t
     std::array<LFT,OTF_LIFT_HELPER_DIM> otf_helper; // auxiliary information to accelerate otf lifting of pairs
 };
 
+struct QEntry {
+    size_t i,j;
+    float len;
+    int8_t sign;
+};
+
+struct atomic_size_t_wrapper
+{
+    atomic_size_t_wrapper(): val(0) {}
+    atomic_size_t_wrapper(const size_t& v): val(v) {}
+    atomic_size_t_wrapper(const atomic_size_t_wrapper& v): val(size_t(v.val)) {}
+    std::atomic_size_t val;
+    CACHELINE_PAD(pad);
+};
+
 /**
     Lifted entries. The x coordinates are wrt global basis.
     x is only valid if len > 0.
@@ -449,7 +464,7 @@ public:
     explicit Siever(const SieverParams &params, unsigned long int seed = 0) :
       full_n(0), full_muT(), full_rr(), ll(0), l(0), r(-1), n(0),
       muT(), db(), cdb(),
-      best_lifts_so_far(), histo(), rng(seed), sim_hashes(rng.rng_nolock())
+      best_lifts_so_far(), histo(), rng(seed), sim_hashes(rng.rng_nolock()), lsh_seed(0)
 #ifdef PERFORMANCE_COUNTING
         , _totalcpu(perfcounters[0])
 #endif
@@ -468,6 +483,8 @@ public:
     // sets / gets the current params object of the Sieve.
     bool set_params(const SieverParams &params); // implemented in params.cpp
     SieverParams get_params(); // implemented in params.cpp
+
+    int64_t lsh_seed;
 
 
     // - setting full dimension and setting full gso
@@ -856,7 +873,7 @@ private:
     template<Recompute what_to_recompute>
     inline void recompute_data_for_entry_babai(Entry &e, int babai_index);
 
-    //TODO:
+    //TODO: move to Slicer?
     template<Recompute what_to_recompute>
     inline void recompute_data_for_entry_t(Entry_t &e);
 
@@ -1135,7 +1152,7 @@ private:
                              std::vector<uint32_t> &buckets, std::vector<atomic_size_t_wrapper> &buckets_index,
                              ProductLSH &lsh);
     void bdgl_bucketing(const size_t blocks, const size_t multi_hash, const size_t nr_buckets_aim,
-                        std::vector<uint32_t> &buckets, std::vector<atomic_size_t_wrapper> &buckets_index);
+                        std::vector<uint32_t> &buckets, std::vector<atomic_size_t_wrapper> &buckets_index, int64_t &lsh_seed);
 
     void bdgl_process_buckets_task(const size_t t_id, const std::vector<uint32_t> &buckets,
                                    const std::vector<atomic_size_t_wrapper> &buckets_index, std::vector<QEntry> &t_queue);
