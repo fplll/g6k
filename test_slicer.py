@@ -6,7 +6,7 @@ from g6k.slicer import RandomizedSlicer
 from utils import *
 
 if __name__ == "__main__":
-    n, betamax, sieve_dim = 55, 40, 30
+    n, betamax, sieve_dim = 55, 40, 40
     B = IntegerMatrix(n,n)
     B.randomize("qary", k=n//2, bits=11.705)
     ft = "ld" if n<193 else "dd"
@@ -14,6 +14,7 @@ if __name__ == "__main__":
     G.update_gso()
 
     if sieve_dim<30: print("Slicer is not implemented on dim < 30")
+    if sieve_dim<40: print("LSH won't work on dim < 40")
 
     lll = LLL.Reduction(G)
     lll()
@@ -63,13 +64,12 @@ if __name__ == "__main__":
 
     blocks = 2
     sp = SieverParams()
-    print(sp["db_size_factor"])
-    print(sp["db_size_base"])
-    print(sp["bdgl_bucket_size_factor"])
-    print(sp["bdgl_multi_hash"])
-    print(sp["bdgl_min_bucket_size"])
-    #N = g6k.params.
-    #buckets = bdgl_bucket_size_factor * 2.**((blocks-1.)/(blocks+1.)) * bdgl_multi_hash**((2.*blocks)/(blocks+1.)) * (N ** (blocks/(1.0+blocks)))
+    #print(sp["db_size_factor"])
+    #print(sp["db_size_base"])
+    #print(sp["bdgl_bucket_size_factor"])
+    #print(sp["bdgl_multi_hash"])
+    #print(sp["bdgl_min_bucket_size"])
+
     N = sp["db_size_factor"] * sp["db_size_base"] ** sieve_dim
     buckets = sp["bdgl_bucket_size_factor"]* 2.**((blocks-1.)/(blocks+1.)) * sp["bdgl_multi_hash"]**((2.*blocks)/(blocks+1.)) * (N ** (blocks/(1.0+blocks)))
     slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"])

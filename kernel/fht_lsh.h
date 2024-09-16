@@ -164,10 +164,10 @@ class ProductLSH
             full_seed = Simd::m128_set_epi64x(0xD0D0FA11 * _seed + 0xD15EA5E5, 0xFEE1DEAD * _seed + 0xB105F00D);
             Simd::SmallVecType prg_state = full_seed;
 
-            pprint(aes_key);
-            pprint(extra_state);
-            pprint(full_seed);
-            std::cout << "-----------------------" << std::endl;
+            //pprint(aes_key);
+            //pprint(extra_state);
+            //pprint(full_seed);
+            //std::cout << "-----------------------" << std::endl;
 
             // Taken is a vector denoting if we've used this position in our permutation before
             std::vector<bool> taken(n,false);
@@ -193,12 +193,8 @@ class ProductLSH
             // we will negate in future. Then, just continue producing the permutation
                 sign[pos] = Simd::m128_extract_epi64<1>(prg_state) % 2 ? 1 : -1;
                 ++i;
-                if (i%10==0) pprint(prg_state);
+                //if (i%10==0) pprint(prg_state);
             }
-            //for (size_t ii = 0; ii<n;){
-            //    std::cout << permutation[ii] << " " << sign[ii] << " ";
-            //}
-            std::cout << "n = " << n << " END OF LSH PRINT" << std::endl;
 
 	
         // rn is the number of remaining dimensions we have to divide up

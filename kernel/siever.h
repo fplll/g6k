@@ -103,6 +103,7 @@ static constexpr unsigned int XPC_THRESHOLD_TRIPLE_INNER_CHECK = 133; // XPC Thr
 static constexpr float X1X2 = 0.108;  // Threshold to put vector in filtered list ~(1/3)^2
 
 static constexpr unsigned int XPC_SLICER_SAMPLING_THRESHOLD = 105; // XPC Threshold for iterative slicer sampling //105
+static constexpr unsigned int XPC_SLICER_THRESHOLD = 96; // XPC Threshold for iterative slicer sampling
 
 static constexpr unsigned int MIN_ENTRY_PER_THREAD = 100; // factor that determines minimum size of work batch to distribute to a thread.
 
@@ -484,7 +485,9 @@ public:
     bool set_params(const SieverParams &params); // implemented in params.cpp
     SieverParams get_params(); // implemented in params.cpp
 
+    //move here to be accessible by RandomizedSlicer
     int64_t lsh_seed;
+    std::vector<uint32_t> buckets;
 
 
     // - setting full dimension and setting full gso

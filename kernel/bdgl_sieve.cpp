@@ -171,7 +171,7 @@ void Siever::bdgl_bucketing(const size_t blocks, const size_t multi_hash, const 
 {
     // init hash
     lsh_seed = rng();
-    std::cout << "lsh_seed: " << lsh_seed << std::endl;
+    //std::cout << "lsh_seed: " << lsh_seed << std::endl;
     ProductLSH lsh(n, blocks, nr_buckets_aim, multi_hash, lsh_seed);
     const size_t nr_buckets = lsh.codesize;
     const size_t S = cdb.size();
@@ -380,7 +380,6 @@ bool Siever::bdgl_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t
     }
     
     std::vector<std::vector<Entry>> transaction_db(params.threads, std::vector<Entry>());
-    std::vector<uint32_t> buckets;
     std::vector<atomic_size_t_wrapper> buckets_i;
     std::vector<std::vector<QEntry>> t_queues(params.threads);
 

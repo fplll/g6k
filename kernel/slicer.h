@@ -56,7 +56,13 @@ public:
     bool bdgl_like_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t multi_hash );
     void slicer_bucketing(const size_t blocks, const size_t multi_hash, const size_t nr_buckets_aim,
                                             std::vector<uint32_t> &buckets, std::vector<atomic_size_t_wrapper> &buckets_index);
+    void slicer_bucketing_task(const size_t t_id, std::vector<uint32_t> &buckets, std::vector<atomic_size_t_wrapper> &buckets_index, ProductLSH &lsh);
 
+    void slicer_process_buckets(const std::vector<uint32_t> &buckets, const std::vector<atomic_size_t_wrapper> &buckets_index,
+                                std::vector<std::vector<QEntry>> &t_queues);
+    void slicer_process_buckets_task(const size_t t_id, const std::vector<uint32_t> &buckets,
+                                     const std::vector<atomic_size_t_wrapper> &buckets_index, std::vector<QEntry> &t_queue);
+    std::pair<LFT, int8_t> reduce_to_QEntry_t(CompressedEntry *ce1, CompressedEntry *ce2);
     //FT iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_entries_used=0);
     //void randomize_target(std::array<LFT, MAX_SIEVING_DIM>& t_yr, size_t k );
     //void randomize_target_small(std::array<LFT, MAX_SIEVING_DIM> &t_yr, unsigned int debug_directives);

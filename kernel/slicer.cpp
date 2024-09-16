@@ -1,7 +1,19 @@
 #include "siever.h"
 #include "slicer.h"
 #include "fht_lsh.h"
+#include <limits>
 
+
+inline bool compare_QEntry(QEntry const& lhs, QEntry const& rhs) { return lhs.len > rhs.len; }
+
+//First element from the list of targets, the second from the siever db
+std::pair<LFT, int8_t> RandomizedSlicer::reduce_to_QEntry_t(CompressedEntry *ce1, CompressedEntry *ce2)
+{
+    LFT inner = std::inner_product(db_t[ce1->i].yr.begin(), db_t[ce1->i].yr.begin()+n, this->sieve.db[ce2->i].yr.begin(),  static_cast<LFT>(0.));
+    LFT new_l = ce1->len + ce2->len - 2 * std::abs(inner);
+    int8_t sign = (inner < 0 ) ? 1 : -1;
+    return { new_l, sign };
+}
 
 void RandomizedSlicer::randomize_target_small_task(Entry_t &t)
 {
@@ -151,8 +163,9 @@ void RandomizedSlicer::slicer_bucketing(const size_t blocks, const size_t multi_
 {
     // init hash
     std::cout << "lsh_seed from sieve: " << this->sieve.lsh_seed << std::endl;
+    //std::cout << "n = " << n << std::endl;
     ProductLSH lsh(n, blocks, nr_buckets_aim, multi_hash, this->sieve.lsh_seed);
-    exit(1);
+
     const size_t nr_buckets = lsh.codesize;
     const size_t S = cdb_t.size();
     size_t bsize = 2 * (S*multi_hash / double(nr_buckets));
@@ -161,11 +174,13 @@ void RandomizedSlicer::slicer_bucketing(const size_t blocks, const size_t multi_
     for( size_t i = 0; i < nr_buckets; i++ )
         buckets_index[i].val = 0;
 
+    //std::cout << "buckets set up" << std::endl;
+
     for (size_t t_id = 0; t_id < threads; ++t_id)
     {
-        //threadpool.push([this, t_id, multi_hash, &buckets, &buckets_index, &lsh](){
-        //    slicer_bucketing_task(t_id, buckets, buckets_index, lsh);
-        //});
+        threadpool.push([this, t_id, multi_hash, &buckets, &buckets_index, &lsh](){
+            slicer_bucketing_task(t_id, buckets, buckets_index, lsh);
+        });
     }
     threadpool.wait_work();
 
@@ -177,56 +192,115 @@ void RandomizedSlicer::slicer_bucketing(const size_t blocks, const size_t multi_
     }
 }
 
-/*
-void RandomizedSlicer::slicer_bucketing_task(const size_t t_id,
+
+void RandomizedSlicer::slicer_bucketing_task(const size_t t_id, std::vector<uint32_t> &buckets, std::vector<atomic_size_t_wrapper> &buckets_index, ProductLSH &lsh) {
+
+    CompressedEntry* const fast_cdb = cdb_t.data();
+    const size_t S = cdb_t.size();
+    const size_t multi_hash = lsh.multi_hash;
+    const unsigned int nr_buckets = buckets_index.size();
+    const size_t bsize = buckets.size() / nr_buckets;
+    //const size_t threads = threads;
+
+    uint32_t i_start = t_id;
+    int32_t res[multi_hash];
+    size_t bucket_index = 0;
+    for (uint32_t i = i_start; i < S; i += threads)
+    {
+        auto db_index = fast_cdb[i].i;
+        lsh.hash( db_t[db_index].yr.data() , res);
+        for( size_t j = 0; j < multi_hash; j++ ) {
+            uint32_t b = res[j];
+            assert( b < nr_buckets );
+            bucket_index = buckets_index[b].val++; // atomic
+            if( bucket_index < bsize ) {
+                buckets[bsize * b + bucket_index] = i;
+            }
+        }
+    }
+}
+
+// Returned queue is sorted
+void RandomizedSlicer::slicer_process_buckets(const std::vector<uint32_t> &buckets, const std::vector<atomic_size_t_wrapper> &buckets_index,
+                                  std::vector<std::vector<QEntry>> &t_queues)
+{
+    for (size_t t_id = 0; t_id < threads; ++t_id)
+    {
+        threadpool.push([this, t_id, &buckets, &buckets_index, &t_queues](){slicer_process_buckets_task(t_id, buckets, buckets_index, t_queues[t_id]);});
+    }
+    threadpool.wait_work();
+}
+
+
+void RandomizedSlicer::slicer_process_buckets_task(const size_t t_id,
                                        const std::vector<uint32_t> &buckets,
-                                       const std::vector<atomic_size_t_wrapper> &buckets_index, std::vector<QEntry> &t_queue) {
+                                       const std::vector<atomic_size_t_wrapper> &buckets_index, std::vector<QEntry> &t_queue)
+{
 
     const size_t nr_buckets = buckets_index.size();
     const size_t bsize = buckets.size() / nr_buckets;
 
-    const uint32_t *const fast_buckets = buckets.data();
-    CompressedEntry *const fast_cdb = cdb_t.data();
+    const uint32_t* const fast_buckets_t = buckets.data();
+    const uint32_t* const fast_buckets = this->sieve.buckets.data();
+
+    CompressedEntry* const fast_cdb_t = cdb_t.data();
+    CompressedEntry* const fast_cdb = this->sieve.cdb.data();
 
     const size_t S = cdb_t.size();
 
-    // todo: start insert earlier
-    int64_t kk = S - 1 - t_id;
+    int64_t kk = S-1-t_id; //controls the number of new reduced vectors to be added
 
-    //TODO:
-    LFT lenbound = fast_cdb[std::min(S - 1, size_t(params.bdgl_improvement_db_ratio * S))].len;
+    //LFT lenbound = fast_cdb[std::min(S-1, size_t(params.bdgl_improvement_db_ratio * S))].len;
     const size_t b_start = t_id;
 
     size_t B = 0;
-    for (size_t b = b_start; b < nr_buckets; b += threads) {
+    for (size_t b = b_start; b < nr_buckets; b += threads)
+    {
         const size_t i_start = bsize * b;
         const size_t i_end = bsize * b + buckets_index[b].val;
 
-        B += ((i_end - i_start) * (i_end - i_start - 1)) / 2;
-        for (size_t i = i_start; i < i_end; ++i) {
+        //B +=( (i_end - i_start) * (i_end-i_start-1)) / 2;
+        for( size_t i = i_start; i < i_end; ++i )
+        {
             if (kk < .1 * S) break;
 
-            uint32_t bi = fast_buckets[i];
-            CompressedEntry *pce1 = &fast_cdb[bi];
+            uint32_t bi = fast_buckets_t[i];
+            CompressedEntry *pce1 = &fast_cdb_t[bi];
             CompressedVector cv = pce1->c;
-            for (size_t j = i_start; j < i; ++j) {
+
+            //LFT best_reduction = pce1->len;
+            //size_t best_j = 0;
+            //int best_sign = 0;
+            for (size_t j = i_start; j < i_end; ++j)
+            {
                 uint32_t bj = fast_buckets[j];
-                if (is_reducible_maybe<XPC_THRESHOLD>(cv, fast_cdb[bj].c)) {
-                    std::pair<LFT, int> len_and_sign = reduce_to_QEntry(pce1, &fast_cdb[bj]);
-                    if (len_and_sign.first < lenbound) {
+                if( this->sieve.is_reducible_maybe<XPC_SLICER_THRESHOLD>(cv, fast_cdb[bj].c) ) //TODO:adjust XPC_SLICER_THRESHOLD
+                {
+
+                    std::pair<LFT, int> len_and_sign = reduce_to_QEntry_t( pce1, &fast_cdb[bj] );
+                    if( len_and_sign.first < pce1->len)
+                    {
+                        //best_j = j;
+                        //best_reduction = len_and_sign.first;
+                        //best_sign = len_and_sign.second;
+
                         if (kk < .1 * S) break;
                         kk -= threads;
+                        //statistics.inc_stats_2redsuccess_outer();
+                        t_queue.push_back({ pce1->i, fast_cdb[bj].i, len_and_sign.first, (int8_t)len_and_sign.second});
 
-                        t_queue.push_back({pce1->i, fast_cdb[bj].i, len_and_sign.first, (int8_t) len_and_sign.second});
                     }
+                    //else if( params.otf_lift and len_and_sign.first < params.lift_radius ) {
+                    //    bdgl_lift( pce1->i, fast_cdb[bj].i, len_and_sign.first, len_and_sign.second );
+                    //}
                 }
             }
         }
     }
     //statistics.inc_stats_xorpopcnt_inner(B);
-    std::sort(t_queue.begin(), t_queue.end(), &compare_QEntry);
+    std::sort( t_queue.begin(), t_queue.end(), &compare_QEntry);
 }
-*/
+
 
 bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t multi_hash ){
 
@@ -239,8 +313,10 @@ bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t block
     while( true ) {
 
         slicer_bucketing(blocks, multi_hash, nr_buckets_aim, buckets, buckets_i);
+        slicer_process_buckets(buckets, buckets_i, t_queues);
 
-        if( it > 10000 ) {
+
+        if( it > 10 ) {
             std::cerr << "Couldn't find a close vector after 10000 iterations" << std::endl;
             return false;
         }
