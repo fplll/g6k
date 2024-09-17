@@ -27,7 +27,7 @@ cdef class RandomizedSlicer(object):
         self._core.grow_db_with_target(<double*> target_f.data, n_per_target)
         sig_off()
 
-    def bdgl_like_sieve(self, size_t nr_buckets, size_t blocks, size_t multi_hash):
+    def bdgl_like_sieve(self, size_t nr_buckets, size_t blocks, size_t multi_hash, len_bound):
         sig_on()
-        self._core.bdgl_like_sieve(nr_buckets, blocks, multi_hash)
+        self._core.bdgl_like_sieve(nr_buckets, blocks, multi_hash, len_bound)
         sig_off()

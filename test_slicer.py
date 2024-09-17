@@ -6,7 +6,7 @@ from g6k.slicer import RandomizedSlicer
 from utils import *
 
 if __name__ == "__main__":
-    n, betamax, sieve_dim = 55, 40, 40
+    n, betamax, sieve_dim = 55, 41, 41
     B = IntegerMatrix(n,n)
     B.randomize("qary", k=n//2, bits=11.705)
     ft = "ld" if n<193 else "dd"
@@ -44,10 +44,10 @@ if __name__ == "__main__":
     #param_sieve['default_sieve'] = "bdgl1"
     g6k = Siever(G,param_sieve)
     g6k.initialize_local(n-sieve_dim,n-sieve_dim,n)
-    g6k(alg="bdgl2")
-    #g6k.M.update_gso()
+    g6k(alg="bdgl")
+    g6k.M.update_gso()
 
-    #print(f"dbsize: {len(g6k)}")
+    print(f"dbsize: {len(g6k)}")
 
     t_gs = from_canonical_scaled( G,t,offset=sieve_dim )
     print(f"t_gs: {t_gs} | norm: {(t_gs@t_gs)}")
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     print("target:", [float(tt) for tt in t_gs])
     print("dbsize", g6k.db_size())
 
-    slicer.grow_db_with_target([float(tt) for tt in t_gs], n_per_target=10)
+    slicer.grow_db_with_target([float(tt) for tt in t_gs], n_per_target=1000)
 
     blocks = 2
     sp = SieverParams()
@@ -72,4 +72,6 @@ if __name__ == "__main__":
 
     N = sp["db_size_factor"] * sp["db_size_base"] ** sieve_dim
     buckets = sp["bdgl_bucket_size_factor"]* 2.**((blocks-1.)/(blocks+1.)) * sp["bdgl_multi_hash"]**((2.*blocks)/(blocks+1.)) * (N ** (blocks/(1.0+blocks)))
-    slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"])
+    e_ = np.array( from_canonical_scaled(g6k.M,e,offset=sieve_dim) )
+
+    slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (1.01*(e_@e_)))

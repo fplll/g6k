@@ -15,6 +15,25 @@ std::pair<LFT, int8_t> RandomizedSlicer::reduce_to_QEntry_t(CompressedEntry *ce1
     return { new_l, sign };
 }
 
+void RandomizedSlicer::parallel_sort_cdb() {
+
+    assert(sorted_until <= cdb_t.size());
+    assert(std::is_sorted(cdb_t.cbegin(), cdb_t.cbegin() + sorted_until, compare_CE()));
+    if (sorted_until == cdb_t.size()) {
+        return; // nothing to do. We do not increase the statistics counter.
+    }
+
+    pa::sort(cdb_t.begin() + sorted_until, cdb_t.end(), compare_CE(), threadpool);
+    cdb_t_tmp_copy.resize(cdb_t.size());
+    pa::merge(cdb_t.begin(), cdb_t.begin() + sorted_until, cdb_t.begin() + sorted_until, cdb_t.end(),
+              cdb_t_tmp_copy.begin(), compare_CE(), threadpool);
+    cdb_t.swap(cdb_t_tmp_copy);
+    sorted_until = cdb_t.size();
+    assert(std::is_sorted(cdb_t.cbegin(), cdb_t.cend(), compare_CE()));
+    return;
+}
+
+
 void RandomizedSlicer::randomize_target_small_task(Entry_t &t)
 {
     size_t fullS = this->sieve.cdb.size();
@@ -155,6 +174,162 @@ void RandomizedSlicer::grow_db_with_target(const double t_yr[], size_t n_per_tar
         std::cout << i << ": " << db_t[i].len << " " << db_t[i].uid  << std::endl;
     }
     */
+}
+
+void RandomizedSlicer::slicer_queue_dup_remove_task( std::vector<QEntry> &queue) {
+    const size_t Q = queue.size();
+    for( size_t index = 0; index < Q; index++ ) {
+        size_t i1 = queue[index].i;
+        size_t i2 = queue[index].j;
+        UidType new_uid = db_t[i1].uid;
+        if(queue[index].sign==1)
+        {
+            new_uid += db_t[i2].uid;
+        }
+        else
+        {
+            new_uid -= db_t[i2].uid;
+        }
+        // if already present, use sign as duplicate marker
+        if (uid_hash_table_t.check_uid_unsafe(new_uid) )
+            queue[index].sign = 0;
+    }
+}
+
+inline int RandomizedSlicer::slicer_reduce_with_delayed_replace(const size_t i1, const size_t i2, LFT const lenbound, std::vector<Entry_t>& transaction_db, int64_t& write_index, LFT new_l, int8_t sign)
+{
+    if (new_l < lenbound)
+    {
+        UidType new_uid = db_t[i1].uid;
+        if(sign==1)
+        {
+            new_uid += db_t[i2].uid;
+        }
+        else
+        {
+            new_uid -= db_t[i2].uid;
+        }
+        if (uid_hash_table_t.insert_uid(new_uid))
+        {
+            std::array<LFT,MAX_SIEVING_DIM> new_yr = db_t[i1].yr;
+            this->sieve.addsub_vec(new_yr,  db_t[i2].yr, static_cast<ZT>(sign));
+            int64_t index = write_index--; // atomic and signed!
+            if( index >= 0 ) {
+                Entry_t& new_entry = transaction_db[index];
+                new_entry.yr = new_yr;
+                this->sieve.recompute_data_for_entry_t<Siever::Recompute::recompute_all>(new_entry);
+                return 1;
+            }
+            return -2; // transaction_db full
+        }
+        else
+        {
+            // duplicate
+            return 0;
+        }
+    }
+    //else if (params.otf_lift && (new_l < params.lift_radius))
+    //{
+    //    bdgl_lift(i1, i2, new_l, sign);
+    //}
+    return -1;
+}
+
+void RandomizedSlicer::slicer_queue_create_task( const size_t t_id, const std::vector<QEntry> &queue, std::vector<Entry_t> &transaction_db, int64_t &write_index) {
+    const size_t S = cdb_t.size();
+    const size_t Q = queue.size();
+
+    const size_t insert_after = S-1-t_id-threads*write_index;
+    for(unsigned int index = 0; index < Q; index++ )  {
+        // use sign as skip marker
+        if( queue[index].sign == 0 ){
+            continue;
+        }
+
+        slicer_reduce_with_delayed_replace( queue[index].i, queue[index].j,
+                                          cdb_t[std::min(S-1, static_cast<unsigned long>(insert_after+threads*write_index))].len / REDUCE_LEN_MARGIN,
+                                          transaction_db, write_index, queue[index].len, queue[index].sign);
+        if( write_index < 0 ){
+            std::cerr << "Spilling full transaction db" << t_id << " " << Q-index << std::endl;
+            break;
+        }
+    }
+}
+
+bool RandomizedSlicer::slicer_replace_in_db(size_t cdb_index, Entry_t &e)
+{
+    CompressedEntry &ce = cdb_t[cdb_index]; // abbreviation
+
+    if (REDUCE_LEN_MARGIN_HALF * e.len >= ce.len)
+    {
+        uid_hash_table_t.erase_uid(e.uid);
+        return false;
+    }
+    uid_hash_table_t.erase_uid(db_t[ce.i].uid);
+    ce.len = e.len;
+    ce.c = e.c;
+    db_t[ce.i] = e;
+    return true;
+}
+
+size_t RandomizedSlicer::slicer_queue_insert_task( const size_t t_id, std::vector<Entry_t> &transaction_db, int64_t write_index) {
+    const size_t S = cdb_t.size();
+    const size_t insert_after = std::max(int(0), int(int(S)-1-t_id-threads*(transaction_db.size()-write_index)));
+    size_t kk = S-1 - t_id;
+    for( int i = transaction_db.size()-1; i > write_index and kk >= insert_after; --i )  {
+        if( slicer_replace_in_db( kk, transaction_db[i] ) ) {
+            kk -= threads;
+        }
+    }
+    return kk + threads;
+}
+
+void RandomizedSlicer::slicer_queue(std::vector<std::vector<QEntry>> &t_queues, std::vector<std::vector<Entry_t>>& transaction_db ) {
+    // clear duplicates read only
+    for( size_t t_id = 0; t_id < threads; ++t_id ) {
+        threadpool.push([this, t_id, &t_queues](){
+            slicer_queue_dup_remove_task(t_queues[t_id]);
+        });
+    }
+    threadpool.wait_work();
+
+    const size_t S = cdb_t.size();
+    size_t Q = 0;
+    for(unsigned int i = 0; i < threads; i++)
+        Q += t_queues[i].size();
+    size_t insert_after = std::max(0, int(int(S)-Q));
+
+    for(unsigned int i = 0; i < threads; i++ )
+        transaction_db[i].resize(std::min(S-insert_after, Q)/threads + 1);
+
+    std::vector<int> write_indices(threads, transaction_db[0].size()-1);
+    // Prepare transaction DB from queue
+
+    for( size_t t_id = 0; t_id < threads; ++t_id ) {
+        threadpool.push([this, t_id, &t_queues, &transaction_db,&write_indices](){
+            int64_t write_index = write_indices[t_id];
+            slicer_queue_create_task(t_id, t_queues[t_id], transaction_db[t_id], write_index);
+            write_indices[t_id] = write_index;
+            t_queues[t_id].clear();
+        });
+    }
+    threadpool.wait_work();
+
+    // Insert transaction DB
+    std::vector<size_t> kk(threads);
+    for( size_t t_id = 0; t_id < threads; ++t_id ) {
+        threadpool.push([this, &kk, t_id, &transaction_db,&write_indices](){
+            kk[t_id] = slicer_queue_insert_task(t_id, transaction_db[t_id], write_indices[t_id]);
+        });
+    }
+    threadpool.wait_work();
+    size_t min_kk = kk[0];
+    size_t inserted = 0;
+    for(unsigned int i = 0; i < threads; i++ ){
+        min_kk = std::min(min_kk, kk[i]);
+        inserted += (S-1-i - kk[i]-threads)/threads;
+    }
+    sorted_until = min_kk;
 }
 
 // assumes buckets and buckets_index are resized and resetted correctly.
@@ -302,7 +477,9 @@ void RandomizedSlicer::slicer_process_buckets_task(const size_t t_id,
 }
 
 
-bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t multi_hash ){
+bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t multi_hash, LFT len_bound ){
+
+    parallel_sort_cdb();
 
     std::vector<std::vector<Entry_t>> transaction_db(threads, std::vector<Entry_t>());
     std::vector<uint32_t> buckets;
@@ -314,10 +491,17 @@ bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t block
 
         slicer_bucketing(blocks, multi_hash, nr_buckets_aim, buckets, buckets_i);
         slicer_process_buckets(buckets, buckets_i, t_queues);
+        slicer_queue(t_queues, transaction_db);
+        parallel_sort_cdb();
+
+        if(cdb_t[0].len<len_bound){
+            std::cout << "cdb_t[0].len " << cdb_t[0].len << std::endl;
+            return true;
+        }
 
 
-        if( it > 10 ) {
-            std::cerr << "Couldn't find a close vector after 10000 iterations" << std::endl;
+        if( it > 20 ) {
+            std::cerr << "Couldn't find a close vector after 20 iterations" << std::endl;
             return false;
         }
         it++;

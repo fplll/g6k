@@ -400,10 +400,10 @@ bool Siever::bdgl_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t
             return true;
         } 
 
-        if( it > 5 ) {
+        if( it > 1000 ) {
             std::cerr << "Not saturated after 10000 iterations" << std::endl;
-            return true;
-            //return false;
+            //return true;
+            return false;
         }
 
         it++;

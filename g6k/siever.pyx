@@ -1201,7 +1201,6 @@ cdef class Siever(object):
 
     def bdgl_sieve(self, blocks=None, buckets=None, reset_stats=True, check_saturation=True):
 
-        print("in bdgl_sieve!")
         assert(self.initialized)
         if self.n < 40:
             logging.warning("bdgl_sieve not recommended below dimension 40")
@@ -1410,8 +1409,6 @@ cdef class Siever(object):
 
     def __call__(self, alg=None, reset_stats=True, tracer=dummy_tracer):
         assert(self.initialized)
-
-        print("inside __call__")
 
         # Check choice of sieve algorithm preemptively, to avoid incorrect user
         # choices  being overwritten by default or crossover leading to non-deterministic

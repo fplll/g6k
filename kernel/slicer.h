@@ -35,6 +35,7 @@ public:
 
     CACHELINE_VARIABLE(std::vector<Entry_t>, db_t);             // database of targets
     CACHELINE_VARIABLE(std::vector<CompressedEntry>, cdb_t);  // compressed version, faster access and periodically sorted
+    CACHELINE_VARIABLE(std::vector<CompressedEntry>, cdb_t_tmp_copy);
     CACHELINE_VARIABLE(rng::threadsafe_rng, rng_t);
 
     unsigned int n;
@@ -47,13 +48,15 @@ public:
     size_t threads = 1;
 
     thread_pool::thread_pool threadpool;
+    size_t sorted_until = 0;
 
+    void parallel_sort_cdb();
 
     void randomize_target_small_task(Entry_t &t);
     //void grow_db_with_target(std::array<LFT,MAX_SIEVING_DIM> &t_yr, size_t n_per_target);
     void grow_db_with_target(const double t_yr[], size_t n_per_target);
 
-    bool bdgl_like_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t multi_hash );
+    bool bdgl_like_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t multi_hash, LFT len_bound );
     void slicer_bucketing(const size_t blocks, const size_t multi_hash, const size_t nr_buckets_aim,
                                             std::vector<uint32_t> &buckets, std::vector<atomic_size_t_wrapper> &buckets_index);
     void slicer_bucketing_task(const size_t t_id, std::vector<uint32_t> &buckets, std::vector<atomic_size_t_wrapper> &buckets_index, ProductLSH &lsh);
@@ -63,6 +66,17 @@ public:
     void slicer_process_buckets_task(const size_t t_id, const std::vector<uint32_t> &buckets,
                                      const std::vector<atomic_size_t_wrapper> &buckets_index, std::vector<QEntry> &t_queue);
     std::pair<LFT, int8_t> reduce_to_QEntry_t(CompressedEntry *ce1, CompressedEntry *ce2);
+
+    void slicer_queue(std::vector<std::vector<QEntry>> &t_queues, std::vector<std::vector<Entry_t>>& transaction_db );
+    void slicer_queue_dup_remove_task( std::vector<QEntry> &queue);
+
+    void slicer_queue_create_task( const size_t t_id, const std::vector<QEntry> &queue, std::vector<Entry_t> &transaction_db, int64_t &write_index);
+    inline int slicer_reduce_with_delayed_replace(const size_t i1, const size_t i2, LFT const lenbound, std::vector<Entry_t>& transaction_db, int64_t& write_index, LFT new_l, int8_t sign);
+    size_t slicer_queue_insert_task( const size_t t_id, std::vector<Entry_t> &transaction_db, int64_t write_index);
+    bool slicer_replace_in_db(size_t cdb_index, Entry_t &e);
+
+
+
     //FT iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_entries_used=0);
     //void randomize_target(std::array<LFT, MAX_SIEVING_DIM>& t_yr, size_t k );
     //void randomize_target_small(std::array<LFT, MAX_SIEVING_DIM> &t_yr, unsigned int debug_directives);
