@@ -505,6 +505,8 @@ inline void Simd::m256_mix(VecType &v0, VecType &v1, const VecType &mask) {
   v1 = m256_xor_si256(v1, diff);
 }
 
+
+
 inline Simd::SmallVecType Simd::m128_random_state(SmallVecType prg_state,
                                                   SmallVecType key,
                                                   SmallVecType *extra_state) {
@@ -516,8 +518,13 @@ inline Simd::SmallVecType Simd::m128_random_state(SmallVecType prg_state,
   (void)key;
   //(void)prg_state;
 
+
   // Rand should be fine here: it stops us falling into random cycles.
-  srand(m128_extract_epi64<0>(prg_state));
+
+
+  //srand(m128_extract_epi64<1>(prg_state));
+
+
   *extra_state = m128_set_epi64x(static_cast<uint64_t>(rand()),
                                  static_cast<uint64_t>(rand()));
 

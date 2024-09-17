@@ -173,6 +173,7 @@ void Siever::bdgl_bucketing(const size_t blocks, const size_t multi_hash, const 
     lsh_seed = rng();
     //std::cout << "lsh_seed: " << lsh_seed << std::endl;
     ProductLSH lsh(n, blocks, nr_buckets_aim, multi_hash, lsh_seed);
+    //std::cout << "lsh initialized" << std::endl;
     const size_t nr_buckets = lsh.codesize;
     const size_t S = cdb.size();
     size_t bsize = 2 * (S*multi_hash / double(nr_buckets));
@@ -387,11 +388,21 @@ bool Siever::bdgl_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t
     while( true ) {
         bdgl_bucketing(blocks, multi_hash, nr_buckets_aim, buckets, buckets_i, lsh_seed);
 
+        //std::cout << "buckets done " << std::endl;
+
         bdgl_process_buckets(buckets, buckets_i, t_queues);
+
+        //std::cout << "buckets processing done " << std::endl;
 
         bdgl_queue(t_queues, transaction_db );
 
+        //std::cout << "queue done " << std::endl;
+
         parallel_sort_cdb();
+
+        //std::cout << "parallel_sort_cdb done " << std::endl;
+
+        //std::cout << it << " " << cdb[saturation_index].len << " " <<   params.saturation_radius << std::endl;
 
         if( cdb[saturation_index].len <= params.saturation_radius ) {
             assert(std::is_sorted(cdb.cbegin(),cdb.cend(), compare_CE()  ));
@@ -400,7 +411,7 @@ bool Siever::bdgl_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t
             return true;
         } 
 
-        if( it > 1000 ) {
+        if( it > 10000 ) {
             std::cerr << "Not saturated after 10000 iterations" << std::endl;
             //return true;
             return false;

@@ -172,9 +172,16 @@ class ProductLSH
             // Taken is a vector denoting if we've used this position in our permutation before
             std::vector<bool> taken(n,false);
 
+            int max_trial = 0;
+
             // Build the permutation that's applied to each vector upon hashing
             for (size_t i = 0; i < n;)
             {
+                max_trial++;
+                if (max_trial>1000) {
+                    std::cerr << "error in instatiating lsh" << std::endl;
+                    exit(1);
+                }
             // produce a new prng state & take the first 64-bits as output
             // We then use this to correspond to an array position - repeating if we fail
             // to find an unused element
@@ -182,18 +189,28 @@ class ProductLSH
                 prg_state = Simd::m128_random_state(prg_state, aes_key, &extra_state);
                 size_t pos = Simd::m128_extract_epi64<0>(prg_state) % n;
 
-              //pprint(prg_state);
-              //std::cout << "pos: " << pos << std::endl;
+                //pprint(prg_state);
 
-                if (taken[pos]) continue;
+
+                if (taken[pos] ){
+                    continue;
+                }
             // Note that we've used this element, and put it in the permutation array
                 taken[pos] = true;
                 permutation[i] = pos;
             // We also take this chance to permute the signs too - if the second 64-bit number is odd then
             // we will negate in future. Then, just continue producing the permutation
                 sign[pos] = Simd::m128_extract_epi64<1>(prg_state) % 2 ? 1 : -1;
+                //if (i%2==0){
+                    //pprint(prg_state);
+                    //std::cout << Simd::m128_extract_epi64<0>(prg_state) << std::endl;
+                //}
+
                 ++i;
-                //if (i%10==0) pprint(prg_state);
+               // if(i==38 && _seed==3730182426863831939){
+               //     exit(1);
+                //}
+                //std::cout << i << " " << n << std::endl;
             }
 
 	

@@ -337,7 +337,7 @@ void RandomizedSlicer::slicer_bucketing(const size_t blocks, const size_t multi_
                             std::vector<uint32_t> &buckets, std::vector<atomic_size_t_wrapper> &buckets_index)
 {
     // init hash
-    std::cout << "lsh_seed from sieve: " << this->sieve.lsh_seed << std::endl;
+    //std::cout << "lsh_seed from sieve: " << this->sieve.lsh_seed << std::endl;
     //std::cout << "n = " << n << std::endl;
     ProductLSH lsh(n, blocks, nr_buckets_aim, multi_hash, this->sieve.lsh_seed);
 
@@ -495,13 +495,16 @@ bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t block
         parallel_sort_cdb();
 
         if(cdb_t[0].len<len_bound){
-            std::cout << "cdb_t[0].len " << cdb_t[0].len << std::endl;
+            std::cout << "solution found" << std::endl;
             return true;
         }
 
+        if(it%100==0) {
+            std::cout << "cdb_t[0].len " << cdb_t[0].len << " cdb_t.size() " << cdb_t.size() << std::endl;
+        }
 
-        if( it > 20 ) {
-            std::cerr << "Couldn't find a close vector after 20 iterations" << std::endl;
+        if( it > 1000 ) {
+            std::cerr << "Couldn't find a close vector after 1000 iterations" << std::endl;
             return false;
         }
         it++;
