@@ -64,7 +64,6 @@ def from_canonical_scaled(M, t, offset=None):
     if offset is None:
         offset=M.d
     gh = gaussian_heuristic(M.r()[-offset:])
-    print(f"gh: {gh}")
     t_ = np.array( M.from_canonical(t)[-offset:], dtype=np.float64 )
     r_ = np.array( [sqrt(tt/gh) for tt in M.r()[-offset:]], dtype=np.float64 )
 
@@ -92,6 +91,12 @@ def gen_and_pickle_lattice(n, k=None, bits=None, betamax=None, seed=None):
             os.makedirs(save_folder)
         except:
             pass    #still in docker if isExists==False, for some reason folder can exist and this will throw an exception.
+
+def reduce_to_fund_par_proj(B_gs,t_gs,dim):
+    for i in range(dim):
+        for j in range(i,-1,-1):
+            t_gs -= B_gs[j] * round( t_gs[j] / B_gs[j][j] )
+    return t_gs
 
 
     k = n//2+1 if k is None else k

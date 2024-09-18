@@ -54,16 +54,20 @@ if __name__ == "__main__":
 
     t_gs = from_canonical_scaled( G,t,offset=sieve_dim )
     print(f"t_gs: {t_gs} | norm: {(t_gs@t_gs)}")
+    #retrieve the projective sublattice
+    B_gs = [ np.array( from_canonical_scaled(G, G.B[i], offset=sieve_dim) ) for i in range(G.d - sieve_dim, G.d) ]
+    t_gs_reduced = reduce_to_fund_par_proj(B_gs,(t_gs),sieve_dim) #reduce the target w.r.t. B_gs
+    t_gs_shift = t_gs-t_gs_reduced #find the shift to be applied after the slicer
 
     #then = perf_counter()
 
     #out_gs = g6k.randomized_iterative_slice([float(tt) for tt in t_gs],samples=1000)
     slicer = RandomizedSlicer(g6k)
 
-    print("target:", [float(tt) for tt in t_gs])
+    print("target:", [float(tt) for tt in t_gs_reduced])
     print("dbsize", g6k.db_size())
 
-    slicer.grow_db_with_target([float(tt) for tt in t_gs], n_per_target=300)
+    slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=300)
 
     blocks = 2
     sp = SieverParams()
