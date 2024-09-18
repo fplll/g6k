@@ -362,13 +362,13 @@ void RandomizedSlicer::slicer_bucketing(const size_t blocks, const size_t multi_
 
     for( size_t i = 0; i < nr_buckets; ++i ) {
         // bucket overflow
-        // std::cout << i << " " <<  buckets_index[i].val << " " << bsize <<  std::endl;
+        //std::cout << i << " " <<  buckets_index[i].val << " " << bsize <<  std::endl;
         if( buckets_index[i].val > bsize ) {
             buckets_index[i].val = bsize;
             //std::cout << "bucket overflow!" << std::endl;
         }
     }
-    exit(1);
+    //exit(1);
 }
 
 
@@ -390,8 +390,8 @@ void RandomizedSlicer::slicer_bucketing_task(const size_t t_id, std::vector<uint
     for (uint32_t i = i_start; i < S; i += threads)
     {
         auto db_index = fast_cdb[i].i;
-        // for (size_t ii =0; ii<n; ii++) std::cout << db_t[db_index].yr[ii] << " " ;
-        // std::cout << std::endl;
+        //for (size_t ii =0; ii<n; ii++) std::cout << db_t[db_index].yr[ii] << " " ;
+        //std::cout << std::endl;
         lsh.hash( db_t[db_index].yr.data() , res);
         for( size_t j = 0; j < multi_hash; j++ ) {
             uint32_t b = res[j];

@@ -155,8 +155,8 @@ void Siever::bdgl_bucketing_task(const size_t t_id, std::vector<uint32_t> &bucke
     for (uint32_t i = i_start; i < S; i += threads)
     {  
         auto db_index = fast_cdb[i].i;
-        for (size_t ii =0; ii<n; ii++) std::cout << db[db_index].yr[ii] << " " ;
-        std::cout << std::endl;
+        //for (size_t ii =0; ii<n; ii++) std::cout << db[db_index].yr[ii] << " " ;
+        //std::cout << std::endl;
         lsh.hash( db[db_index].yr.data() , res);
         for( size_t j = 0; j < multi_hash; j++ ) {
             uint32_t b = res[j];
