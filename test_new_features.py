@@ -35,7 +35,7 @@ G.update_gso()
 param_sieve = SieverParams()
 param_sieve['threads'] = 5
 # param_sieve['db_size_factor'] = 3.75
-param_sieve['default_sieve'] = "bgj1"
+param_sieve['default_sieve'] = "bdgl2" #"bgj1"
 g6k = Siever(G,param_sieve)
 g6k.initialize_local(5,5,n)
 g6k()
