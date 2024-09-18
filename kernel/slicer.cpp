@@ -350,7 +350,7 @@ void RandomizedSlicer::slicer_bucketing(const size_t blocks, const size_t multi_
     for( size_t i = 0; i < nr_buckets; i++ )
         buckets_index[i].val = 0;
 
-    std::cout << "S:" << S << std::endl;
+    // std::cout << "S:" << S << std::endl;
 
     for (size_t t_id = 0; t_id < threads; ++t_id)
     {
