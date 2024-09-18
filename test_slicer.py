@@ -6,7 +6,7 @@ from g6k.slicer import RandomizedSlicer
 from utils import *
 
 if __name__ == "__main__":
-    n, betamax, sieve_dim = 58, 42, 42
+    n, betamax, sieve_dim = 112, 42, 42
     B = IntegerMatrix(n,n)
     B.randomize("qary", k=n//2, bits=11.705)
     ft = "ld" if n<193 else "dd"
@@ -30,7 +30,7 @@ if __name__ == "__main__":
     G = GSO.Mat( bkz.gso.B, U=IntegerMatrix.identity(n,int_type=int_type), UinvT=IntegerMatrix.identity(n,int_type=int_type), float_type=ft )
     G.update_gso()
     c = [ randrange(-3,4) for j in range(n) ]
-    e = np.array( [ randrange(-2,3) for j in range(n) ],dtype=np.int64 )
+    e = np.array( [ randrange(-6,7) for j in range(n) ],dtype=np.int64 )
     print(f"gauss: {gaussian_heuristic(G.r())**0.5} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
 
     b = G.B.multiply_left( c )
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     print("target:", [float(tt) for tt in t_gs_reduced])
     print("dbsize", g6k.db_size())
 
-    slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=300)
+    slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=1200)
 
     blocks = 2
     sp = SieverParams()
@@ -82,6 +82,6 @@ if __name__ == "__main__":
     buckets = sp["bdgl_bucket_size_factor"]* 2.**((blocks-1.)/(blocks+1.)) * sp["bdgl_multi_hash"]**((2.*blocks)/(blocks+1.)) * (N ** (blocks/(1.0+blocks)))
     e_ = np.array( from_canonical_scaled(g6k.M,e,offset=sieve_dim) )
 
-    print("target length:", 1.01*(e_@e_))
+    print("target length:", 1.001*(e_@e_))
     #slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (1.01*(e_@e_)))
-    slicer.bdgl_like_sieve(42, 1, sp["bdgl_multi_hash"], (1.01*(e_@e_)))
+    slicer.bdgl_like_sieve(42, 1, sp["bdgl_multi_hash"], (1.001*(e_@e_)))

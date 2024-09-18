@@ -196,7 +196,7 @@ void Siever::bdgl_bucketing(const size_t blocks, const size_t multi_hash, const 
     
     for( size_t i = 0; i < nr_buckets; ++i ) {
         // bucket overflow
-        std::cout << i << " " <<  buckets_index[i].val << " " << bsize <<  std::endl;
+       //std::cout << i << " " <<  buckets_index[i].val << " " << bsize <<  std::endl;
         if( buckets_index[i].val > bsize ) {
             buckets_index[i].val = bsize;
             //std::cout << "bucket overflow!" << std::endl;
@@ -416,8 +416,15 @@ bool Siever::bdgl_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t
             assert(std::is_sorted(cdb.cbegin(),cdb.cend(), compare_CE()  ));
             invalidate_histo();
             recompute_histo();
+
+            for(unsigned int i=0; i<buckets_i.size(); i++){
+                std::cout << i << " " << buckets_i[i].val << std::endl;
+            }
+
             return true;
         }
+
+
 
         if(it%100==0){
             std::cout << " cdb.size() " << cdb.size() << std::endl;

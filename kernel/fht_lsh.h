@@ -248,10 +248,10 @@ class ProductLSH
             if (i>0) codesize *= 2;
         }
         assert(codesize <= _codesize);
-        std::cout << "codesize: " << codesize << " blocks: " << blocks << std::endl;
-        for (int i=0; i<blocks; i++){
-            pprint(lshs[i].full_seed);
-        }
+        //std::cout << "codesize: " << codesize << " blocks: " << blocks << std::endl;
+        //for (int i=0; i<blocks; i++){
+        //    pprint(lshs[i].full_seed);
+        //}
         };
 
     // Hash. Given a vector v as input, hash it against the subcodes and produce the results, stored in res. 
