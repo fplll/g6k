@@ -147,12 +147,16 @@ void Siever::bdgl_bucketing_task(const size_t t_id, std::vector<uint32_t> &bucke
     const size_t bsize = buckets.size() / nr_buckets;
     const size_t threads = params.threads;
 
+    //std::cout << "bsize " << bsize <<  " nr_buckets: " << nr_buckets << " multi_hash " << multi_hash << std::endl;
+
     uint32_t i_start = t_id;
     int32_t res[multi_hash];
     size_t bucket_index = 0;
     for (uint32_t i = i_start; i < S; i += threads)
     {  
         auto db_index = fast_cdb[i].i;
+        for (size_t ii =0; ii<n; ii++) std::cout << db[db_index].yr[ii] << " " ;
+        std::cout << std::endl;
         lsh.hash( db[db_index].yr.data() , res);
         for( size_t j = 0; j < multi_hash; j++ ) {
             uint32_t b = res[j];
@@ -192,8 +196,10 @@ void Siever::bdgl_bucketing(const size_t blocks, const size_t multi_hash, const 
     
     for( size_t i = 0; i < nr_buckets; ++i ) {
         // bucket overflow
+        std::cout << i << " " <<  buckets_index[i].val << " " << bsize <<  std::endl;
         if( buckets_index[i].val > bsize ) {
             buckets_index[i].val = bsize;
+            //std::cout << "bucket overflow!" << std::endl;
         }
     }
 }
@@ -368,6 +374,8 @@ void Siever::bdgl_queue(std::vector<std::vector<QEntry>> &t_queues, std::vector<
 }
 
 bool Siever::bdgl_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t multi_hash) {
+
+    std::cout << "nr_buckets_aim:" << nr_buckets_aim << " blocks: " << blocks << " multi_hash: " <<multi_hash <<  std::endl;
     switch_mode_to(SieveStatus::plain);
     parallel_sort_cdb();
     statistics.inc_stats_sorting_sieve();
@@ -381,7 +389,7 @@ bool Siever::bdgl_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t
     }
     
     std::vector<std::vector<Entry>> transaction_db(params.threads, std::vector<Entry>());
-    std::vector<atomic_size_t_wrapper> buckets_i;
+    //std::vector<atomic_size_t_wrapper> buckets_i;
     std::vector<std::vector<QEntry>> t_queues(params.threads);
 
     size_t it = 0;
@@ -409,7 +417,11 @@ bool Siever::bdgl_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t
             invalidate_histo();
             recompute_histo();
             return true;
-        } 
+        }
+
+        if(it%100==0){
+            std::cout << " cdb.size() " << cdb.size() << std::endl;
+        }
 
         if( it > 10000 ) {
             std::cerr << "Not saturated after 10000 iterations" << std::endl;

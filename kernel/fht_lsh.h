@@ -44,7 +44,7 @@ class FastHadamardLSH
     private:
     // full_seed contains the source of randomness. We extract from this in our permutations and update
     // it to keep it fresh.
-      Simd::SmallVecType full_seed;
+
     // aes_key contains the key we use for using the singular AES tour for updating our randomness.
       Simd::SmallVecType aes_key;
       // This contains some extra state for the random number generator in non-AVX2 builds.
@@ -59,7 +59,8 @@ class FastHadamardLSH
       template<int regs_> 
       void hash_templated(const int16_t * const vv, int32_t * const res);
 
-    public: 
+    public:
+    Simd::SmallVecType full_seed;//TODO:move back to private
 
     // n is the adjusted hashing dimension that we use in this subcode.
         size_t n;
@@ -247,6 +248,10 @@ class ProductLSH
             if (i>0) codesize *= 2;
         }
         assert(codesize <= _codesize);
+        std::cout << "codesize: " << codesize << " blocks: " << blocks << std::endl;
+        for (int i=0; i<blocks; i++){
+            pprint(lshs[i].full_seed);
+        }
         };
 
     // Hash. Given a vector v as input, hash it against the subcodes and produce the results, stored in res. 

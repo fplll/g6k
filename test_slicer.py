@@ -6,7 +6,7 @@ from g6k.slicer import RandomizedSlicer
 from utils import *
 
 if __name__ == "__main__":
-    n, betamax, sieve_dim = 55, 41, 41
+    n, betamax, sieve_dim = 58, 42, 42
     B = IntegerMatrix(n,n)
     B.randomize("qary", k=n//2, bits=11.705)
     ft = "ld" if n<193 else "dd"
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     print("target:", [float(tt) for tt in t_gs])
     print("dbsize", g6k.db_size())
 
-    slicer.grow_db_with_target([float(tt) for tt in t_gs], n_per_target=5000)
+    slicer.grow_db_with_target([float(tt) for tt in t_gs], n_per_target=300)
 
     blocks = 2
     sp = SieverParams()
@@ -79,4 +79,5 @@ if __name__ == "__main__":
     e_ = np.array( from_canonical_scaled(g6k.M,e,offset=sieve_dim) )
 
     print("target length:", 1.01*(e_@e_))
-    slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (1.01*(e_@e_)))
+    #slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (1.01*(e_@e_)))
+    slicer.bdgl_like_sieve(42, 1, sp["bdgl_multi_hash"], (1.01*(e_@e_)))

@@ -220,6 +220,7 @@ inline int RandomizedSlicer::slicer_reduce_with_delayed_replace(const size_t i1,
                 this->sieve.recompute_data_for_entry_t<Siever::Recompute::recompute_all>(new_entry);
                 return 1;
             }
+            std::cout << "transaction_db full" << std::endl;
             return -2; // transaction_db full
         }
         else
@@ -349,7 +350,7 @@ void RandomizedSlicer::slicer_bucketing(const size_t blocks, const size_t multi_
     for( size_t i = 0; i < nr_buckets; i++ )
         buckets_index[i].val = 0;
 
-    //std::cout << "buckets set up" << std::endl;
+    std::cout << "S:" << S << std::endl;
 
     for (size_t t_id = 0; t_id < threads; ++t_id)
     {
@@ -361,10 +362,13 @@ void RandomizedSlicer::slicer_bucketing(const size_t blocks, const size_t multi_
 
     for( size_t i = 0; i < nr_buckets; ++i ) {
         // bucket overflow
+        std::cout << i << " " <<  buckets_index[i].val << " " << bsize <<  std::endl;
         if( buckets_index[i].val > bsize ) {
             buckets_index[i].val = bsize;
+            //std::cout << "bucket overflow!" << std::endl;
         }
     }
+    exit(1);
 }
 
 
@@ -377,12 +381,17 @@ void RandomizedSlicer::slicer_bucketing_task(const size_t t_id, std::vector<uint
     const size_t bsize = buckets.size() / nr_buckets;
     //const size_t threads = threads;
 
+    //std::cout << "bsize " << bsize <<  " nr_buckets: " << nr_buckets << " multi_hash " << multi_hash << std::endl;
+
+
     uint32_t i_start = t_id;
     int32_t res[multi_hash];
     size_t bucket_index = 0;
     for (uint32_t i = i_start; i < S; i += threads)
     {
         auto db_index = fast_cdb[i].i;
+        for (size_t ii =0; ii<n; ii++) std::cout << db_t[db_index].yr[ii] << " " ;
+        std::cout << std::endl;
         lsh.hash( db_t[db_index].yr.data() , res);
         for( size_t j = 0; j < multi_hash; j++ ) {
             uint32_t b = res[j];
@@ -393,6 +402,7 @@ void RandomizedSlicer::slicer_bucketing_task(const size_t t_id, std::vector<uint
             }
         }
     }
+
 }
 
 // Returned queue is sorted
@@ -434,6 +444,11 @@ void RandomizedSlicer::slicer_process_buckets_task(const size_t t_id,
         const size_t i_start = bsize * b;
         const size_t i_end = bsize * b + buckets_index[b].val;
 
+        const size_t bsize_sieve = this->sieve.buckets.size() / this->sieve.buckets_i.size();
+        const size_t i_start_s = bsize_sieve*b;
+        const size_t i_end_s = i_start_s + this->sieve.buckets_i[b].val;
+
+
         //B +=( (i_end - i_start) * (i_end-i_start-1)) / 2;
         for( size_t i = i_start; i < i_end; ++i )
         {
@@ -443,17 +458,21 @@ void RandomizedSlicer::slicer_process_buckets_task(const size_t t_id,
             CompressedEntry *pce1 = &fast_cdb_t[bi];
             CompressedVector cv = pce1->c;
 
-            //LFT best_reduction = pce1->len;
-            //size_t best_j = 0;
-            //int best_sign = 0;
-            for (size_t j = i_start; j < i_end; ++j)
+            LFT best_reduction = pce1->len;
+            size_t best_j = -1;
+            int best_sign = 0;
+
+            //TODO: bsize and
+
+
+            for (size_t j = i_start_s; j < i_end_s; ++j)
             {
                 uint32_t bj = fast_buckets[j];
                 if( this->sieve.is_reducible_maybe<XPC_SLICER_THRESHOLD>(cv, fast_cdb[bj].c) ) //TODO:adjust XPC_SLICER_THRESHOLD
                 {
 
                     std::pair<LFT, int> len_and_sign = reduce_to_QEntry_t( pce1, &fast_cdb[bj] );
-                    if( len_and_sign.first < pce1->len)
+                    if( len_and_sign.first < 0.97*pce1->len)
                     {
                         //best_j = j;
                         //best_reduction = len_and_sign.first;
@@ -470,6 +489,9 @@ void RandomizedSlicer::slicer_process_buckets_task(const size_t t_id,
                     //}
                 }
             }
+            //if(best_j!=-1) {
+            //    t_queue.push_back({ pce1->i, fast_cdb[fast_buckets[best_j]].i, best_reduction, (int8_t)best_sign});
+            //}
         }
     }
     //statistics.inc_stats_xorpopcnt_inner(B);
@@ -479,6 +501,8 @@ void RandomizedSlicer::slicer_process_buckets_task(const size_t t_id,
 
 bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t multi_hash, LFT len_bound ){
 
+    std::cout << "nr_buckets_aim:" << nr_buckets_aim << " blocks: " << blocks << " multi_hash: " <<multi_hash <<  std::endl;
+
     parallel_sort_cdb();
 
     std::vector<std::vector<Entry_t>> transaction_db(threads, std::vector<Entry_t>());
@@ -486,13 +510,18 @@ bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t block
     std::vector<atomic_size_t_wrapper> buckets_i;
     std::vector<std::vector<QEntry>> t_queues(threads);
 
+    //TODO: assert that all input parameters are equal to those from bdgl_sieve
+
     size_t it = 0;
     while( true ) {
+
 
         slicer_bucketing(blocks, multi_hash, nr_buckets_aim, buckets, buckets_i);
         slicer_process_buckets(buckets, buckets_i, t_queues);
         slicer_queue(t_queues, transaction_db);
         parallel_sort_cdb();
+
+        this->sieve.bdgl_bucketing(blocks, multi_hash, nr_buckets_aim, this->sieve.buckets, this->sieve.buckets_i, this->sieve.lsh_seed );
 
         if(cdb_t[0].len<len_bound){
             std::cout << "solution found" << std::endl;
@@ -503,8 +532,8 @@ bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t block
             std::cout << "cdb_t[0].len " << cdb_t[0].len << " cdb_t.size() " << cdb_t.size() << std::endl;
         }
 
-        if( it > 1000 ) {
-            std::cerr << "Couldn't find a close vector after 1000 iterations" << std::endl;
+        if( it > 10000 ) {
+            std::cerr << "Couldn't find a close vector after 10000 iterations" << std::endl;
             return false;
         }
         it++;

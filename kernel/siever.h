@@ -488,6 +488,7 @@ public:
     //move here to be accessible by RandomizedSlicer
     int64_t lsh_seed;
     std::vector<uint32_t> buckets;
+    std::vector<atomic_size_t_wrapper> buckets_i;
 
 
     // - setting full dimension and setting full gso
