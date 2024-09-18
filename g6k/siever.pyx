@@ -1361,7 +1361,7 @@ cdef class Siever(object):
       B = data["B"]
       ll, l, r = data["ll"], data["l"], data["r"]
       default_sieve = data["default_sieve"]
-      assert default_sieve == "bgj1", f"Siever type {default_sieve} not supported. Use bgj1."
+      # assert default_sieve == "bgj1", f"Siever type {default_sieve} not supported. Use bgj1."
       coeffs = data["coeffs"]
 
       B = IntegerMatrix.from_matrix( B, int_type="long" )

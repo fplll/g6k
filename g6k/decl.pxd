@@ -179,10 +179,15 @@ cdef extern from "../kernel/siever.h" nogil:
         #CompressedVector c
         #uint64_t uid
 
+    cdef struct Entry_t:
+      vector[LFT] yr
+      FT len
+
     cdef struct CompressedEntry:
     # CompressedVector c
        IT i
     #  FT len
+
 
     cdef struct LiftEntry:
         vector[ZT] x
@@ -295,4 +300,7 @@ cdef extern from "../kernel/slicer.h" nogil:
         void grow_db_with_target( double* t_yr, size_t n_per_target);
         void bdgl_like_sieve(size_t nr_buckets, size_t blocks, size_t multi_hash, LFT len_bound);
 
-
+        unsigned int n
+        size_t db_t_size()
+        vector[Entry_t] db_t
+        vector[CompressedEntry] cdb_t

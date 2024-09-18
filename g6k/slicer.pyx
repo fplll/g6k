@@ -8,8 +8,7 @@ cimport numpy as np
 #from siever import Siever
 from cython.operator import dereference
 from decl cimport MAX_SIEVING_DIM
-
-
+from decl cimport CompressedEntry, Entry, Entry_t
 
 cdef class RandomizedSlicer(object):
 
@@ -31,3 +30,15 @@ cdef class RandomizedSlicer(object):
         sig_on()
         self._core.bdgl_like_sieve(nr_buckets, blocks, multi_hash, len_bound)
         sig_off()
+
+    def itervalues_t(self):
+        """
+        Iterate over all entries in the target database (in the order determined by the compressed database)
+
+        """
+        cdef Entry_t *e;
+
+        for i in range(self._core.cdb_t.size()):
+            e = &self._core.db_t[self._core.cdb_t[i].i]
+            r = [e.yr[j] for j in range(self._core.n)]
+            yield tuple(r)
