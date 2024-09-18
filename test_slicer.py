@@ -81,7 +81,7 @@ if __name__ == "__main__":
     print(f"Babai Succsess: {succ}")
     # - - -
 
-    if not succ or True:
+    if not succ:
 
         #then = perf_counter()
 
