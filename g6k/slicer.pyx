@@ -8,7 +8,7 @@ cimport numpy as np
 #from siever import Siever
 from cython.operator import dereference
 from decl cimport MAX_SIEVING_DIM
-from decl cimport CompressedEntry, Entry, Entry_t
+from decl cimport CompressedEntry, Entry_t
 
 cdef class RandomizedSlicer(object):
 
@@ -25,6 +25,9 @@ cdef class RandomizedSlicer(object):
         #print("target_f:", target_f)
         self._core.grow_db_with_target(<double*> target_f.data, n_per_target)
         sig_off()
+
+    def set_nthreads(self, size_t nt):
+        self._core.set_nthreads(nt)
 
     def bdgl_like_sieve(self, size_t nr_buckets, size_t blocks, size_t multi_hash, len_bound):
         sig_on()

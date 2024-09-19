@@ -296,9 +296,9 @@ cdef extern from "../kernel/slicer.h" nogil:
 
     cdef cppclass RandomizedSlicer:
         RandomizedSlicer(Siever &sieve, unsigned long int seed)
-        #void grow_db_with_target( std::array<LFT,128> &t_yr, size_t n_per_target);
         void grow_db_with_target( double* t_yr, size_t n_per_target);
         void bdgl_like_sieve(size_t nr_buckets, size_t blocks, size_t multi_hash, LFT len_bound);
+        void set_nthreads(size_t nt);
 
         unsigned int n
         size_t db_t_size()

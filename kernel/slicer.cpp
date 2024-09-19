@@ -12,20 +12,16 @@ std::pair<LFT, int8_t> RandomizedSlicer::reduce_to_QEntry_t(CompressedEntry *ce1
     LFT inner = std::inner_product(db_t[ce1->i].yr.begin(), db_t[ce1->i].yr.begin()+n, this->sieve.db[ce2->i].yr.begin(),  static_cast<LFT>(0.));
     LFT new_l = ce1->len + ce2->len - 2 * std::abs(inner);
     int8_t sign = (inner < 0 ) ? 1 : -1;
-    //std::cout << "new_l: " << new_l << " ce1.len: " << ce1->len << " ce2->len:" << ce2->len << std::endl;
     return { new_l, sign };
 }
 
 void RandomizedSlicer::parallel_sort_cdb() {
 
-    //std::cout <<"sorted_until:" << sorted_until << " cdb_t.size(): " << cdb_t.size() << std::endl;
     assert(sorted_until <= cdb_t.size());
     assert(std::is_sorted(cdb_t.cbegin(), cdb_t.cbegin() + sorted_until, compare_CE()));
     if (sorted_until == cdb_t.size()) {
-        return; // nothing to do. We do not increase the statistics counter.
+        return;
     }
-
-
     pa::sort(cdb_t.begin() + sorted_until, cdb_t.end(), compare_CE(), threadpool);
     cdb_t_tmp_copy.resize(cdb_t.size());
     pa::merge(cdb_t.begin(), cdb_t.begin() + sorted_until, cdb_t.begin() + sorted_until, cdb_t.end(),
@@ -45,21 +41,13 @@ void RandomizedSlicer::randomize_target_small_task(Entry_t &t)
     size_t fullS = this->sieve.cdb.size();
     size_t max_trial = 2 + std::pow(fullS, .3);
     CompressedEntry* fast_cdb = &(this->sieve.cdb.front());
-    //Entry* e_db = &(this->sieve.db.front());
     size_t partial = 5 * std::pow(fullS, .6);
 
-    //std::cout << "fullS " << fullS << std::endl;
-    //std::cout << "max_trial " << max_trial << " partial " << partial << std::endl;
 
     Entry_t tmp;
 
     size_t i = (rng_t() % partial);
     size_t j = (rng_t() % partial);
-
-    //std::cout << "n = " << this->sieve.n << std:: endl;
-    //std::cout << "cdb.size = " << this->sieve.cdb.size() << std:: endl;
-
-    //std::cout << i << " " << j  << std::endl;
 
     for (unsigned int trial=0;;++trial) {
         ++j;
@@ -83,8 +71,6 @@ void RandomizedSlicer::randomize_target_small_task(Entry_t &t)
             //    new_yr[ii] += sign*this->sieve.db[this->sieve.cdb[j].i].yr[ii];
             //}
 
-            //std::cout << "new_yr addition" << std::endl;
-
             this->sieve.addsub_vec(new_yr, this->sieve.db[this->sieve.cdb[j].i].yr, static_cast<ZT>(sign));
 
             //TODO: change to XPC (if makes sense)
@@ -99,8 +85,6 @@ void RandomizedSlicer::randomize_target_small_task(Entry_t &t)
 
 }
 
-
-//void RandomizedSlicer::grow_db_with_target(std::array<LFT,MAX_SIEVING_DIM> &t_yr, size_t n_per_target){
 void RandomizedSlicer::grow_db_with_target(const double t_yr[], size_t n_per_target){
 
     Entry_t input_t;
@@ -112,7 +96,7 @@ void RandomizedSlicer::grow_db_with_target(const double t_yr[], size_t n_per_tar
     this->sieve.recompute_data_for_entry_t<Siever::Recompute::recompute_all>(input_t);
 
 
-    std::cout << "length: " << input_t.len << " uid: " <<input_t.uid << std::endl;
+    //std::cout << "length: " << input_t.len << " uid: " <<input_t.uid << std::endl;
 
     unsigned long const start = db_t.size();
     unsigned long const N = start+n_per_target;
@@ -140,8 +124,6 @@ void RandomizedSlicer::grow_db_with_target(const double t_yr[], size_t n_per_tar
 
     for( size_t i = start+1; i < N; i++)
     {
-
-        //std::cout << " " << input_t.len << std::endl;
         int col = 0;
 
         Entry_t e = input_t;
@@ -150,10 +132,8 @@ void RandomizedSlicer::grow_db_with_target(const double t_yr[], size_t n_per_tar
         {
             Entry_t tmp = e;
             randomize_target_small_task(tmp);
-            //std::cout << col << " tmp.uid:" << tmp.uid << std::endl;
 
             if(!uid_hash_table_t.insert_uid(tmp.uid)) {
-                //for (size_t ii=0; ii<n; ii++){ std::cout << tmp.yr[ii] << " ";}
                 continue;
             }
             db_t[i] = tmp;
@@ -500,7 +480,6 @@ void RandomizedSlicer::slicer_process_buckets_task(const size_t t_id,
 
                         if (kk < .1 * S) break;
                         kk -= threads;
-                        //statistics.inc_stats_2redsuccess_outer();
                         t_queue.push_back({ pce1->i, fast_cdb[bj].i, len_and_sign.first, (int8_t)len_and_sign.second});
 
                     }
@@ -533,6 +512,7 @@ bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t block
     //TODO: assert that all input parameters are equal to those from bdgl_sieve
 
     size_t it = 0;
+    LFT best_len = cdb_t[0].len;
     while( true ) {
 
         if(cdb_t[0].len<len_bound){
@@ -546,8 +526,10 @@ bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t block
         parallel_sort_cdb();
 
         //DO WE NEED TO DO REBUCKETING? Every X-round?
-        this->sieve.bdgl_bucketing(blocks, multi_hash, nr_buckets_aim, this->sieve.buckets, this->sieve.buckets_i, this->sieve.lsh_seed );
-
+        if(cdb_t[0].len>=best_len) {
+            this->sieve.bdgl_bucketing(blocks, multi_hash, nr_buckets_aim, this->sieve.buckets, this->sieve.buckets_i,
+                                       this->sieve.lsh_seed);
+        }
 
 
         if(it%1000==0) {

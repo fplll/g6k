@@ -70,8 +70,6 @@ if __name__ == "__main__":
 
     param_sieve = SieverParams()
     param_sieve['threads'] = 2
-    # param_sieve['db_size_factor'] = 3.75
-    #param_sieve['default_sieve'] = "bdgl1"
     g6k = Siever(G,param_sieve)
     g6k.initialize_local(n-sieve_dim,n-sieve_dim,n)
     print("Running bdgl2...")
@@ -126,6 +124,7 @@ if __name__ == "__main__":
 
         #out_gs = g6k.randomized_iterative_slice([float(tt) for tt in t_gs],samples=1000)
         slicer = RandomizedSlicer(g6k)
+        slicer.set_nthreads(2);
 
         print("target:", [float(tt) for tt in t_gs_reduced])
         print("dbsize", g6k.db_size())

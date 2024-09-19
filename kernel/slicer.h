@@ -5,6 +5,10 @@
 #ifndef G6K_HYBRID_SLICER_H
 #define G6K_HYBRID_SLICER_H
 
+static constexpr unsigned int XPC_SLICER_SAMPLING_THRESHOLD = 105; // XPC Threshold for iterative slicer sampling //105
+static constexpr unsigned int XPC_SLICER_THRESHOLD = 96; // XPC Threshold for iterative slicer sampling
+
+
 struct QEntry;
 class ProductLSH;
 
@@ -42,10 +46,10 @@ public:
 
     SimHashes sim_hashes_t; // needs to go after rng!
     UidHashTable uid_hash_table_t; //hash table for db_t -- the database of targets
-    //Siever* sieve;
 
-    FT dist_sq_bnd = 0;
-    size_t threads = 2;
+    //FT dist_sq_bnd = 0;
+    size_t threads = 1;
+
 
     thread_pool::thread_pool threadpool;
     size_t sorted_until = 0;
@@ -53,7 +57,6 @@ public:
     void parallel_sort_cdb();
 
     void randomize_target_small_task(Entry_t &t);
-    //void grow_db_with_target(std::array<LFT,MAX_SIEVING_DIM> &t_yr, size_t n_per_target);
     void grow_db_with_target(const double t_yr[], size_t n_per_target);
 
     bool bdgl_like_sieve(size_t nr_buckets_aim, const size_t blocks, const size_t multi_hash, LFT len_bound );
@@ -75,13 +78,7 @@ public:
     size_t slicer_queue_insert_task( const size_t t_id, std::vector<Entry_t> &transaction_db, int64_t write_index);
     bool slicer_replace_in_db(size_t cdb_index, Entry_t &e);
 
-
-
-    //FT iterative_slice( std::array<LFT,MAX_SIEVING_DIM>& t_yr, size_t max_entries_used=0);
-    //void randomize_target(std::array<LFT, MAX_SIEVING_DIM>& t_yr, size_t k );
-    //void randomize_target_small(std::array<LFT, MAX_SIEVING_DIM> &t_yr, unsigned int debug_directives);
-    //void randomized_iterative_slice( float* t_yr, size_t max_entries_used=0, size_t samples=1, float dist_sq_bnd=-1.0, unsigned int debug_directives = 873 );
-
+    void set_nthreads(size_t nt){ this->threads = nt;}
 };
 
 #endif //G6K_HYBRID_SLICER_H
