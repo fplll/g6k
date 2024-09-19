@@ -159,3 +159,8 @@ def load_lattices(n):
             yield g6k_obj
             # lats.append(L)
         print(filename)
+
+def uniform_random_distribution(d,r):
+    u = np.random.normal(0,1,d)  # an array of d normally distributed random variables
+    d=np.sum(u**2) **(0.5)
+    return r*u/d

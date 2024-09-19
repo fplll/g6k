@@ -9,7 +9,7 @@ import sys
 if __name__ == "__main__":
 
     FPLLL.set_precision(250)
-    n, betamax, sieve_dim = 112, 52, 52 #n=170 is liikely to fail
+    n, betamax, sieve_dim = 55, 55, 55 #n=170 is liikely to fail
     ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
     # - - - try load a lattice - - -
     filename = f"bdgl2_n{n}_b{sieve_dim}.pkl"
@@ -53,11 +53,13 @@ if __name__ == "__main__":
         lll = LLL.Reduction( G )
         lll()
     # - - - end Make all fpylll objects - - -
+    gh = gaussian_heuristic(G.r())**0.5
 
     c = [ randrange(-2,3) for j in range(n) ]
-    e = np.array( [ randrange(-8,8) for j in range(n) ],dtype=np.int64 )
+    # e = np.array( [ randrange(-8,8) for j in range(n) ],dtype=np.int64 )
+    e = np.array( uniform_random_distribution(n,0.8*gh) )
 
-    print(f"gauss: {gaussian_heuristic(G.r())**0.5} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
+    print(f"gauss: {gh} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
 
     e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
     print(f"projected (e_@e_): {(e_@e_)} vs r/4: {G.get_r(n-sieve_dim, n-sieve_dim)/4}")
@@ -172,4 +174,3 @@ if __name__ == "__main__":
         print(c)
         #print(f"Coeffs of b found: {(c==bab_01)}")
         print(f"Succsess: {all(c==bab_01)}")
-
