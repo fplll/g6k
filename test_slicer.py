@@ -9,7 +9,7 @@ import sys
 if __name__ == "__main__":
 
     FPLLL.set_precision(250)
-    n, betamax, sieve_dim = 112, 41, 41 #n=170 is liikely to fail
+    n, betamax, sieve_dim = 112, 52, 52 #n=170 is liikely to fail
     ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
     # - - - try load a lattice - - -
     filename = f"bdgl2_n{n}_b{sieve_dim}.pkl"
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     # - - - end Make all fpylll objects - - -
 
     c = [ randrange(-2,3) for j in range(n) ]
-    e = np.array( [ randrange(-6,7) for j in range(n) ],dtype=np.int64 )
+    e = np.array( [ randrange(-8,8) for j in range(n) ],dtype=np.int64 )
 
     print(f"gauss: {gaussian_heuristic(G.r())**0.5} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
 
@@ -69,7 +69,7 @@ if __name__ == "__main__":
     t = [ int(tt) for tt in t_ ]
 
     param_sieve = SieverParams()
-    param_sieve['threads'] = 1
+    param_sieve['threads'] = 2
     # param_sieve['db_size_factor'] = 3.75
     #param_sieve['default_sieve'] = "bdgl1"
     g6k = Siever(G,param_sieve)
@@ -130,25 +130,24 @@ if __name__ == "__main__":
         print("target:", [float(tt) for tt in t_gs_reduced])
         print("dbsize", g6k.db_size())
 
-        slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=300)
+        slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=900)
 
-        blocks = 2
+        blocks = 2 # should be the same as in siever
+        blocks = min(3, max(1, blocks))
+        blocks = min(int(sieve_dim / 28), blocks)
         sp = SieverParams()
-        #print(sp["db_size_factor"])
-        #print(sp["db_size_base"])
-        #print(sp["bdgl_bucket_size_factor"])
-        #print(sp["bdgl_multi_hash"])
-        #print(sp["bdgl_min_bucket_size"])
-
-
         N = sp["db_size_factor"] * sp["db_size_base"] ** sieve_dim
         buckets = sp["bdgl_bucket_size_factor"]* 2.**((blocks-1.)/(blocks+1.)) * sp["bdgl_multi_hash"]**((2.*blocks)/(blocks+1.)) * (N ** (blocks/(1.0+blocks)))
+        buckets = min(buckets, sp["bdgl_multi_hash"] * N / sp["bdgl_min_bucket_size"])
+        buckets = max(buckets, 2**(blocks-1))
+
+        print("blocks: ", blocks, " buckets: ", buckets )
         # e_ = np.array( from_canonical_scaled(g6k.M,e,offset=sieve_dim) )
 
         # print(f"(e_@e_): {(e_@e_)} vs r: {g6k.M.get_r(n-sieve_dim, n-sieve_dim)}")
         # print("target length:", 1.01*(e_@e_))
         #slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (1.01*(e_@e_)))
-        slicer.bdgl_like_sieve(sieve_dim, 1, sp["bdgl_multi_hash"], (1.01*(e_@e_)))
+        slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (1.01*(e_@e_)))
         iterator = slicer.itervalues_t()
         for tmp in iterator:
             out_gs_reduced = tmp  #cdb[0]
@@ -170,8 +169,8 @@ if __name__ == "__main__":
         bab_0 = N.babai(tmp)
 
         bab_01=np.array( bab_0+bab_1 )
-        print((f"recovered*B^(-1): {bab_0+bab_1}"))
+        #print((f"recovered*B^(-1): {bab_0+bab_1}"))
         print(c)
-        print(f"Coeffs of b found: {(c==bab_01)}")
+        #print(f"Coeffs of b found: {(c==bab_01)}")
         print(f"Succsess: {all(c==bab_01)}")
 

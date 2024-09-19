@@ -25,7 +25,7 @@ public:
         this->n = this->sieve.n;
         sim_hashes_t.reset_compress_pos(this->sieve);
         uid_hash_table_t.reset_hash_function(this->sieve);
-        std::cout << "initialized randomized slicer" << std::endl;
+        //std::cout << "initialized randomized slicer" << std::endl;
     }
 
     friend SimHashes;
@@ -45,7 +45,7 @@ public:
     //Siever* sieve;
 
     FT dist_sq_bnd = 0;
-    size_t threads = 1;
+    size_t threads = 2;
 
     thread_pool::thread_pool threadpool;
     size_t sorted_until = 0;

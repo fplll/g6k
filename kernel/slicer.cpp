@@ -122,7 +122,7 @@ void RandomizedSlicer::grow_db_with_target(const double t_yr[], size_t n_per_tar
     db_t.resize(N);
     cdb_t.resize(N);
 
-    std::cout << "input_t.uid:" << input_t.uid << std::endl;
+    //std::cout << "input_t.uid:" << input_t.uid << std::endl;
 
 
     if(!uid_hash_table_t.insert_uid(input_t.uid)){
@@ -536,7 +536,7 @@ bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t block
     while( true ) {
 
         if(cdb_t[0].len<len_bound){
-            std::cout << it <<  " solution found of norm:" << cdb_t[0].len << std::endl;
+            std::cout << it <<  "-th it: solution found of norm:" << cdb_t[0].len << std::endl;
             return true;
         }
 
@@ -545,7 +545,7 @@ bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t block
         slicer_queue(t_queues, transaction_db);
         parallel_sort_cdb();
 
-        //DO WE NEED TO DO REBUCKETING?
+        //DO WE NEED TO DO REBUCKETING? Every X-round?
         this->sieve.bdgl_bucketing(blocks, multi_hash, nr_buckets_aim, this->sieve.buckets, this->sieve.buckets_i, this->sieve.lsh_seed );
 
 
