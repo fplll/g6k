@@ -55,7 +55,7 @@ def gen_cvpp_g6k(n,betamax=None,k=None,bits=11.705):
 
 def run_exp(g6k,ntests,approx_facts):
     G = g6k.M
-    B = g6k.B
+    B = G.B
     n = G.d
 
     lambda1 = G.get_r(0, 0)**0.5
@@ -122,7 +122,7 @@ def run_exp(g6k,ntests,approx_facts):
             try:
                 slicer = RandomizedSlicer(g6k)
                 slicer.set_nthreads(2);
-                slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=2000)
+                slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=1000)
 
                 blocks = 2 # should be the same as in siever
                 blocks = min(3, max(1, blocks))
@@ -160,21 +160,31 @@ def run_exp(g6k,ntests,approx_facts):
                 #     print(f"FAIL after slicer: {(err@err)}")
                 # else:
                 #     succ_slic += 1
-
+                #
+                # out = to_canonical_scaled( G,out_gs,offset=n )
                 out = to_canonical_scaled( G,out_gs,offset=n )
-                projerr = G.to_canonical( G.from_canonical(e,start=0), start=0)
 
-                # N = GSO.Mat( G.B[:n-sieve_dim], float_type=ft )
-                # N.update_gso()
-                bab_1 = G.babai(t-np.array(out),start=0) #last sieve_dim coordinates of s
+                projerr = G.to_canonical( G.from_canonical(e,start=n-n), start=n-n)
+                diff_v =  np.array(projerr)-np.array(out)
+                # print(f"Diff btw. cvp and slicer: {diff_v}")
 
-                bab_01=np.array( bab_1 )
+                N = GSO.Mat( G.B[:n-n], float_type="ld" )
+                N.update_gso()
+                bab_1 = G.babai(t-np.array(out),start=n-n) #last n coordinates of s
+                tmp = t - np.array( G.B[-n:].multiply_left(bab_1) )
+                tmp = N.to_canonical( G.from_canonical( tmp, start=0, dimension=n-n ) ) #project onto span(B[-n:])
+                bab_0 = N.babai(tmp)
+
+                bab_01=np.array( bab_0+bab_1 )
+
+                bab_01=np.array( bab_01 )
                 succ = all(c==bab_01)
                 print(f"Slic Succsess: {succ}")
                 if not ( succ ):
                     print(f"FAIL after slicer: {(err@err)}")
                 else:
                     succ_slic += 1
+                del slicer
             except Exception as excpt: #if slicer fails for some reason,
                 #then prey, this is not a devastating segfault
                 print(excpt)
@@ -186,9 +196,9 @@ def run_exp(g6k,ntests,approx_facts):
     return Ds
 
 if __name__=="__main__":
-    ntests = 200
+    ntests = 20
     n = 70
-    approx_facts = [ 0.8 + 0.05*i for i in range(9) ]
+    approx_facts = [ 1.44 + 0.05*i for i in range(1) ]
     g6k = gen_cvpp_g6k(55,betamax=None,k=None,bits=11.705)
     # g6k = gen_cvpp_g6k(n,betamax=50,k=None,bits=24.705)
     # g6k.dump_on_disk(f"cvppg6k_n{n}_{hex(randrange(2**12))[2:]}.pkl")

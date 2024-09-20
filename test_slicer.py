@@ -57,7 +57,7 @@ if __name__ == "__main__":
 
     c = [ randrange(-2,3) for j in range(n) ]
     # e = np.array( [ randrange(-8,8) for j in range(n) ],dtype=np.int64 )
-    e = np.array( uniform_random_distribution(n,0.8*gh) )
+    e = np.array( uniform_random_distribution(n,1.44*gh/2) )
 
     print(f"gauss: {gh} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
 
