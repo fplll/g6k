@@ -8,6 +8,8 @@
 static constexpr unsigned int XPC_SLICER_SAMPLING_THRESHOLD = 105; // XPC Threshold for iterative slicer sampling //105
 static constexpr unsigned int XPC_SLICER_THRESHOLD = 96; // XPC Threshold for iterative slicer sampling
 
+#define REDUCE_DIST_MARGIN 1.02
+
 
 struct QEntry;
 class ProductLSH;
@@ -74,7 +76,7 @@ public:
     void slicer_queue_dup_remove_task( std::vector<QEntry> &queue);
 
     void slicer_queue_create_task( const size_t t_id, const std::vector<QEntry> &queue, std::vector<Entry_t> &transaction_db, int64_t &write_index);
-    inline int slicer_reduce_with_delayed_replace(const size_t i1, const size_t i2, LFT const lenbound, std::vector<Entry_t>& transaction_db, int64_t& write_index, LFT new_l, int8_t sign);
+    inline int slicer_reduce_with_delayed_replace(const size_t i1, const size_t i2, std::vector<Entry_t>& transaction_db, int64_t& write_index, LFT new_l, int8_t sign);
     size_t slicer_queue_insert_task( const size_t t_id, std::vector<Entry_t> &transaction_db, int64_t write_index);
     bool slicer_replace_in_db(size_t cdb_index, Entry_t &e);
 

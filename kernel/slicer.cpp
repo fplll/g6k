@@ -185,9 +185,9 @@ void RandomizedSlicer::slicer_queue_dup_remove_task( std::vector<QEntry> &queue)
     }
 }
 
-inline int RandomizedSlicer::slicer_reduce_with_delayed_replace(const size_t i1, const size_t i2, LFT const lenbound, std::vector<Entry_t>& transaction_db, int64_t& write_index, LFT new_l, int8_t sign)
+inline int RandomizedSlicer::slicer_reduce_with_delayed_replace(const size_t i1, const size_t i2,  std::vector<Entry_t>& transaction_db, int64_t& write_index, LFT new_l, int8_t sign)
 {
-    if (new_l < lenbound)
+    if (new_l < REDUCE_DIST_MARGIN*db_t[i1].len)
     {
         /*
         std::cout << "db_t[i2].uid: " << db_t[i2].uid << std::endl;
@@ -203,7 +203,8 @@ inline int RandomizedSlicer::slicer_reduce_with_delayed_replace(const size_t i1,
 
         std::array<LFT,MAX_SIEVING_DIM> new_yr = db_t[i1].yr;
         this->sieve.addsub_vec(new_yr,  this->sieve.db[i2].yr, static_cast<ZT>(sign));
-        if(uid_hash_table_t.compute_uid_t(new_yr)){
+        if(uid_hash_table_t.compute_uid_t(new_yr))
+        {
             int64_t index = write_index--; // atomic and signed!
             if( index >= 0 ) {
                 Entry_t& new_entry = transaction_db[index];
@@ -223,6 +224,7 @@ inline int RandomizedSlicer::slicer_reduce_with_delayed_replace(const size_t i1,
         else
         {
             // duplicate
+            std::cout << " duplicate !" << std::endl;
             return 0;
         }
     }
@@ -245,10 +247,11 @@ void RandomizedSlicer::slicer_queue_create_task( const size_t t_id, const std::v
         }
 
         slicer_reduce_with_delayed_replace( queue[index].i, queue[index].j,
-                                          cdb_t[std::min(S-1, static_cast<unsigned long>(insert_after+threads*write_index))].len / REDUCE_LEN_MARGIN,
                                           transaction_db, write_index, queue[index].len, queue[index].sign);
+        //std::cout << t_id << " " << Q << " index: " << index << " write_index: " << write_index <<std::endl;
         if( write_index < 0 ){
-            std::cerr << "Spilling full transaction db" << t_id << " " << Q-index << std::endl;
+            //std::cerr << "Spilling full transaction db " << t_id << " " << Q << " " << index << std::endl;
+            //exit(1);
             break;
         }
     }
@@ -293,16 +296,24 @@ void RandomizedSlicer::slicer_queue(std::vector<std::vector<QEntry>> &t_queues, 
 
     const size_t S = cdb_t.size();
     size_t Q = 0;
+
     for(unsigned int i = 0; i < threads; i++)
         Q += t_queues[i].size();
+
     size_t insert_after = std::max(0, int(int(S)-Q));
 
     for(unsigned int i = 0; i < threads; i++ )
         transaction_db[i].resize(std::min(S-insert_after, Q)/threads + 1);
+        //transaction_db[i].resize(t_queues[i].size());
+
+    //std::vector<int> write_indices(threads);
+    //for(unsigned int i = 0; i < threads; i++ )
+    //    write_indices[i] = transaction_db[i].size();
 
     std::vector<int> write_indices(threads, transaction_db[0].size()-1);
-    // Prepare transaction DB from queue
 
+
+    // Prepare transaction DB from queue
     for( size_t t_id = 0; t_id < threads; ++t_id ) {
         threadpool.push([this, t_id, &t_queues, &transaction_db,&write_indices](){
             int64_t write_index = write_indices[t_id];
@@ -472,15 +483,16 @@ void RandomizedSlicer::slicer_process_buckets_task(const size_t t_id,
                 {
 
                     std::pair<LFT, int> len_and_sign = reduce_to_QEntry_t( pce1, &fast_cdb[bj] );
-                    if( len_and_sign.first < 0.98*pce1->len)
+                    //if( len_and_sign.first < 0.98*pce1->len)
+                    if(len_and_sign.first < best_reduction)
                     {
-                        //best_j = j;
-                        //best_reduction = len_and_sign.first;
-                        //best_sign = len_and_sign.second;
+                        best_j = j;
+                        best_reduction = len_and_sign.first;
+                        best_sign = len_and_sign.second;
 
                         if (kk < .1 * S) break;
                         kk -= threads;
-                        t_queue.push_back({ pce1->i, fast_cdb[bj].i, len_and_sign.first, (int8_t)len_and_sign.second});
+                        //t_queue.push_back({ pce1->i, fast_cdb[bj].i, len_and_sign.first, (int8_t)len_and_sign.second});
 
                     }
                     //else if( params.otf_lift and len_and_sign.first < params.lift_radius ) {
@@ -488,9 +500,9 @@ void RandomizedSlicer::slicer_process_buckets_task(const size_t t_id,
                     //}
                 }
             }
-            //if(best_j!=-1) {
-            //    t_queue.push_back({ pce1->i, fast_cdb[fast_buckets[best_j]].i, best_reduction, (int8_t)best_sign});
-            //}
+            if(best_j!=-1) {
+                t_queue.push_back({ pce1->i, fast_cdb[fast_buckets[best_j]].i, best_reduction, (int8_t)best_sign});
+            }
         }
     }
     //statistics.inc_stats_xorpopcnt_inner(B);
@@ -526,18 +538,18 @@ bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t block
         parallel_sort_cdb();
 
         //DO WE NEED TO DO REBUCKETING? Every X-round?
-        if(cdb_t[0].len>=best_len) {
-            this->sieve.bdgl_bucketing(blocks, multi_hash, nr_buckets_aim, this->sieve.buckets, this->sieve.buckets_i,
+        //if(cdb_t[0].len>=best_len) {
+        this->sieve.bdgl_bucketing(blocks, multi_hash, nr_buckets_aim, this->sieve.buckets, this->sieve.buckets_i,
                                        this->sieve.lsh_seed);
-        }
+        //}
 
 
         if(it%1000==0) {
             std::cout << "cdb_t[0].len " << cdb_t[0].len << " cdb_t.size() " << cdb_t.size() << std::endl;
         }
 
-        if( it > 10000 ) {
-            std::cerr << "Couldn't find a close vector after 10000 iterations" << std::endl;
+        if( it > 5000 ) {
+            std::cerr << "Couldn't find a close vector after 5000 iterations" << std::endl;
             return false;
         }
         it++;

@@ -9,7 +9,7 @@ import sys
 if __name__ == "__main__":
 
     FPLLL.set_precision(250)
-    n, betamax, sieve_dim = 112, 52, 52 #n=170 is liikely to fail
+    n, betamax, sieve_dim = 110, 54, 54 #n=170 is liikely to fail
     ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
     # - - - try load a lattice - - -
     filename = f"bdgl2_n{n}_b{sieve_dim}.pkl"
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     # - - - end Make all fpylll objects - - -
 
     c = [ randrange(-2,3) for j in range(n) ]
-    e = np.array( [ randrange(-8,8) for j in range(n) ],dtype=np.int64 )
+    e = np.array( [ randrange(-9,8) for j in range(n) ],dtype=np.int64 )
 
     print(f"gauss: {gaussian_heuristic(G.r())**0.5} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
 
@@ -69,7 +69,7 @@ if __name__ == "__main__":
     t = [ int(tt) for tt in t_ ]
 
     param_sieve = SieverParams()
-    param_sieve['threads'] = 2
+    param_sieve['threads'] = 4
     g6k = Siever(G,param_sieve)
     g6k.initialize_local(n-sieve_dim,n-sieve_dim,n)
     print("Running bdgl2...")
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     #assert(False)
 
     t_gs = from_canonical_scaled( G,t,offset=sieve_dim )
-    print(f"t_gs: {t_gs} | norm: {(t_gs@t_gs)}")
+    #print(f"t_gs: {t_gs} | norm: {(t_gs@t_gs)}")
     #retrieve the projective sublattice
     B_gs = [ np.array( from_canonical_scaled(G, G.B[i], offset=sieve_dim), dtype=np.float64 ) for i in range(G.d - sieve_dim, G.d) ]
     t_gs_reduced = reduce_to_fund_par_proj(B_gs,(t_gs),sieve_dim) #reduce the target w.r.t. B_gs
@@ -105,13 +105,13 @@ if __name__ == "__main__":
     bab_01=np.array( bab_0+bab_1 )
     print((f"recovered*B^(-1): {bab_0+bab_1}"))
     print(c)
-    print(f"Coeffs of b found: {(c==bab_01)}")
+   #print(f"Coeffs of b found: {(c==bab_01)}")
     succ = all(c==bab_01)
     print(f"Babai Succsess: {succ}")
     # - - - end prelim check - - -
     # - - - extra check - - -
     bab_t = np.array( g6k.M.babai(t) )
-    print(f"Coeffs of b found: {(c==bab_t)}")
+    #print(f"Coeffs of b found: {(c==bab_t)}")
     succ = all(c==bab_t)
     print(f"Babai Succsess: {succ}")
 
@@ -129,7 +129,7 @@ if __name__ == "__main__":
         print("target:", [float(tt) for tt in t_gs_reduced])
         print("dbsize", g6k.db_size())
 
-        slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=900)
+        slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=750)
 
         blocks = 2 # should be the same as in siever
         blocks = min(3, max(1, blocks))
@@ -146,6 +146,7 @@ if __name__ == "__main__":
         # print(f"(e_@e_): {(e_@e_)} vs r: {g6k.M.get_r(n-sieve_dim, n-sieve_dim)}")
         # print("target length:", 1.01*(e_@e_))
         #slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (1.01*(e_@e_)))
+
         slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (1.01*(e_@e_)))
         iterator = slicer.itervalues_t()
         for tmp in iterator:
@@ -169,7 +170,7 @@ if __name__ == "__main__":
 
         bab_01=np.array( bab_0+bab_1 )
         #print((f"recovered*B^(-1): {bab_0+bab_1}"))
-        print(c)
+        #print(c)
         #print(f"Coeffs of b found: {(c==bab_01)}")
         print(f"Succsess: {all(c==bab_01)}")
 

@@ -70,11 +70,13 @@ inline int Siever::bdgl_reduce_with_delayed_replace(const size_t i1, const size_
                 recompute_data_for_entry<Recompute::recompute_all_and_consider_otf_lift>(new_entry);
                 return 1;
             }
+            std::cout << "transaction_db is full "<< std::endl;
             return -2; // transaction_db full
         }
         else
         {
             // duplicate
+            //std::cout << "found duplicate"<< std::endl;
             return 0;
         }
     }
@@ -299,8 +301,10 @@ void Siever::bdgl_queue_create_task( const size_t t_id, const std::vector<QEntry
         bdgl_reduce_with_delayed_replace( queue[index].i, queue[index].j,
                                           cdb[std::min(S-1, static_cast<unsigned long>(insert_after+params.threads*write_index))].len / REDUCE_LEN_MARGIN,
                                                   transaction_db, write_index, queue[index].len, queue[index].sign);
+        //std::cout << t_id << " " << Q << " index: " << index << " write_index: " << write_index <<std::endl;
         if( write_index < 0 ){
             std::cerr << "Spilling full transaction db" << t_id << " " << Q-index << std::endl;
+            exit(1);
             break;
         }
     }
@@ -320,6 +324,8 @@ size_t Siever::bdgl_queue_insert_task( const size_t t_id, std::vector<Entry> &tr
 
 void Siever::bdgl_queue(std::vector<std::vector<QEntry>> &t_queues, std::vector<std::vector<Entry>>& transaction_db ) {
     // clear duplicates read only
+    //for(unsigned int i = 0; i<params.threads; i++) std::cout << t_queues[i].size() << " ";
+    //std::cout << std::endl;
     for( size_t t_id = 0; t_id < params.threads; ++t_id ) {
         threadpool.push([this, t_id, &t_queues](){
             bdgl_queue_dup_remove_task(t_queues[t_id]);
@@ -337,6 +343,11 @@ void Siever::bdgl_queue(std::vector<std::vector<QEntry>> &t_queues, std::vector<
         transaction_db[i].resize(std::min(S-insert_after, Q)/params.threads + 1);
 
     std::vector<int> write_indices(params.threads, transaction_db[0].size()-1);
+    //std::cout << "t_queues sizes:" << std::endl;
+    //for(unsigned int i = 0; i<params.threads; i++) std::cout << t_queues[i].size() << " " << write_indices[i] <<  " ";
+    //std::cout << std::endl;
+    //std::cout << std::endl;
+
     // Prepare transaction DB from queue
     for( size_t t_id = 0; t_id < params.threads; ++t_id ) {
         threadpool.push([this, t_id, &t_queues, &transaction_db,&write_indices](){
