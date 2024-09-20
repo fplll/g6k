@@ -35,24 +35,40 @@ def flatter_interface( fpylllB ):
     return B
 
 def kyberGen(n, q = 3329, eta = 3, k=1):
+    polys = []
+    for i in range(k*k):
+        polys.append( uniform_vec(n,0,q) )
+    A = module(polys, k, k)
 
-  s = binomial_vec(k*n, eta)
-  e = binomial_vec(k*n, eta)
+    return A,q
 
-  polys = []
-  for i in range(k*k):
-    polys.append( uniform_vec(n,0,q) )
+def se_gen(k,n,eta):
+    s = binomial_vec(k*n, eta)
+    e = binomial_vec(k*n, eta)
+    return s, e
 
-  A = module(polys, k, k)
+def generateLWEInstances(n, q = 3329, eta = 3, k=1, ntar=5):
+    A,q = kyberGen(n,q = q, eta = eta, k=k)
+    bse = []
+    for _ in range(ntar):
+        s, e = se_gen(k,n,eta)
+        b = (s.dot(A) + e) % q
+        bse.append( (b,s,e) )
 
-  return A,s,e,q
+    return A,q,bse
 
-def generateLWEInstance(n, q = 3329, eta = 3, k=1):
-  A,s,e,q = kyberGen(n,q = q, eta = eta, k=k)
+def gen_and_dump_lwe(n, q, eta, k, ntar, seed=0):
+    A,q,bse= generateLWEInstances(n, q, eta, k, ntar)
 
-  b = (s.dot(A) + e) % q
+    with open(f"lwe_instance_{n}_{q}_{eta}_{k}_{seed}", "wb") as fl:
+        pickle.dump({"A": A, "q": q, "eta": eta, "k": k, "bse": bse}, fl)
 
-  return A,b,q,s,e
+def load_lwe(n,q,eta,k,seed=0):
+    print(f"- - - k={k} - - - load")
+    with open(f"lwe_instance_{n}_{q}_{eta}_{k}_{seed}", "rb") as fl:
+        D = pickle.load(fl)
+    A_, q_, eta_, k_, bse_ = D["A"], D["q"], D["eta"], D["k"], D["bse"]
+    return A_, q_, eta_, k_, bse_
 
 def throw_vec(Gso, sol, beta):
     n = Gso.B.nrows
@@ -69,12 +85,19 @@ def throw_vec(Gso, sol, beta):
             # print(f"yes: {ind} | {projfact**0.5} , {projsec**0.5}")
             return ind, projfact**0.5,  np.real( projsec**0.5 )
 
-def attack_on_kyber(n,q,eta,k,betamax,ntours=5):
+def attack_on_kyber(n,q,eta,k,betamax,ntours=5,seed=[0,0]):
     # prepeare the lattice
     print( f"launching {n,q,eta,k}" )
-    A,b,q,s,e = generateLWEInstance( n, q=3329, eta=eta, k=k )
+    # try:
+    A, q, eta, k, bse = load_lwe(n,q,eta,k,seed[0]) #D["A"], D["q"], D["bse"]
+    # except FileNotFoundError:
+        # gen_and_dump_lwe(n, q, eta, k, ntar, seed[0])
+        # A, q, eta,k, bse = load_lwe(n,q,eta,k,seed[0]) #D["A"], D["q"], D["bse"]
+    print(f"lenbse: {len(bse)} seed={seed[1]}")
+    b, s, e = bse[seed[1]]
 
     r,c = A.shape
+    print(f"Shape: {A.shape}, n, k: {n,k}")
     t = np.concatenate([b,[0]*r]) #BDD target
     x = np.concatenate([b-e,s,[-1]]) #BBD solution
     sol = np.concatenate([e,-s,[1]])
@@ -180,20 +203,35 @@ if not isExist:
     except:
         pass    #still in docker if isExists==False, for some reason folder can exist and this will throw an exception.
 
-nthreads = 10
-tests_per_dim = 10
+nthreads = 40
+lats_per_dim = 10
+inst_per_lat = 10 #how many instances per A, q
+q, eta = 3329, 3
 
 nks = [ (100+10*i,1) for i in range(6) ]
-eta = 3
 output = []
 pool = Pool(processes = nthreads )
 tasks = []
 
 for nk in nks:
-    for _ in range(tests_per_dim):
-        tasks.append( pool.apply_async(
-            attack_on_kyber, (nk[0],3329,eta,nk[1],26,5)
-            ) )
+    n, k = nk[0], 1
+    for latnum in range(lats_per_dim):
+        gen_and_dump_lwe(nk[0], q, eta,k, ntar=inst_per_lat, seed=latnum)
+
+for nk in nks:
+    n, k = nk[0], 1
+    for latnum in range(lats_per_dim):
+        # gen_and_dump_lwe(nk[0], q, eta,k, nk[1], latnum)
+        for tstnum in range(inst_per_lat):
+            tasks.append( pool.apply_async(
+                attack_on_kyber, (nk[0],q,eta,k,80,5,[latnum,tstnum])
+                ) )
+
+# for nk in nks:
+#     for _ in range(tests_per_dim):
+#         tasks.append( pool.apply_async(
+#             attack_on_kyber, (nk[0],3329,eta,nk[1],26,5)
+#             ) )
 
 for t in tasks:
         output.append( t.get() )
@@ -203,3 +241,5 @@ pool.close()
 name = f"exp105-2.pkl"
 with open( path+name, "wb" ) as file:
     pickle.dump( output,file )
+
+print(output)
