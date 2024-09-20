@@ -1,6 +1,6 @@
 from lwe_gen import *
 
-import os
+import sys,os
 import time
 from time import perf_counter
 from fpylll import *
@@ -72,6 +72,7 @@ def load_lwe(n,q,eta,k,seed=0):
 
 def throw_vec(Gso, sol, beta):
     n = Gso.B.nrows
+    sol = [int( ss ) for ss in sol]
     for ind in range(max(16,beta-1),n):
         veclst = [ bb for bb in Gso.B[:-ind] ] + [sol]
         Bpr = IntegerMatrix.from_matrix(veclst)
@@ -102,23 +103,24 @@ def attack_on_kyber(n,q,eta,k,betamax,ntours=5,seed=[0,0]):
     x = np.concatenate([b-e,s,[-1]]) #BBD solution
     sol = np.concatenate([e,-s,[1]])
 
-    B = np.array( [ [int(0) for i in range(2*k*n+1)] for j in range(2*k*n+1) ] )
+    B = [ [int(0) for i in range(2*k*n+1)] for j in range(2*k*n+1) ]
     for i in range( k*n ):
-        B[i,i] = q
+        B[i][i] = int( q )
     for i in range(k*n, 2*k*n+1):
-        B[i,i] = 1
+        B[i][i] = 1
     for i in range(k*n, 2*k*n):
         for j in range(k*n):
-            B[i,j] = A[i-k*n,j]
+            B[i][j] = int( A[i-k*n,j]v )
 
     for j in range(k*n):
-        B[-1,j] = t[j]
+        B[-1][j] = int( t[j] )
 
     tarnrmsq = 1.01*(sol.dot(sol))
 
     then = perf_counter()
     C = flatter_interface(B)
     C = IntegerMatrix.from_matrix( B )
+    B = np.array( B )
     print(f"flatter done in {perf_counter()-then}")
 
     G = GSO.Mat(C,float_type="dd")
