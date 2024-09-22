@@ -261,7 +261,7 @@ bool RandomizedSlicer::slicer_replace_in_db(size_t cdb_index, Entry_t &e)
 {
     CompressedEntry &ce = cdb_t[cdb_index]; // abbreviation
 
-    if (REDUCE_LEN_MARGIN_HALF * e.len >= ce.len)
+    if (REDUCE_DIST_MARGIN * e.len >= ce.len)
     {
         uid_hash_table_t.erase_uid(e.uid);
         return false;
@@ -287,12 +287,16 @@ size_t RandomizedSlicer::slicer_queue_insert_task( const size_t t_id, std::vecto
 
 void RandomizedSlicer::slicer_queue(std::vector<std::vector<QEntry>> &t_queues, std::vector<std::vector<Entry_t>>& transaction_db ) {
     // clear duplicates read only
+    /*
     for( size_t t_id = 0; t_id < threads; ++t_id ) {
         threadpool.push([this, t_id, &t_queues](){
             slicer_queue_dup_remove_task(t_queues[t_id]);
         });
     }
     threadpool.wait_work();
+
+    std::cout << "slicer_queue_dup_remove_task finished" << std::endl;
+    */
 
     const size_t S = cdb_t.size();
     size_t Q = 0;
@@ -324,6 +328,8 @@ void RandomizedSlicer::slicer_queue(std::vector<std::vector<QEntry>> &t_queues, 
     }
     threadpool.wait_work();
 
+    //std::cout << "slicer_queue_create_task finished" << std::endl;
+
     // Insert transaction DB
     std::vector<size_t> kk(threads);
     for( size_t t_id = 0; t_id < threads; ++t_id ) {
@@ -331,6 +337,9 @@ void RandomizedSlicer::slicer_queue(std::vector<std::vector<QEntry>> &t_queues, 
             kk[t_id] = slicer_queue_insert_task(t_id, transaction_db[t_id], write_indices[t_id]);
         });
     }
+
+    //std::cout << "slicer_queue_insert_task finished" << std::endl;
+
     threadpool.wait_work();
     size_t min_kk = kk[0];
     size_t inserted = 0;
@@ -529,13 +538,22 @@ bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t block
 
         if(cdb_t[0].len<len_bound){
             std::cout << it <<  "-th it: solution found of norm:" << cdb_t[0].len << std::endl;
+            transaction_db.clear();
+            buckets.clear();
+            buckets_i.clear();
+            t_queues.clear();
             return true;
         }
 
         slicer_bucketing(blocks, multi_hash, nr_buckets_aim, buckets, buckets_i);
+        //std::cout << "slicer_bucketing finished" << std::endl;
         slicer_process_buckets(buckets, buckets_i, t_queues);
+        //std::cout << "slicer_process_buckets finished" << std::endl;
         slicer_queue(t_queues, transaction_db);
+        //std::cout << "slicer_queue finished" << std::endl;
         parallel_sort_cdb();
+        //std::cout << "parallel_sort_cdb finished" << std::endl;
+
 
         //DO WE NEED TO DO REBUCKETING? Every X-round?
         //if(cdb_t[0].len>=best_len) {
@@ -544,11 +562,11 @@ bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t block
         //}
 
 
-        if(it%1000==0) {
+        if(it%500==0) {
             std::cout << "cdb_t[0].len " << cdb_t[0].len << " cdb_t.size() " << cdb_t.size() << std::endl;
         }
 
-        if( it > 5000 ) {
+        if( it > 2000 ) {
             std::cerr << "Couldn't find a close vector after 5000 iterations" << std::endl;
             return false;
         }

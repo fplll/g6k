@@ -33,6 +33,11 @@ public:
         uid_hash_table_t.reset_hash_function(this->sieve);
         //std::cout << "initialized randomized slicer" << std::endl;
     }
+    ~RandomizedSlicer(){
+        this->db_t.clear();
+        this->cdb_t.clear();
+        this->cdb_t_tmp_copy.clear();
+    }
 
     friend SimHashes;
     friend UidHashTable;
@@ -81,6 +86,8 @@ public:
     bool slicer_replace_in_db(size_t cdb_index, Entry_t &e);
 
     void set_nthreads(size_t nt){ this->threads = nt;}
+
+    //void uninitialize();
 };
 
 #endif //G6K_HYBRID_SLICER_H

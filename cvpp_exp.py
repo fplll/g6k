@@ -196,10 +196,11 @@ def run_exp(g6k,ntests,approx_facts):
     return Ds
 
 if __name__=="__main__":
-    ntests = 20
-    n = 70
-    approx_facts = [ 1.44 + 0.05*i for i in range(1) ]
-    g6k = gen_cvpp_g6k(55,betamax=None,k=None,bits=11.705)
+    ntests = 30
+    n = 62
+    approx_facts = [ 0.75 + 0.05*i for i in range(10) ]
+    print(approx_facts)
+    g6k = gen_cvpp_g6k(n,betamax=None,k=None,bits=11.705)
     # g6k = gen_cvpp_g6k(n,betamax=50,k=None,bits=24.705)
     # g6k.dump_on_disk(f"cvppg6k_n{n}_{hex(randrange(2**12))[2:]}.pkl")
     Ds = run_exp(g6k,ntests,approx_facts)

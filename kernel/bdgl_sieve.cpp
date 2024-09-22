@@ -304,7 +304,7 @@ void Siever::bdgl_queue_create_task( const size_t t_id, const std::vector<QEntry
         //std::cout << t_id << " " << Q << " index: " << index << " write_index: " << write_index <<std::endl;
         if( write_index < 0 ){
             std::cerr << "Spilling full transaction db" << t_id << " " << Q-index << std::endl;
-            exit(1);
+            //exit(1);
             break;
         }
     }

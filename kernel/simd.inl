@@ -516,8 +516,7 @@ inline Simd::SmallVecType Simd::m128_random_state(SmallVecType prg_state,
 #else
   // Silence the fact it isn't used.
   (void)key;
-  //(void)prg_state;
-
+  (void)prg_state;
 
   // Rand should be fine here: it stops us falling into random cycles.
 
