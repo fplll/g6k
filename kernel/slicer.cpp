@@ -106,11 +106,9 @@ void RandomizedSlicer::grow_db_with_target(const double t_yr[], size_t n_per_tar
     db_t.resize(N);
     cdb_t.resize(N);
 
-    //std::cout << "input_t.uid:" << input_t.uid << std::endl;
 
 
     if(!uid_hash_table_t.insert_uid(input_t.uid)){
-        // for (size_t ii=0; ii<n; ii++){ std::cout << input_t.yr[ii] << " ";}
         std::cerr << "The original target is already in db" << std::endl;
         exit(1);
     }
@@ -157,33 +155,8 @@ void RandomizedSlicer::grow_db_with_target(const double t_yr[], size_t n_per_tar
 
     }
 
-    /*
-    for( size_t i = start; i < N; i++)
-    {
-        std::cout << i << ": " << db_t[i].len << " " << db_t[i].uid  << std::endl;
-    }
-    */
 }
 
-void RandomizedSlicer::slicer_queue_dup_remove_task( std::vector<QEntry> &queue) {
-    const size_t Q = queue.size();
-    for( size_t index = 0; index < Q; index++ ) {
-        size_t i1 = queue[index].i;
-        size_t i2 = queue[index].j;
-        UidType new_uid = db_t[i1].uid;
-        if(queue[index].sign==1)
-        {
-            new_uid += db_t[i2].uid;
-        }
-        else
-        {
-            new_uid -= db_t[i2].uid;
-        }
-        // if already present, use sign as duplicate marker
-        if (uid_hash_table_t.check_uid_unsafe(new_uid) )
-            queue[index].sign = 0;
-    }
-}
 
 inline int RandomizedSlicer::slicer_reduce_with_delayed_replace(const size_t i1, const size_t i2,  std::vector<Entry_t>& transaction_db, int64_t& write_index, LFT new_l, int8_t sign)
 {
@@ -239,16 +212,11 @@ void RandomizedSlicer::slicer_queue_create_task( const size_t t_id, const std::v
     const size_t S = cdb_t.size();
     const size_t Q = queue.size();
 
-    const size_t insert_after = S-1-t_id-threads*write_index;
+    //const size_t insert_after = S-1-t_id-threads*write_index;
     for(unsigned int index = 0; index < Q; index++ )  {
-        // use sign as skip marker
-        if( queue[index].sign == 0 ){
-            continue;
-        }
 
         slicer_reduce_with_delayed_replace( queue[index].i, queue[index].j,
                                           transaction_db, write_index, queue[index].len, queue[index].sign);
-        //std::cout << t_id << " " << Q << " index: " << index << " write_index: " << write_index <<std::endl;
         if( write_index < 0 ){
             //std::cerr << "Spilling full transaction db " << t_id << " " << Q << " " << index << std::endl;
             //exit(1);
@@ -567,7 +535,7 @@ bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t block
         }
 
         if( it > 2000 ) {
-            std::cerr << "Couldn't find a close vector after 5000 iterations" << std::endl;
+            std::cerr << "Couldn't find a close vector after 2000 iterations" << std::endl;
             return false;
         }
         it++;

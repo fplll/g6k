@@ -71,7 +71,7 @@ class FastHadamardLSH
         unsigned multi_hash;
 
         // regs is the number of registers we have available to use for hashing
-    unsigned regs;
+        unsigned regs;
         int64_t seed;
 
     // Prints out an m256i vector as 16bit chunks
@@ -165,33 +165,20 @@ class ProductLSH
             full_seed = Simd::m128_set_epi64x(0xD0D0FA11 * _seed + 0xD15EA5E5, 0xFEE1DEAD * _seed + 0xB105F00D);
             Simd::SmallVecType prg_state = full_seed;
 
-            //pprint(aes_key);
-            //pprint(extra_state);
-            //pprint(full_seed);
-            //std::cout << "-----------------------" << std::endl;
 
             // Taken is a vector denoting if we've used this position in our permutation before
             std::vector<bool> taken(n,false);
 
-            //int max_trial = 0;
 
             // Build the permutation that's applied to each vector upon hashing
             for (size_t i = 0; i < n;)
             {
-                //max_trial++;
-                //if (max_trial>2000) {
-                //    std::cerr << "error in instatiating lsh" << std::endl;
-                //    exit(1);
-                //}
             // produce a new prng state & take the first 64-bits as output
             // We then use this to correspond to an array position - repeating if we fail
             // to find an unused element
 
                 prg_state = Simd::m128_random_state(prg_state, aes_key, &extra_state);
                 size_t pos = Simd::m128_extract_epi64<0>(prg_state) % n;
-
-                //pprint(prg_state);
-
 
                 if (taken[pos] ){
                     continue;
@@ -202,16 +189,9 @@ class ProductLSH
             // We also take this chance to permute the signs too - if the second 64-bit number is odd then
             // we will negate in future. Then, just continue producing the permutation
                 sign[pos] = Simd::m128_extract_epi64<1>(prg_state) % 2 ? 1 : -1;
-                //if (i%2==0){
-                    //pprint(prg_state);
-                    //std::cout << Simd::m128_extract_epi64<0>(prg_state) << std::endl;
-                //}
+
 
                 ++i;
-               // if(i==38 && _seed==3730182426863831939){
-               //     exit(1);
-                //}
-                //std::cout << i << " " << n << std::endl;
             }
 
 	

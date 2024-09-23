@@ -20,24 +20,17 @@ public:
     explicit RandomizedSlicer(Siever &sieve, unsigned long int seed = 0) :
             sieve(sieve), db_t(), cdb_t(), n(0), rng_t(seed), sim_hashes_t(rng_t.rng_nolock())
     {
-        /*
-        size_t fullS = this->sieve.cdb.size();
-        Entry* e_db = &(this->sieve.db.front());
-        for (size_t ii = 0; ii<fullS; ii++) {
-            for (const auto &e: e_db[ii].c) { std::cout << e << " "; }
-            std::cout <<e_db[ii].len << std::endl;
-        }
-        */
         this->n = this->sieve.n;
         sim_hashes_t.reset_compress_pos(this->sieve);
         uid_hash_table_t.reset_hash_function(this->sieve);
         //std::cout << "initialized randomized slicer" << std::endl;
     }
-    ~RandomizedSlicer(){
-        this->db_t.clear();
-        this->cdb_t.clear();
-        this->cdb_t_tmp_copy.clear();
-    }
+
+    //~RandomizedSlicer(){
+    //    this->db_t.clear();
+    //    this->cdb_t.clear();
+    //    this->cdb_t_tmp_copy.clear();
+    //}
 
     friend SimHashes;
     friend UidHashTable;
@@ -54,7 +47,6 @@ public:
     SimHashes sim_hashes_t; // needs to go after rng!
     UidHashTable uid_hash_table_t; //hash table for db_t -- the database of targets
 
-    //FT dist_sq_bnd = 0;
     size_t threads = 1;
 
 
@@ -78,16 +70,12 @@ public:
     std::pair<LFT, int8_t> reduce_to_QEntry_t(CompressedEntry *ce1, CompressedEntry *ce2);
 
     void slicer_queue(std::vector<std::vector<QEntry>> &t_queues, std::vector<std::vector<Entry_t>>& transaction_db );
-    void slicer_queue_dup_remove_task( std::vector<QEntry> &queue);
-
     void slicer_queue_create_task( const size_t t_id, const std::vector<QEntry> &queue, std::vector<Entry_t> &transaction_db, int64_t &write_index);
     inline int slicer_reduce_with_delayed_replace(const size_t i1, const size_t i2, std::vector<Entry_t>& transaction_db, int64_t& write_index, LFT new_l, int8_t sign);
     size_t slicer_queue_insert_task( const size_t t_id, std::vector<Entry_t> &transaction_db, int64_t write_index);
     bool slicer_replace_in_db(size_t cdb_index, Entry_t &e);
 
     void set_nthreads(size_t nt){ this->threads = nt;}
-
-    //void uninitialize();
 };
 
 #endif //G6K_HYBRID_SLICER_H
