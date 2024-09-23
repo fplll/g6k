@@ -54,7 +54,7 @@ if __name__=="__main__":
             beta = find_beta(dim-kappa_, n-kappa_, q, st_dev_e)
             if beta==infinity: continue
             Tbkz = svp_cost(beta,dim-kappa_)
-            Tcvp = batchCVPP_cost(beta, M_log, sqrt(4/3.), 1)
+            _, Tcvp = batchCVPP_cost(beta, M_log, sqrt(4/3.), 1)
             min_ = max(Tbkz, Tcvp)
             if min_<min_rt:
                 min_rt = min_

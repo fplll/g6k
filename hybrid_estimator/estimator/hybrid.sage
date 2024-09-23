@@ -44,7 +44,7 @@ for n in range(nMin,nMax+1,nStep):
         beta, delta = dbdd.estimate_attack()
 
         costBKZ = 0.292*beta + log(8*dbdd.dim(), 2) + 16.4
-        costCVP = batchCVPP_cost(beta, H*kappa, sqrt(4/3), 1)
+        _, costCVP = batchCVPP_cost(beta, H*kappa, sqrt(4/3), 1)
 
         if kappa == 0:
             costNonHybrid = costBKZ
