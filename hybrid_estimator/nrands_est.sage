@@ -6,7 +6,7 @@ dim = 56
 data = []
 for M in range(200, 1151, 50):
     log_M = log(M, 2).n()
-    prob, T = batchCVPP_cost(dim, log_M, sqrt(4/3.), 1)
+    prob, T = batchCVPP_cost(dim, log_M, sqrt(4/3.), 1) #change sqrt(4/3) to the value cdb_size()^{1/dim}
     data.append([M,min(1,(prob**dim)*M)])
 
 print(data)
