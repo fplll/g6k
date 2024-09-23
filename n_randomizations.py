@@ -107,7 +107,7 @@ for i in range(Nexperiments):
     c = [ randrange(-10,10) for j in range(n) ]
     #e = binomial_vec(n, 20)
     #e = np.array( [ randrange(-8,9) for j in range(n) ],dtype=np.int64 )
-    e = np.array( uniform_random_distribution(n, 0.9*gh/2) )
+    e = np.array( random_on_sphere(n, 0.9*gh/2) )
 
     print(f"gauss: {gh} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
     e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
