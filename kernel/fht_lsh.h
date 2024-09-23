@@ -173,16 +173,16 @@ class ProductLSH
             // Taken is a vector denoting if we've used this position in our permutation before
             std::vector<bool> taken(n,false);
 
-            int max_trial = 0;
+            //int max_trial = 0;
 
             // Build the permutation that's applied to each vector upon hashing
             for (size_t i = 0; i < n;)
             {
-                max_trial++;
-                if (max_trial>1000) {
-                    std::cerr << "error in instatiating lsh" << std::endl;
-                    exit(1);
-                }
+                //max_trial++;
+                //if (max_trial>2000) {
+                //    std::cerr << "error in instatiating lsh" << std::endl;
+                //    exit(1);
+                //}
             // produce a new prng state & take the first 64-bits as output
             // We then use this to correspond to an array position - repeating if we fail
             // to find an unused element

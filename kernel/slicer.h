@@ -8,7 +8,7 @@
 static constexpr unsigned int XPC_SLICER_SAMPLING_THRESHOLD = 105; // XPC Threshold for iterative slicer sampling //105
 static constexpr unsigned int XPC_SLICER_THRESHOLD = 96; // XPC Threshold for iterative slicer sampling
 
-#define REDUCE_DIST_MARGIN 1.02
+#define REDUCE_DIST_MARGIN 1.008
 
 
 struct QEntry;

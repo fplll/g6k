@@ -563,7 +563,7 @@ bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t block
 
 
         if(it%500==0) {
-            std::cout << "cdb_t[0].len " << cdb_t[0].len << " cdb_t.size() " << cdb_t.size() << std::endl;
+            std::cout << "iteration " << it <<  " cdb_t[0].len " << cdb_t[0].len  << std::endl;
         }
 
         if( it > 2000 ) {

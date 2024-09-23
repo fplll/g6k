@@ -26,15 +26,15 @@ def binomial_vec(n, eta):
 #paramset1 = {"n": 110, "b": [i for i in range(42, 56)], "nrands": [i for i in range(600,900,50)] }
 #paramset2 = {"n": 120, "b": [i for i in range(42, 56)], "nrands": [i for i in range(600,900,50)] }
 
-range_ = range(500, 751, 50)
+range_ = range(700, 1151, 50)
 babai_suc = 0
 slicer_suc = [0]*len(range_)
 slicer_fail = [0]*len(range_)
-Nexperiments = 100
+Nexperiments = 120
 
 
 FPLLL.set_precision(250)
-n, betamax, sieve_dim = 100, 42, 42
+n, betamax, sieve_dim = 112, 56, 56
 ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
 
 # - - - try load a lattice - - -
@@ -106,8 +106,8 @@ for i in range(Nexperiments):
 
     c = [ randrange(-10,10) for j in range(n) ]
     #e = binomial_vec(n, 20)
-    e = np.array( [ randrange(-8,9) for j in range(n) ],dtype=np.int64 )
-    #e = np.array( uniform_random_distribution(n, 0.9*gh/2) )
+    #e = np.array( [ randrange(-8,9) for j in range(n) ],dtype=np.int64 )
+    e = np.array( uniform_random_distribution(n, 0.9*gh/2) )
 
     print(f"gauss: {gh} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
     e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
@@ -162,7 +162,7 @@ for i in range(Nexperiments):
             slicer.set_nthreads(1);
             slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=nrand)
             try:
-                slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (1.01*(e_@e_)))
+                slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (1.03*(e_@e_)))
                 iterator = slicer.itervalues_t()
                 for tmp in iterator:
                     out_gs_reduced = tmp  #cdb[0]
