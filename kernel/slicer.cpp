@@ -506,10 +506,10 @@ bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t block
 
         if(cdb_t[0].len<len_bound){
             std::cout << it <<  "-th it: solution found of norm:" << cdb_t[0].len << std::endl;
-            transaction_db.clear();
-            buckets.clear();
-            buckets_i.clear();
-            t_queues.clear();
+#           //transaction_db.clear();
+            //buckets.clear();
+            //buckets_i.clear();
+            //t_queues.clear();
             return true;
         }
 
