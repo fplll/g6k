@@ -65,51 +65,6 @@ EOF
 deactivate
 source ./activate
 
-
-# Install FPLLL
-
-git clone https://github.com/fplll/fplll g6k-fplll
-cd g6k-fplll || exit
-./autogen.sh
-./configure --prefix="$VIRTUAL_ENV" $CONFIGURE_FLAGS
-make clean
-retval=$?
-if [ $retval -ne 0 ]; then
-    echo "Make clean failed in fplll. This is usually because there was an error with either autogen.sh or configure."
-    echo "Check the logs above - they'll contain more information."
-    exit 1 # 1 is the exit value if building fplll fails via configure or autogen
-fi
-
-make $jobs
-retval=$?
-if [ $retval -ne 0 ]; then
-    echo "Making fplll failed."
-    echo "Check the logs above - they'll contain more information."
-    exit 2 # 2 is the exit value if building fplll fails as a result of make $jobs.
-fi
-
-make install
-retval=$?
-
-if [ $retval -ne 0 ]; then
-    echo "Make install failed for fplll."
-    echo "Check the logs above - they'll contain more information."
-    exit 3 # 3 is the exit value if installing fplll failed.
-fi
-
-cd ..
-
-# Install FPyLLL
-
-git clone https://github.com/fplll/fpylll g6k-fpylll
-cd g6k-fpylll || exit
-$PIP install -r requirements.txt
-$PIP install -r suggestions.txt
-$PYTHON setup.py clean
-$PYTHON setup.py build_ext $jobs || $PYTHON setup.py build_ext
-$PYTHON setup.py install
-cd ..
-
 # Build G6K
 
 $PIP install -r requirements.txt
