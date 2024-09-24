@@ -109,7 +109,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
         c = [ randrange(-10,10) for j in range(n) ]
         #e = binomial_vec(n, 20)
         #e = np.array( [ randrange(-8,9) for j in range(n) ],dtype=np.int64 )
-        e = np.array( random_on_sphere(n, 1.8*gh/2) )
+        e = np.array( random_on_sphere(n, 1.0*gh/2) )
 
         print(f"gauss: {gh} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
         e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
@@ -151,16 +151,18 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
         if succ:
             babai_suc+=1
 
-        this_instance_succseeded = False
+
         if not succ:
-            if this_instance_succseeded: #can only enter here after a succsessful slicer
-                slicer_suc += 1
-                continue
+
             #filename = f"bdgl2_n{n}_b{sieve_dim}.pkl"
             #g6k.dump_on_disk( filename )
             #then = perf_counter()
             ctr = 0
+            this_instance_succseeded = False
             for nrand in range_:
+                if this_instance_succseeded: #can only enter here after a succsessful slicer
+                    slicer_suc[ctr] += 1
+                    continue
 
                 slicer = RandomizedSlicer(g6k)
                 slicer.set_nthreads(2);
@@ -213,12 +215,12 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
 #paramset1 = {"n": 110, "b": [i for i in range(42, 56)], "nrands": [i for i in range(600,900,50)] }
 #paramset2 = {"n": 120, "b": [i for i in range(42, 56)], "nrands": [i for i in range(600,900,50)] }
 
-n_rerand_min, n_rerand_max, step = 10, 101, 5
+n_rerand_min, n_rerand_max, step = 10, 71, 10
 range_ = range(n_rerand_min, n_rerand_max, step)
 # babai_suc = 0
 # slicer_suc = [0]*len(range_)
 # slicer_fail = [0]*len(range_)
-Nexperiments = 200
+Nexperiments = 100
 Nlats = 5
 path = "saved_lattices/"
 isExist = os.path.exists(path)
