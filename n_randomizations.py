@@ -26,16 +26,20 @@ def binomial_vec(n, eta):
 #paramset1 = {"n": 110, "b": [i for i in range(42, 56)], "nrands": [i for i in range(600,900,50)] }
 #paramset2 = {"n": 120, "b": [i for i in range(42, 56)], "nrands": [i for i in range(600,900,50)] }
 
-range_ = range(700, 1151, 50)
+n_rerand_min, n_rerand_max, step = 50, 500, 10
+range_ = range(n_rerand_min, n_rerand_max, step)
 babai_suc = 0
 slicer_suc = [0]*len(range_)
 slicer_fail = [0]*len(range_)
-Nexperiments = 120
+Nexperiments = 50
 
 
 FPLLL.set_precision(250)
-n, betamax, sieve_dim = 112, 56, 56
+n, betamax, sieve_dim = 60, 60, 60
+approx_fact = 1.1
 ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
+print(f"launching n, betamax, sieve_dim = {n, betamax, sieve_dim}")
+print(f"n_rerand_min, n_rerand_max, step: {n_rerand_min, n_rerand_max, step}")
 
 # - - - try load a lattice - - -
 filename = f"bdgl2_n{n}_b{sieve_dim}.pkl"
@@ -102,7 +106,7 @@ buckets = max(buckets, 2**(blocks-1))
 
 for i in range(Nexperiments):
 
-    print("Running experiment ", i)
+    print("Running experiment ", i, "out of ", Nexperiments-1)
 
     c = [ randrange(-10,10) for j in range(n) ]
     #e = binomial_vec(n, 20)
@@ -162,7 +166,7 @@ for i in range(Nexperiments):
             slicer.set_nthreads(1);
             slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=nrand)
             try:
-                slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (1.03*(e_@e_)))
+                slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (approx_fact*(e_@e_)))
                 iterator = slicer.itervalues_t()
                 for tmp in iterator:
                     out_gs_reduced = tmp  #cdb[0]
@@ -197,3 +201,14 @@ for i in range(Nexperiments):
 print(babai_suc)
 print(slicer_suc)
 print(slicer_fail)
+
+density_plot = []
+cntr = 0
+for nrand in range_:
+    density_plot.append( (nrand,slicer_suc[cntr]+babai_suc) )
+    cntr+=1
+# density_plot = [ (nrand, slicer_suc[nrand]+babai_suc) for nrand in range_ ]
+with open(f"nrand_{n}_exp.pkl", "wb") as file:
+    pickle.dump( density_plot, file )
+
+print(density_plot)
