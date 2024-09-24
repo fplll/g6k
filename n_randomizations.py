@@ -30,11 +30,11 @@ range_ = range(700, 1151, 50)
 babai_suc = 0
 slicer_suc = [0]*len(range_)
 slicer_fail = [0]*len(range_)
-Nexperiments = 120
+Nexperiments = 40
 
 
 FPLLL.set_precision(250)
-n, betamax, sieve_dim = 112, 56, 56
+n, betamax, sieve_dim = 60, 52, 60
 ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
 
 # - - - try load a lattice - - -
@@ -107,11 +107,11 @@ for i in range(Nexperiments):
     c = [ randrange(-10,10) for j in range(n) ]
     #e = binomial_vec(n, 20)
     #e = np.array( [ randrange(-8,9) for j in range(n) ],dtype=np.int64 )
-    e = np.array( random_on_sphere(n, 0.9*gh/2) )
+    e = np.array( random_on_sphere(n, 1.0*gh/2) )
 
     print(f"gauss: {gh} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
     e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
-    print("projected target squared length:", 1.01*(e_@e_))
+    print("projected target squared length:", 1.1*(e_@e_))
 
     b = G.B.multiply_left( c )
     b_ = np.array(b,dtype=np.int64)
