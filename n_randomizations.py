@@ -11,29 +11,12 @@ try:
 except ModuleNotFoundError:
     from multiprocessing import Pool
 
-def binomial_dist(eta):
-    s = 0
-    for i in range(eta):
-        s += randrange(2)
-    return s
-
-"""
-  Returns an n-dimensional vector,
-  whose coordinates follow a centered binomial distribution
-  with parameter eta.
-"""
-def binomial_vec(n, eta):
-    v = np.array([0]*n)
-    for i in range(n):
-        v[i] = binomial_dist(2*eta) - eta
-    return v
-
 def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
     babai_suc = 0
     approx_fact = 1.1
     ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
     print(f"launching n, betamax, sieve_dim = {n, betamax, sieve_dim}")
-    print(f"n_rerand_min, n_rerand_max, step: {n_rerand_min, n_rerand_max, step}")
+    print(f"range_: {range_}")
 
     slicer_suc = [0]*len(range_)
     slicer_fail = [0]*len(range_)
@@ -107,7 +90,6 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
         print("Running experiment ", i, "out of ", Nexperiments-1)
 
         c = [ randrange(-10,10) for j in range(n) ]
-        #e = binomial_vec(n, 20)
         #e = np.array( [ randrange(-8,9) for j in range(n) ],dtype=np.int64 )
         e = np.array( random_on_sphere(n, 1.0*gh/2) )
 
@@ -214,6 +196,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
 
 #paramset1 = {"n": 110, "b": [i for i in range(42, 56)], "nrands": [i for i in range(600,900,50)] }
 #paramset2 = {"n": 120, "b": [i for i in range(42, 56)], "nrands": [i for i in range(600,900,50)] }
+
 if __name__ == '__main__':
     n_rerand_min, n_rerand_max, step = 10, 71, 10
     range_ = range(n_rerand_min, n_rerand_max, step)
@@ -247,6 +230,7 @@ if __name__ == '__main__':
 
     for t in tasks:
         density_plots.append( t.get() )
+
 
     with open(f"nrand_{n}_exp.pkl", "wb") as file:
         pickle.dump( density_plots, file )
