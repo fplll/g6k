@@ -14,13 +14,12 @@ except ModuleNotFoundError:
 
 def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperiments):
     babai_suc = 0
-    approx_fact = 1.1
+    approx_fact = 1.03
     ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
     print(f"launching n, betamax, sieve_dim = {n, betamax, sieve_dim}")
-    print(f"range_: {range_}")
 
-    slicer_suc = [0]*len(range_)
-    slicer_fail = [0]*len(range_)
+    slicer_suc = [0]*n_shrinkings
+    slicer_fail = [0]*n_shrinkings
     # - - - try load a lattice - - -
     filename = f"saved_lattices/bdgl2_n{n}_b{sieve_dim}_{lat_id}.pkl"
     nothing_to_load = True
@@ -90,13 +89,13 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
     for j in range(n_shrinkings):
         slicer = RandomizedSlicer(g6k)
         slicer.set_nthreads(2);
-        nrand, _ = batchCVPP_cost(sieve_dim,100,dbsize_start,1) #100 can be any constant >1
-
+        nrand_, _ = batchCVPP_cost(sieve_dim,100,dbsize_start**(1./sieve_dim),1) #100 can be any constant >1
+        print("nrand:", (1./nrand_)**sieve_dim)
         print("Running experiment ", j, "out of ", n_shrinkings)
 
         for i in range(Nexperiments):
             c = [ randrange(-10,10) for j in range(n) ]
-            e = np.array( random_on_sphere(n, 0.5*gh) )
+            e = np.array( random_on_sphere(n, 0.49*gh) )
             print(f"gauss: {gh} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
             e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
             print("projected target squared length:", (e_@e_))
@@ -137,7 +136,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
                     slicer_suc[ctr] += 1
                     continue
 
-                slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=nrand)
+                slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=ceil((1./nrand_)**sieve_dim) + 100)
                 try:
                     slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (approx_fact*(e_@e_)))
                     iterator = slicer.itervalues_t()
@@ -158,13 +157,14 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
                     bab_01=np.array( bab_0+bab_1 )
                     print(f"Success: {all(c==bab_01)}")
                     if (all(c==bab_01)):
-                        slicer_suc[ctr] += 1
+                        slicer_suc[j] += 1
                         this_instance_succseeded = True
                     else:
-                        slicer_fail[ctr] += 1
+                        slicer_fail[j] += 1
 
                 except Exception as e: print(e)
-                ctr+=1
+        #ctr+=1
+
         g6k.shrink_db(shrink_factor*g6k.db_size())
 
     print(f"Lattice-{lat_id} processed...")
@@ -174,16 +174,18 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
 
     density_plot = []
     cntr = 0
-    for nrand in range_:
-        density_plot.append( (nrand,slicer_suc[cntr]+babai_suc) )
+    s = 1
+    for j in range(n_shrinkings):
+        density_plot.append( (s,slicer_suc[cntr]+babai_suc) )
         cntr+=1
+        s *= shrink_factor
     return density_plot
 
 
 if __name__ == '__main__':
 
-    Nexperiments = 10
-    Nlats = 5
+    Nexperiments = 50
+    Nlats = 1
     path = "saved_lattices/"
     isExist = os.path.exists(path)
     if not isExist:
@@ -194,10 +196,10 @@ if __name__ == '__main__':
 
 
     FPLLL.set_precision(250)
-    n, betamax, sieve_dim = 60, 50, 60
-    nthreads = 2
+    n, betamax, sieve_dim = 65, 45, 65
+    nthreads = 1
     shrink_factor = 0.95
-    n_shrinkings = 15
+    n_shrinkings = 20
     pool = Pool(processes = nthreads )
     tasks = []
 
