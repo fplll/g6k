@@ -66,7 +66,7 @@ if __name__ == "__main__":
     print(f"dbsize: {len(g6k)}")
 
     t_gs = from_canonical_scaled( G,t,offset=sieve_dim )
-    print(f"t_gs: {t_gs} | norm: {(t_gs@t_gs)}")
+    print(f"t_gs: {t_gs} | norm2: {(t_gs@t_gs)}")
 
     then = perf_counter()
 

@@ -33,7 +33,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
     approx_fact = 1.1
     ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
     print(f"launching n, betamax, sieve_dim = {n, betamax, sieve_dim}")
-    print(f"n_rerand_min, n_rerand_max, step: {n_rerand_min, n_rerand_max, step}")
+    print(f"range_: {range_}")
 
     slicer_suc = [0]*len(range_)
     slicer_fail = [0]*len(range_)
@@ -215,41 +215,42 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
 #paramset1 = {"n": 110, "b": [i for i in range(42, 56)], "nrands": [i for i in range(600,900,50)] }
 #paramset2 = {"n": 120, "b": [i for i in range(42, 56)], "nrands": [i for i in range(600,900,50)] }
 
-n_rerand_min, n_rerand_max, step = 10, 71, 10
-range_ = range(n_rerand_min, n_rerand_max, step)
-# babai_suc = 0
-# slicer_suc = [0]*len(range_)
-# slicer_fail = [0]*len(range_)
-Nexperiments = 100
-Nlats = 5
-path = "saved_lattices/"
-isExist = os.path.exists(path)
-if not isExist:
-    try:
-        os.makedirs(path)
-    except:
-        pass
+if __name__ == "__main__":
+    n_rerand_min, n_rerand_max, step = 10, 101, 10
+    range_ = range(n_rerand_min, n_rerand_max, step)
+    # babai_suc = 0
+    # slicer_suc = [0]*len(range_)
+    # slicer_fail = [0]*len(range_)
+    Nexperiments = 10
+    Nlats = 5
+    path = "saved_lattices/"
+    isExist = os.path.exists(path)
+    if not isExist:
+        try:
+            os.makedirs(path)
+        except:
+            pass
 
 
-FPLLL.set_precision(250)
-n, betamax, sieve_dim = 50, 48, 50
-nthreads = 5
-pool = Pool(processes = nthreads )
-tasks = []
+    FPLLL.set_precision(250)
+    n, betamax, sieve_dim = 50, 48, 50
+    nthreads = 5
+    pool = Pool(processes = nthreads )
+    tasks = []
 
-density_plots = []
-for lat_id in range(Nlats):
-    # density_plot = run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments)
-    # density_plots.append(density_plot)
-    tasks.append( pool.apply_async(
-        run_exp, (lat_id, n, betamax, sieve_dim, range_, Nexperiments)
-    ) )
+    density_plots = []
+    for lat_id in range(Nlats):
+        # density_plot = run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments)
+        # density_plots.append(density_plot)
+        tasks.append( pool.apply_async(
+            run_exp, (lat_id, n, betamax, sieve_dim, range_, Nexperiments)
+        ) )
 
-for t in tasks:
-        density_plots.append( t.get() )
+    for t in tasks:
+            density_plots.append( t.get() )
 
-with open(f"nrand_{n}_exp.pkl", "wb") as file:
-    pickle.dump( density_plots, file )
+    with open(f"nrand_{n}_exp.pkl", "wb") as file:
+        pickle.dump( density_plots, file )
 
-print(density_plots)
-print(Nexperiments)
+    print(density_plots)
+    print(Nexperiments)
