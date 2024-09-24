@@ -5,13 +5,14 @@ from g6k.slicer import RandomizedSlicer
 from utils import *
 import argparse
 import sys
+from hybrid_estimator.batchCVP import batchCVPP_cost
 
 try:
     from multiprocess import Pool  # you might need pip install multiprocess
 except ModuleNotFoundError:
     from multiprocessing import Pool
 
-def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
+def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperiments):
     babai_suc = 0
     approx_fact = 1.1
     ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
@@ -26,7 +27,6 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
     try:
         g6k = Siever.restore_from_file(filename)
         G = g6k.M
-        B = G.B
         nothing_to_load = False
         print(f"Load succeeded...")
     except Exception as excpt:
@@ -85,69 +85,58 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
     buckets = min(buckets, sp["bdgl_multi_hash"] * N / sp["bdgl_min_bucket_size"])
     buckets = max(buckets, 2**(blocks-1))
 
-    for i in range(Nexperiments):
+    dbsize_start = g6k.db_size()
 
-        print("Running experiment ", i, "out of ", Nexperiments-1)
+    for j in range(n_shrinkings):
+        slicer = RandomizedSlicer(g6k)
+        slicer.set_nthreads(2);
+        nrand, _ = batchCVPP_cost(sieve_dim,100,dbsize_start,1) #100 can be any constant >1
 
-        c = [ randrange(-10,10) for j in range(n) ]
-        #e = np.array( [ randrange(-8,9) for j in range(n) ],dtype=np.int64 )
-        e = np.array( random_on_sphere(n, 1.0*gh/2) )
+        print("Running experiment ", j, "out of ", n_shrinkings)
 
-        print(f"gauss: {gh} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
-        e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
-        print("projected target squared length:", 1.01*(e_@e_))
+        for i in range(Nexperiments):
+            c = [ randrange(-10,10) for j in range(n) ]
+            e = np.array( random_on_sphere(n, 0.5*gh) )
+            print(f"gauss: {gh} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
+            e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
+            print("projected target squared length:", (e_@e_))
 
-        b = G.B.multiply_left( c )
-        b_ = np.array(b,dtype=np.int64)
-        t_ = e+b_
-        t = [ int(tt) for tt in t_ ]
+            b = G.B.multiply_left( c )
+            b_ = np.array(b,dtype=np.int64)
+            t_ = e+b_
+            t = [ int(tt) for tt in t_ ]
 
-        t_gs = from_canonical_scaled( G,t,offset=sieve_dim )
-        #print(f"t_gs: {t_gs} | norm: {(t_gs@t_gs)}")
-        #retrieve the projective sublattice
-        B_gs = [ np.array( from_canonical_scaled(G, G.B[i], offset=sieve_dim), dtype=np.float64 ) for i in range(G.d - sieve_dim, G.d) ]
-        t_gs_reduced = reduce_to_fund_par_proj(B_gs,(t_gs),sieve_dim) #reduce the target w.r.t. B_gs
-        t_gs_shift = t_gs-t_gs_reduced #find the shift to be applied after the slicer
-
-
-        # - - - Babai check - - -
-        out = to_canonical_scaled( G,t_gs_reduced,offset=sieve_dim )
-
-        projerr = G.to_canonical( G.from_canonical(e,start=n-sieve_dim), start=n-sieve_dim)
-        diff_v =  np.array(projerr, dtype=np.float64)-np.array(out, dtype=np.float64)
-        # print(f"Diff btw. cvp and slicer: {diff_v}")
-
-        N = GSO.Mat( G.B[:n-sieve_dim], float_type=ft )
-        N.update_gso()
-        bab_1 = G.babai(t-np.array(out),start=n-sieve_dim) #last sieve_dim coordinates of s
-        tmp = t - np.array( G.B[-sieve_dim:].multiply_left(bab_1) )
-        tmp = N.to_canonical( G.from_canonical( tmp, start=0, dimension=n-sieve_dim ) ) #project onto span(B[-sieve_dim:])
-        bab_0 = N.babai(tmp)
-
-        bab_01=np.array( bab_0+bab_1 )
-        #print((f"recovered*B^(-1): {bab_0+bab_1}"))
-        #print(c)
-        #print(f"Coeffs of b found: {(c==bab_01)}")
-        succ = all(c==bab_01)
-        print(f"Babai Success: {succ}")
-        if succ:
-            babai_suc+=1
+            t_gs = from_canonical_scaled( G,t,offset=sieve_dim )
+            B_gs = [ np.array( from_canonical_scaled(G, G.B[i], offset=sieve_dim), dtype=np.float64 ) for i in range(G.d - sieve_dim, G.d) ]
+            t_gs_reduced = reduce_to_fund_par_proj(B_gs,(t_gs),sieve_dim) #reduce the target w.r.t. B_gs
+            t_gs_shift = t_gs-t_gs_reduced #find the shift to be applied after the slicer
 
 
-        if not succ:
+            # - - - Babai check - - -
+            out = to_canonical_scaled( G,t_gs_reduced,offset=sieve_dim )
+            N = GSO.Mat( G.B[:n-sieve_dim], float_type=ft )
+            N.update_gso()
+            bab_1 = G.babai(t-np.array(out),start=n-sieve_dim) #last sieve_dim coordinates of s
+            tmp = t - np.array( G.B[-sieve_dim:].multiply_left(bab_1) )
+            tmp = N.to_canonical( G.from_canonical( tmp, start=0, dimension=n-sieve_dim ) ) #project onto span(B[-sieve_dim:])
+            bab_0 = N.babai(tmp)
 
-            #filename = f"bdgl2_n{n}_b{sieve_dim}.pkl"
-            #g6k.dump_on_disk( filename )
-            #then = perf_counter()
-            ctr = 0
-            this_instance_succseeded = False
-            for nrand in range_:
+            bab_01=np.array( bab_0+bab_1 )
+            succ = all(c==bab_01)
+            print(f"Babai Success: {succ}")
+            if succ:
+                babai_suc+=1
+
+
+            if not succ:
+
+                ctr = 0
+                this_instance_succseeded = False
+
                 if this_instance_succseeded: #can only enter here after a succsessful slicer
                     slicer_suc[ctr] += 1
                     continue
 
-                slicer = RandomizedSlicer(g6k)
-                slicer.set_nthreads(2);
                 slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=nrand)
                 try:
                     slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (approx_fact*(e_@e_)))
@@ -159,11 +148,6 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
 
                     # - - - Check - - - -
                     out = to_canonical_scaled( G,out_gs,offset=sieve_dim )
-
-                    projerr = G.to_canonical( G.from_canonical(e,start=n-sieve_dim), start=n-sieve_dim)
-                    diff_v =  np.array(projerr)-np.array(out)
-
-
                     N = GSO.Mat( G.B[:n-sieve_dim], float_type=ft )
                     N.update_gso()
                     bab_1 = G.babai(t-np.array(out),start=n-sieve_dim) #last sieve_dim coordinates of s
@@ -179,9 +163,10 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
                     else:
                         slicer_fail[ctr] += 1
 
-
                 except Exception as e: print(e)
                 ctr+=1
+        g6k.shrink_db(shrink_factor*g6k.db_size())
+
     print(f"Lattice-{lat_id} processed...")
     print(babai_suc)
     print(slicer_suc)
@@ -194,15 +179,9 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
         cntr+=1
     return density_plot
 
-#paramset1 = {"n": 110, "b": [i for i in range(42, 56)], "nrands": [i for i in range(600,900,50)] }
-#paramset2 = {"n": 120, "b": [i for i in range(42, 56)], "nrands": [i for i in range(600,900,50)] }
 
 if __name__ == '__main__':
-    n_rerand_min, n_rerand_max, step = 10, 71, 10
-    range_ = range(n_rerand_min, n_rerand_max, step)
-    # babai_suc = 0
-    # slicer_suc = [0]*len(range_)
-    # slicer_fail = [0]*len(range_)
+
     Nexperiments = 10
     Nlats = 5
     path = "saved_lattices/"
@@ -215,17 +194,17 @@ if __name__ == '__main__':
 
 
     FPLLL.set_precision(250)
-    n, betamax, sieve_dim = 50, 48, 50
+    n, betamax, sieve_dim = 60, 50, 60
     nthreads = 2
+    shrink_factor = 0.95
+    n_shrinkings = 15
     pool = Pool(processes = nthreads )
     tasks = []
 
     density_plots = []
     for lat_id in range(Nlats):
-        # density_plot = run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments)
-        # density_plots.append(density_plot)
         tasks.append( pool.apply_async(
-            run_exp, (lat_id, n, betamax, sieve_dim, range_, Nexperiments)
+            run_exp, (lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperiments)
         ) )
 
     for t in tasks:

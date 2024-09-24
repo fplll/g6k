@@ -513,6 +513,10 @@ bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t block
             return true;
         }
 
+        //DO WE NEED TO DO REBUCKETING? Every X-round?
+        this->sieve.bdgl_bucketing(blocks, multi_hash, nr_buckets_aim, this->sieve.buckets, this->sieve.buckets_i,
+                                   this->sieve.lsh_seed);
+
         slicer_bucketing(blocks, multi_hash, nr_buckets_aim, buckets, buckets_i);
         //std::cout << "slicer_bucketing finished" << std::endl;
         slicer_process_buckets(buckets, buckets_i, t_queues);
@@ -523,11 +527,8 @@ bool RandomizedSlicer::bdgl_like_sieve(size_t nr_buckets_aim, const size_t block
         //std::cout << "parallel_sort_cdb finished" << std::endl;
 
 
-        //DO WE NEED TO DO REBUCKETING? Every X-round?
-        //if(cdb_t[0].len>=best_len) {
-        this->sieve.bdgl_bucketing(blocks, multi_hash, nr_buckets_aim, this->sieve.buckets, this->sieve.buckets_i,
-                                       this->sieve.lsh_seed);
-        //}
+
+
 
 
         if(it%500==0) {
