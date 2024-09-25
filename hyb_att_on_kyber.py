@@ -1,4 +1,4 @@
-from lwe_gen import *
+from experiments.lwe_gen import *
 
 import sys,os
 import time
