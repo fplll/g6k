@@ -76,7 +76,7 @@ def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthrea
         then_round=time.perf_counter()
         LR.BKZ(beta,tours=5)
         round_time = time.perf_counter()-then_round
-        print(f"BKZ-{beta} done in {round_time}")
+        print(f"BKZ-{beta} done in {round_time}\n")
     report["bkz_runtime"] = time.perf_counter() - bkz_start
 
     if dump_bkz:
@@ -97,8 +97,8 @@ def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthrea
         sieve_start = time.perf_counter()
         g6k(alg="bdgl")
         report["bdgl_runtime"][i] = time.perf_counter()-sieve_start
-        print(f"siever-{kappa}-{sieve_dim_max-nsieves+i} finished in added time {time.perf_counter()-sieve_start}" )
-        g6k.dump_on_disk(out_path+f"g6kdump_{n}_{q}_{eta}_{k}_{seed}_{kappa}_{sieve_dim_max-nsieves+i}")
+        print(f"siever-{kappa}-{sieve_dim_max-nsieves+i} finished in added time {time.perf_counter()-sieve_start}\n" )
+        g6k.dump_on_disk(out_path+f'g6kdump_{n}_{q}_{eta}_{k}_{seed}_{kappa}_{sieve_dim_max-nsieves+i}')
         g6k.extend_left(1)
 
     return report
@@ -118,22 +118,21 @@ if __name__=="__main__":
     tasks = []
     for param in params:
         for latnum in range(lats_per_dim):
-            for instance in range(inst_per_lat):
-                for kappa in range(param[1]-1, param[1]+2,1):
-                    tasks.append( pool.apply_async(
-                        run_preprocessing, (
-                            param[0], #n
-                            q, #q
-                            eta, #eta
-                            1, #k
-                            [latnum,instance], #seed
-                            param[2]-5, #beta_bkz
-                            param[2]+2, #sieve_dim_max
-                            7,  #nsieves
-                            kappa, #kappa
-                            nthreads #nthreads
+            for kappa in range(param[1]-1, param[1]+2,1):
+                tasks.append( pool.apply_async(
+                    run_preprocessing, (
+                        param[0], #n
+                        q, #q
+                        eta, #eta
+                        1, #k
+                        [latnum,0], #seed, second value is irrelevant
+                        param[2]-5, #beta_bkz
+                        param[2]+4, #sieve_dim_max
+                        7,  #nsieves
+                        kappa, #kappa
+                        nthreads #nthreads
                         )
-                    ) )
+                ) )
 
     for t in tasks:
         output.append( t.get() )
