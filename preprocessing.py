@@ -77,16 +77,18 @@ def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthrea
         LR.BKZ(beta,tours=5)
         round_time = time.perf_counter()-then_round
         print(f"BKZ-{beta} done in {round_time}\n")
+        sys.stdout.flush()
     report["bkz_runtime"] = time.perf_counter() - bkz_start
 
     if dump_bkz:
-        with open(out_path+f"/bkzdump_{n}_{q}_{eta}_{k}_{seed}_{kappa}_{sieve_dim_max-nsieves+i}", "wb") as f:
+        with open(out_path+f"/bkzdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+i}", "wb") as f:
             pickle.dump({"B": H11}, f)
 
 
     #---------run sieving------------
+    FPLLL.set_precision(250)
     int_type = H11.int_type
-    ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
+    ft = "dd" if config.have_qd else "mpfr"
     G = GSO.Mat( H11, U=IntegerMatrix.identity(H11r,int_type=int_type), UinvT=IntegerMatrix.identity(H11r,int_type=int_type), float_type=ft )
     G.update_gso()
     param_sieve = SieverParams()
@@ -98,18 +100,19 @@ def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthrea
         g6k(alg="bdgl")
         report["bdgl_runtime"][i] = time.perf_counter()-sieve_start
         print(f"siever-{kappa}-{sieve_dim_max-nsieves+i} finished in added time {time.perf_counter()-sieve_start}\n" )
-        g6k.dump_on_disk(out_path+f'g6kdump_{n}_{q}_{eta}_{k}_{seed}_{kappa}_{sieve_dim_max-nsieves+i}')
+        sys.stdout.flush()
+        g6k.dump_on_disk(out_path+f'g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+i}')
         g6k.extend_left(1)
 
     return report
 
 if __name__=="__main__":
     # (dimension, predicted kappa, predicted beta)
-    params = [(140, 12, 48), (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
-    #params = [(140, 12, 48)]#, (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
-    nworkers, nthreads = 20, 4
+    #params = [(140, 12, 48), (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
+    params = [(140, 12, 48)]#, (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
+    nworkers, nthreads = 2, 2
 
-    lats_per_dim = 10
+    lats_per_dim = 2
     inst_per_lat = 10 #how many instances per A, q
     q, eta = 3329, 3
     #def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthreads=1)
@@ -126,7 +129,7 @@ if __name__=="__main__":
                         eta, #eta
                         1, #k
                         [latnum,0], #seed, second value is irrelevant
-                        param[2]-5, #beta_bkz
+                        param[2]-1, #beta_bkz
                         param[2]+4, #sieve_dim_max
                         7,  #nsieves
                         kappa, #kappa
@@ -140,3 +143,4 @@ if __name__=="__main__":
 
     for o_ in output:
         print(o_)
+    sys.stdout.flush()
