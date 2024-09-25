@@ -61,9 +61,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
         lll = LLL.Reduction( G )
         lll()
     # - - - end Make all fpylll objects - - -
-
-
-
+    # make Siver object
     param_sieve = SieverParams()
     param_sieve['threads'] = 1
     g6k = Siever(G,param_sieve)
@@ -85,21 +83,6 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
     buckets = max(buckets, 2**(blocks-1))
 
     dbsize_start = g6k.db_size()
-    lambda1 = 10**32
-    cntr = 0
-    for tmp in g6k.itervalues():
-        break
-    v = np.array( g6k.M.B.multiply_left(tmp) )
-    nvsq = (v@v)
-    print(nvsq, end=", ")
-    if nvsq < lambda1:
-        lambda1 = nvsq
-    cntr += 1
-
-    print()
-    lambda1 = lambda1**0.5
-    print(f"gh: {gh}, lambda1: {lambda1}")
-    lambda1 = min(gh, lambda1)
 
     for j in range(n_shrinkings):
         slicer = RandomizedSlicer(g6k)
@@ -110,8 +93,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
 
         for i in range(Nexperiments):
             c = [ randrange(-10,10) for k in range(n) ]
-            e = np.array( random_on_sphere(n, 0.46 * gh) )
-            #print("e:", e)
+            e = np.array( random_on_sphere(n, 0.46 * gh) ) #error vector
             print(f"gauss: {gh} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
             e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
 
@@ -120,10 +102,13 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
             t_ = e+b_
             t = [ int(tt) for tt in t_ ]
 
+            #project onto the last projective lattice and babai reduce
             t_gs = from_canonical_scaled( G,t,offset=sieve_dim )
-            B_gs = [ np.array( from_canonical_scaled(G, G.B[k], offset=sieve_dim), dtype=np.float64 ) for k in range(G.d - sieve_dim, G.d) ]
-            t_gs_reduced = reduce_to_fund_par_proj(B_gs,(t_gs),sieve_dim) #reduce the target w.r.t. B_gs
-            t_gs_shift = t_gs-t_gs_reduced #find the shift to be applied after the slicer
+            t_gs_non_scaled = G.from_canonical(t)[-sieve_dim:]
+            shift_babai_c = G.babai((n-sieve_dim)*[0] + list(t_gs_non_scaled), start=n-sieve_dim,gso=True)
+            shift_babai = G.B.multiply_left( (n-sieve_dim)*[0] + list( shift_babai_c ) )
+            t_gs_reduced = from_canonical_scaled( G,np.array(t)-shift_babai,offset=sieve_dim ) #this is the actual reduced target
+            t_gs_shift = from_canonical_scaled( G,shift_babai,offset=sieve_dim )
 
             print("projected reduced target squared length:", (t_gs_reduced@t_gs_reduced))
             print("projected error squared length:", (e_@e_))
@@ -138,7 +123,8 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
             tmp = N.to_canonical( G.from_canonical( tmp, start=0, dimension=n-sieve_dim ) ) #project onto span(B[-sieve_dim:])
             bab_0 = N.babai(tmp)
 
-            bab_01=np.array( bab_0+bab_1 )
+            bab_01=np.array( bab_0+bab_1 ) #shifted answer. Good since it is smaller, thus less rounding error
+            bab_01 += np.array(shift_babai_c)
             succ = all(c==bab_01)
             print(f"Babai Success: {succ}")
             if succ:
@@ -146,11 +132,6 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
 
 
             if not succ:
-                #this_instance_succseeded = False
-
-                #if this_instance_succseeded: #can only enter here after a succsessful slicer
-                #    slicer_suc[ctr] += 1
-                #    continue
 
                 slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=ceil((1./nrand_)**sieve_dim) + 100)
                 try:
@@ -171,14 +152,14 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
                     bab_0 = N.babai(tmp)
 
                     bab_01=np.array( bab_0+bab_1 )
+                    bab_01 += np.array(shift_babai_c)
                     print(f"Success: {all(c==bab_01)}")
                     if (all(c==bab_01)):
+                        print(f"SUCCESS")
                         slicer_suc[j] += 1
-                        #this_instance_succseeded = True
                     else:
                         slicer_fail[j] += 1
-                        found_nrm_sq = out_gs@out_gs
-                        print(f"FAIL: {found_nrm_sq}")
+                        print(f"FAIL")
                         assert ( found_nrm_sq>0.999*(e_@e_) ), f"Found impossible vector! {found_nrm_sq} < {(e_@e_)}"
 
                 except Exception as e: print(f" - - - {e} - - -")
@@ -214,7 +195,7 @@ if __name__ == '__main__':
 
 
     FPLLL.set_precision(250)
-    n, betamax, sieve_dim = 65, 45, 65
+    n, betamax, sieve_dim = 55, 45, 55
     nthreads = 1
     shrink_factor = 0.95
     n_shrinkings = 20

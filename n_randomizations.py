@@ -102,21 +102,21 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
         t_ = e+b_
         t = [ int(tt) for tt in t_ ]
 
+        #size red
         t_gs = from_canonical_scaled( G,t,offset=sieve_dim )
-        #print(f"t_gs: {t_gs} | norm: {(t_gs@t_gs)}")
-        #retrieve the projective sublattice
-        B_gs = [ np.array( from_canonical_scaled(G, G.B[i], offset=sieve_dim), dtype=np.float64 ) for i in range(G.d - sieve_dim, G.d) ]
-        t_gs_reduced = reduce_to_fund_par_proj(B_gs,(t_gs),sieve_dim) #reduce the target w.r.t. B_gs
-        t_gs_shift = t_gs-t_gs_reduced #find the shift to be applied after the slicer
 
+        #Checked for t_gs_reduced!
+        t_gs_non_scaled = G.from_canonical(t)[-sieve_dim:]
+        shift_babai_c = G.babai((n-sieve_dim)*[0] + list(t_gs_non_scaled), start=n-sieve_dim,gso=True)
+        shift_babai = G.B.multiply_left( (n-sieve_dim)*[0] + list( shift_babai_c ) )
+        t_gs_reduced = from_canonical_scaled( G,np.array(t)-shift_babai,offset=sieve_dim ) #this is the actual reduced target
+        t_gs_shift = from_canonical_scaled( G,shift_babai,offset=sieve_dim )
+        print(f"nrm t_gs_reduced: {t_gs_reduced@t_gs_reduced}")
+        print(f"nrm t_gs_shift: {t_gs_shift@t_gs_shift}")
 
-        # - - - Babai check - - -
-        out = to_canonical_scaled( G,t_gs_reduced,offset=sieve_dim )
+        print(f"norm: {t_gs_reduced@ t_gs_reduced}")
 
-        projerr = G.to_canonical( G.from_canonical(e,start=n-sieve_dim), start=n-sieve_dim)
-        diff_v =  np.array(projerr, dtype=np.float64)-np.array(out, dtype=np.float64)
-        # print(f"Diff btw. cvp and slicer: {diff_v}")
-
+        out = t_gs_reduced
         N = GSO.Mat( G.B[:n-sieve_dim], float_type=ft )
         N.update_gso()
         bab_1 = G.babai(t-np.array(out),start=n-sieve_dim) #last sieve_dim coordinates of s
@@ -132,8 +132,6 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
         print(f"Babai Success: {succ}")
         if succ:
             babai_suc+=1
-
-
         if not succ:
 
             #filename = f"bdgl2_n{n}_b{sieve_dim}.pkl"
@@ -172,15 +170,20 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
                     bab_0 = N.babai(tmp)
 
                     bab_01=np.array( bab_0+bab_1 )
-                    print(f"Success: {all(c==bab_01)}")
+                    bab_01 += np.array(shift_babai_c) #shifted answer. Good since it is smaller, thus less rounding error
+                    print(f"Slicer Success: {all(c==bab_01)}")
                     if (all(c==bab_01)):
                         slicer_suc[ctr] += 1
                         this_instance_succseeded = True
                     else:
+                        print("SLICER fail")
                         slicer_fail[ctr] += 1
+                        # print(f"c: {c}")
+                        # print(f"bab_01: {bab_01}")
+                        # print(f"c-shift_c{np.array(c)-np.array(shift_babai_c)}")
 
 
-                except Exception as e: print(e)
+                except Exception as e: raise e #print(e)
                 ctr+=1
     print(f"Lattice-{lat_id} processed...")
     print(babai_suc)
@@ -215,7 +218,7 @@ if __name__ == '__main__':
 
 
     FPLLL.set_precision(250)
-    n, betamax, sieve_dim = 50, 48, 50
+    n, betamax, sieve_dim = 55, 48, 55
     nthreads = 2
     pool = Pool(processes = nthreads )
     tasks = []
