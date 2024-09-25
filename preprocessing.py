@@ -104,6 +104,8 @@ def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthrea
         g6k.dump_on_disk(out_path+f'g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+i}')
         g6k.extend_left(1)
 
+    print(report)
+    sys.stdout.flush()
     return report
 
 if __name__=="__main__":
