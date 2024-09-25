@@ -35,7 +35,7 @@ def load_lwe(n,q,eta,k,seed=0):
     return A_, q_, eta_, k_, bse_
 
 
-def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthreads=1,dump_bkz=True):
+def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthreads,dump_bkz=True):
     report = {
         "params": (n,q,eta,k,seed),
         "beta_bkz": beta_bkz,
@@ -55,6 +55,11 @@ def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthrea
     for i in range(k*n, 2*k*n):
         for j in range(k*n):
             B[i][j] = int( A[i-k*n,j] )
+
+    if sieve_dim_max<60:
+        nthreads = 1
+    elif sieve_dim_max<80:
+        nthreads = 2
 
 
     H11 = B[:len(B)-kappa] #the part of basis to be reduced
@@ -102,10 +107,10 @@ if __name__=="__main__":
     # (dimension, predicted kappa, predicted beta)
     params = [(140, 12, 48), (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
     #params = [(140, 12, 48)]#, (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
-    nworkers, nthreads = 2, 5
+    nworkers, nthreads = 20, 4
 
-    lats_per_dim = 2 #10
-    inst_per_lat = 2 #10 #how many instances per A, q
+    lats_per_dim = 10
+    inst_per_lat = 10 #how many instances per A, q
     q, eta = 3329, 3
     #def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthreads=1)
     output = []
