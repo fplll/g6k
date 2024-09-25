@@ -110,6 +110,9 @@ def prepare_kyber(n,q,eta,k,betamax,kappa,seed=[0,0]):
 
 def attacker(input_dict, n_guess_coord, dist_sq_bnd, tracer_exp=None):
     """
+    param input_dict: dictionary
+    param n_guess_coord: guessing stage dim (kappa)
+    param dist_sq_bnd: distance bound
     Assumes H11 is BKZ-betamax reduced while B is original.
     """
     B, H11, q, eta, k, bse, betamax = input_dict['B'], input_dict['H11'], input_dict['q'], input_dict['eta'], input_dict['k'], input_dict['bse'], input_dict['betamax']
@@ -123,10 +126,9 @@ def attacker(input_dict, n_guess_coord, dist_sq_bnd, tracer_exp=None):
     print(G.get_r(0,0)**0.5)
     print(f"t_gs: {t_gs} | norm2: {(t_gs@t_gs)}")
 
+    #TODO: make dimension incremention + BKZ functionality
     param_sieve = SieverParams()
     param_sieve['threads'] = 5
-    # param_sieve['db_size_factor'] = 3.75
-    # param_sieve['default_sieve'] = "bgj1"
     g6k = Siever(G,param_sieve)
     g6k.initialize_local(n-sieve_dim,n-sieve_dim,n)
     g6k("bdgl2")
@@ -146,6 +148,7 @@ def attacker(input_dict, n_guess_coord, dist_sq_bnd, tracer_exp=None):
         vec_index += 1
 
 def alg_3(g6k,B,H11,t,n_guess_coord, dist_sq_bnd, tracer_alg3=None):
+    raise NotImplementedError
     # - - - prepare targets - - -
     then_start = perf_counter()
     # t_gs = from_canonical_scaled( G,t,offset=sieve_dim )
@@ -168,7 +171,7 @@ def alg_3(g6k,B,H11,t,n_guess_coord, dist_sq_bnd, tracer_alg3=None):
     """
     We return (if we succeed) (-s,e)[dim-kappa-betamax:n-kappa] to avoid fp errors.
     """
-    #TODO: dist_sq_bnd has changed at this point (or even in attacker)
+    #TODO: dist_sq_bnd might have changed at this point (or even in attacker)
     ctilde1 = alg_2_batched( g6k,target_candidates,H11,betamax, dist_sq_bnd, tracer_alg3=None )
     v1 = np.array( G_.B.multiply_left( ctilde1 ) )
     #keep a track of v2?
