@@ -1,3 +1,5 @@
+#example  sage hybrid.sage -n "140:150:10" -q 3329 -eta 3
+
 load("../framework/instance_gen.sage")
 load("../batchCVP.py")
 
@@ -17,6 +19,8 @@ parser.add_argument("eta", type=int)
 args, unknown = parser.parse_known_args()
 if len(unknown) > 0:
     print("Unknown arguments " + str(unknown) + " will be ignored.")
+
+print(args.n)
 
 nMin, nMax, nStep = args.n.split(":")
 nMin = int(nMin)
