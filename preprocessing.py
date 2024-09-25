@@ -12,13 +12,24 @@ except ModuleNotFoundError:
     from multiprocessing import Pool
 
 import pickle
-path = "lwe instances/saved_lattices/"
+inp_path = "lwe instances/saved_lattices/"
+out_path = "lwe instance/reduced_lattices/"
 #path = "saved_lattices/"
+does_exist = os.path.exists(path)
+if not does_exist:
+    sys.exit('cannot find path for input lattices')
+
+does_exist = os.path.exists(out_path)
+if not does_exist:
+    try:
+        os.makedirs(out_path)
+    except:
+        pass #TODO: why pass?
 
 
 def load_lwe(n,q,eta,k,seed=0):
     #print(f"- - - k={k} - - - load")
-    with open(path + f"lwe_instance_{n}_{q}_{eta}_{k}_{seed}", "rb") as fl:
+    with open(inp_path + f"lwe_instance_{n}_{q}_{eta}_{k}_{seed}", "rb") as fl:
         D = pickle.load(fl)
     A_, q_, eta_, k_, bse_ = D["A"], D["q"], D["eta"], D["k"], D["bse"]
     return A_, q_, eta_, k_, bse_
@@ -113,7 +124,7 @@ if __name__=="__main__":
                             [latnum,instance], #seed
                             param[2]-5, #beta_bkz
                             param[2]+2, #sieve_dim_max
-                            5,  #nsieves
+                            7,  #nsieves
                             kappa, #kappa
                             nthreads #nthreads
                         )
