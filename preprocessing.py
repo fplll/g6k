@@ -99,7 +99,7 @@ def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthrea
         sieve_start = time.perf_counter()
         g6k(alg="bdgl")
         report["bdgl_runtime"][i] = time.perf_counter()-sieve_start
-        print(f"siever-{kappa}-{sieve_dim_max-nsieves+i} finished in added time {time.perf_counter()-sieve_start}\n" )
+        print(f"siever-{seed[0]}-{kappa}-{sieve_dim_max-nsieves+i} finished in added time {time.perf_counter()-sieve_start}\n" )
         sys.stdout.flush()
         g6k.dump_on_disk(out_path+f'g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+i}')
         g6k.extend_left(1)
