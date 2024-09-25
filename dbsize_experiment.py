@@ -12,7 +12,7 @@ try:
 except ModuleNotFoundError:
     from multiprocessing import Pool
 
-def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperiments):
+def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperiments, slicer_threads):
     babai_suc = 0
     approx_fact = 1.02
     ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
@@ -86,14 +86,14 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
 
     for j in range(n_shrinkings):
         slicer = RandomizedSlicer(g6k)
-        slicer.set_nthreads(2);
+        slicer.set_nthreads(slicer_threads);
         nrand_, _ = batchCVPP_cost(sieve_dim,100,dbsize_start**(1./sieve_dim),1) #100 can be any constant >1
         print("nrand:", (1./nrand_)**sieve_dim)
         print("Running experiment ", j, "out of ", n_shrinkings)
 
         for i in range(Nexperiments):
             c = [ randrange(-10,10) for k in range(n) ]
-            e = np.array( random_on_sphere(n, 0.46 * gh) ) #error vector
+            e = np.array( random_on_sphere(n, 0.48 * gh) ) #error vector
             print(f"gauss: {gh} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
             e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
 
@@ -133,7 +133,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
 
             if not succ:
 
-                slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=ceil((1./nrand_)**sieve_dim) + 100)
+                slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=ceil((1./nrand_)**sieve_dim))
                 try:
                     slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (approx_fact**2 * (e_@e_)))
                     iterator = slicer.itervalues_t()
@@ -183,7 +183,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
 
 if __name__ == '__main__':
 
-    Nexperiments = 150
+    Nexperiments = 15
     Nlats = 1
     path = "saved_lattices/"
     isExist = os.path.exists(path)
@@ -195,8 +195,9 @@ if __name__ == '__main__':
 
 
     FPLLL.set_precision(250)
-    n, betamax, sieve_dim = 55, 45, 55
+    n, betamax, sieve_dim = 56, 45, 56
     nthreads = 1
+    slicer_threads = 1
     shrink_factor = 0.95
     n_shrinkings = 20
     pool = Pool(processes = nthreads )
@@ -205,14 +206,14 @@ if __name__ == '__main__':
     density_plots = []
     for lat_id in range(Nlats):
         tasks.append( pool.apply_async(
-            run_exp, (lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperiments)
+            run_exp, (lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperiments, slicer_threads)
         ) )
 
     for t in tasks:
         density_plots.append( t.get() )
 
 
-    with open(f"nrand_{n}_exp.pkl", "wb") as file:
+    with open(f"dbsize_{n}_exp.pkl", "wb") as file:
         pickle.dump( density_plots, file )
 
     print(density_plots)

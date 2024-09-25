@@ -219,7 +219,7 @@ if __name__ == '__main__':
 
     FPLLL.set_precision(250)
     n, betamax, sieve_dim = 55, 48, 55
-    nthreads = 2
+    nthreads = 1
     pool = Pool(processes = nthreads )
     tasks = []
 

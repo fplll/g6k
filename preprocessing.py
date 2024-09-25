@@ -13,7 +13,7 @@ except ModuleNotFoundError:
 
 import pickle
 inp_path = "lwe instances/saved_lattices/"
-out_path = "lwe instance/reduced_lattices/"
+out_path = "lwe instances/reduced_lattices/"
 #path = "saved_lattices/"
 does_exist = os.path.exists(inp_path)
 if not does_exist:
