@@ -19,6 +19,9 @@ except ModuleNotFoundError:
 import pickle
 from sample import *
 
+from preprocessing import run_preprocessing
+#def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthreads=1)
+
 max_nsampl = 10**7
 
 def kyberGen(n, q = 3329, eta = 3, k=1):
@@ -68,11 +71,13 @@ def prepare_kyber(n,q,eta,k,betamax,kappa,seed=[0,0]):
     dim = n*k
     print( f"Launching hybrid on: {n,q,eta,k}" )
     print(f"betamax,kappa: {betamax,kappa}")
-    # try:
-    A, q, eta, k, bse = load_lwe(n,q,eta,k,seed[0]) #D["A"], D["q"], D["bse"]
-    # except FileNotFoundError:
-        # gen_and_dump_lwe(n, q, eta, k, ntar, seed[0])
-        # A, q, eta,k, bse = load_lwe(n,q,eta,k,seed[0]) #D["A"], D["q"], D["bse"]
+    try:
+        A, q, eta, k, bse = load_lwe(n,q,eta,k,seed[0]) #D["A"], D["q"], D["bse"]
+        filename = f"g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+i}"
+        g6k = Siever.restore_from_file(  )
+    except FileNotFoundError:
+        gen_and_dump_lwe(n, q, eta, k, ntar, seed[0])
+        A, q, eta,k, bse = load_lwe(n,q,eta,k,seed[0]) #D["A"], D["q"], D["bse"]
     print(f"lenbse: {len(bse)} seed={seed[1]}")
     b, s, e = bse[seed[1]]
 

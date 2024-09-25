@@ -105,55 +105,6 @@ def reduce_to_fund_par_proj(B_gs,t_gs,dim):
     return t_gs_save
 
 
-    k = n//2+1 if k is None else k
-    bits = 11.705 if bits is None else bits
-    betamax = 40 if betamax is None else betamax
-    seed = randrange(2**32) if seed is None else seed
-
-    B = IntegerMatrix(n,n)
-    B.randomize("qary", k=n//2, bits=11.705)
-    ft = "ld" if n<193 else "dd"
-
-    try:
-        G = GSO.Mat(B, float_type=ft)
-    except: #if "dd" is not available
-        FPLLL.set_precision(208)
-        G = GSO.Mat(B, float_type="mpfr")
-    G.update_gso()
-    lll = LLL.Reduction(G)
-    lll()
-
-    bkz = LatticeReduction(B)
-    for beta in range(5,betamax+1):
-        then_round=time.perf_counter()
-        bkz.BKZ(beta,tours=5)
-        round_time = time.perf_counter()-then_round
-        print(f"BKZ-{beta} done in {round_time}")
-
-    int_type = bkz.gso.B.int_type
-    G = GSO.Mat( bkz.gso.B, U=IntegerMatrix.identity(n,int_type=int_type), UinvT=IntegerMatrix.identity(n,int_type=int_type), float_type=ft )
-    G.update_gso()
-
-    param_sieve = SieverParams()
-    param_sieve['threads'] = 5
-    # param_sieve['db_size_factor'] = 3.75
-    param_sieve['default_sieve'] = "bgj1"
-    g6k = Siever(G,param_sieve)
-    g6k.initialize_local(0,0,n)
-    then = perf_counter()
-    try:
-        g6k()
-    except SaturationError as saterr:
-        print(saterr)
-        pass
-    print(f"Sieving in dim-{n} done in {perf_counter()-then}")
-    g6k.M.update_gso()
-
-    filename = save_folder + f"siever_{n}_{betamax}_{hex(seed)[2:]}.pkl"
-    g6k.dump_on_disk(filename)
-    print("Dump succsess")
-    print(f"len g6k: {len(g6k)}")
-
 def load_lattices(n):
     # An iterator through n-dimensional lattices
     # Each instance requires an exponential amount of memory, so we
