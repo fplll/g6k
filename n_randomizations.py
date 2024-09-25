@@ -110,16 +110,9 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
         shift_babai_c = G.babai((n-sieve_dim)*[0] + list(t_gs_non_scaled), start=n-sieve_dim,gso=True)
         shift_babai = G.B.multiply_left( (n-sieve_dim)*[0] + list( shift_babai_c ) )
         t_gs_reduced = from_canonical_scaled( G,np.array(t)-shift_babai,offset=sieve_dim ) #this is the actual reduced target
-        # t_gs_shift = t_gs - t_gs_reduced #find the shift to be applied after the slicer
         t_gs_shift = from_canonical_scaled( G,shift_babai,offset=sieve_dim )
         print(f"nrm t_gs_reduced: {t_gs_reduced@t_gs_reduced}")
         print(f"nrm t_gs_shift: {t_gs_shift@t_gs_shift}")
-
-        # B_gs = [ np.array( from_canonical_scaled(G, G.B[i], offset=sieve_dim), dtype=np.float64 ) for i in range(G.d - sieve_dim, G.d) ]
-        # t_gs_reduced = reduce_to_fund_par_proj(B_gs,(t_gs),sieve_dim) #reduce the target w.r.t. B_gs
-        # t_gs_shift = t_gs-t_gs_reduced #find the shift to be applied after the slicer
-        # print(f"myy t_gs_reduced: {t_gs_reduced@t_gs_reduced}")
-        # print(f"myy t_gs_shift: {t_gs_shift@t_gs_shift}")
 
         print(f"norm: {t_gs_reduced@ t_gs_reduced}")
 
@@ -177,7 +170,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
                     bab_0 = N.babai(tmp)
 
                     bab_01=np.array( bab_0+bab_1 )
-                    bab_01 += np.array(shift_babai_c)
+                    bab_01 += np.array(shift_babai_c) #shifted answer. Good since it is smaller, thus less rounding error
                     print(f"Slicer Success: {all(c==bab_01)}")
                     if (all(c==bab_01)):
                         slicer_suc[ctr] += 1

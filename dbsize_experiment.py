@@ -121,16 +121,11 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
             t = [ int(tt) for tt in t_ ]
 
             t_gs = from_canonical_scaled( G,t,offset=sieve_dim )
-            
-            # t_gs_non_scaled = G.from_canonical(t)[-sieve_dim:]
-            # t_babai_reduced_c = G.babai((n-sieve_dim)*[0] + list(t_gs_non_scaled), start=n-sieve_dim,gso=True)
-            # t_babai_reduced = G.B.multiply_left( t_babai_reduced_c )
-            # t_gs_reduced = from_canonical_scaled( G,t_babai_reduced,offset=sieve_dim )
-            # t_gs_shift = t_gs-t_gs_reduced #find the shift to be applied after the slicer
-
-            B_gs = [ np.array( from_canonical_scaled(G, G.B[i], offset=sieve_dim), dtype=np.float64 ) for i in range(G.d - sieve_dim, G.d) ]
-            t_gs_reduced = reduce_to_fund_par_proj(B_gs,(t_gs),sieve_dim) #reduce the target w.r.t. B_gs
-            t_gs_shift = t_gs-t_gs_reduced #find the shift to be applied after the slicer
+            t_gs_non_scaled = G.from_canonical(t)[-sieve_dim:]
+            shift_babai_c = G.babai((n-sieve_dim)*[0] + list(t_gs_non_scaled), start=n-sieve_dim,gso=True)
+            shift_babai = G.B.multiply_left( (n-sieve_dim)*[0] + list( shift_babai_c ) )
+            t_gs_reduced = from_canonical_scaled( G,np.array(t)-shift_babai,offset=sieve_dim ) #this is the actual reduced target
+            t_gs_shift = from_canonical_scaled( G,shift_babai,offset=sieve_dim )
 
             print("projected reduced target squared length:", (t_gs_reduced@t_gs_reduced))
             print("projected error squared length:", (e_@e_))
@@ -145,7 +140,8 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
             tmp = N.to_canonical( G.from_canonical( tmp, start=0, dimension=n-sieve_dim ) ) #project onto span(B[-sieve_dim:])
             bab_0 = N.babai(tmp)
 
-            bab_01=np.array( bab_0+bab_1 )
+            bab_01=np.array( bab_0+bab_1 ) #shifted answer. Good since it is smaller, thus less rounding error
+            bab_01 += np.array(shift_babai_c)
             succ = all(c==bab_01)
             print(f"Babai Success: {succ}")
             if succ:
@@ -178,14 +174,15 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
                     bab_0 = N.babai(tmp)
 
                     bab_01=np.array( bab_0+bab_1 )
+                    bab_01 += np.array(shift_babai_c)
                     print(f"Success: {all(c==bab_01)}")
                     if (all(c==bab_01)):
+                        print(f"SUCCESS")
                         slicer_suc[j] += 1
                         #this_instance_succseeded = True
                     else:
                         slicer_fail[j] += 1
-                        found_nrm_sq = out_gs@out_gs
-                        print(f"FAIL: {found_nrm_sq}")
+                        print(f"FAIL")
                         assert ( found_nrm_sq>0.999*(e_@e_) ), f"Found impossible vector! {found_nrm_sq} < {(e_@e_)}"
 
                 except Exception as e: print(f" - - - {e} - - -")
