@@ -108,11 +108,11 @@ def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthrea
 
 if __name__=="__main__":
     # (dimension, predicted kappa, predicted beta)
-    #params = [(140, 12, 48), (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
-    params = [(140, 12, 48)]#, (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
-    nworkers, nthreads = 2, 2
+    params = [(140, 12, 48), (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
+    #params = [(140, 12, 48)]#, (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
+    nworkers, nthreads = 20, 4
 
-    lats_per_dim = 2
+    lats_per_dim = 10
     inst_per_lat = 10 #how many instances per A, q
     q, eta = 3329, 3
     #def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthreads=1)
