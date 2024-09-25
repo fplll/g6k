@@ -75,7 +75,7 @@ def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthrea
     report["bkz_runtime"] = time.perf_counter() - bkz_start
 
     if dump_bkz:
-        with open(f"reduced_lattices/bkzdump_{n}_{q}_{eta}_{k}_{seed}_{kappa}_{sieve_dim_max-nsieves+i}", "wb") as f:
+        with open(out_path+f"/bkzdump_{n}_{q}_{eta}_{k}_{seed}_{kappa}_{sieve_dim_max-nsieves+i}", "wb") as f:
             pickle.dump({"B": H11}, f)
 
 
@@ -93,7 +93,7 @@ def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthrea
         g6k(alg="bdgl")
         report["bdgl_runtime"][i] = time.perf_counter()-sieve_start
         print(f"siever-{kappa}-{sieve_dim_max-nsieves+i} finished in added time {time.perf_counter()-sieve_start}" )
-        g6k.dump_on_disk(f"reduced_lattices/g6kdump_{n}_{q}_{eta}_{k}_{seed}_{kappa}_{sieve_dim_max-nsieves+i}")
+        g6k.dump_on_disk(out_path+f"g6kdump_{n}_{q}_{eta}_{k}_{seed}_{kappa}_{sieve_dim_max-nsieves+i}")
         g6k.extend_left(1)
 
     return report
