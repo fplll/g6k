@@ -110,7 +110,7 @@ def attack_on_kyber(n,q,eta,k,betamax,ntours=5,seed=[0,0]):
         B[i][i] = 1
     for i in range(k*n, 2*k*n):
         for j in range(k*n):
-            B[i][j] = int( A[i-k*n,j]v )
+            B[i][j] = int( A[i-k*n,j] )
 
     for j in range(k*n):
         B[-1][j] = int( t[j] )
@@ -205,12 +205,12 @@ if not isExist:
     except:
         pass    #still in docker if isExists==False, for some reason folder can exist and this will throw an exception.
 
-nthreads = 40
-lats_per_dim = 10
+nthreads = 2
+lats_per_dim = 5
 inst_per_lat = 10 #how many instances per A, q
 q, eta = 3329, 3
 
-nks = [ (100+10*i,1) for i in range(6) ]
+nks = [ (120+10*i,1) for i in range(1) ]
 output = []
 pool = Pool(processes = nthreads )
 tasks = []

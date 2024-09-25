@@ -13,6 +13,7 @@ except ModuleNotFoundError:
 
 import pickle
 path = "lwe instances/saved_lattices/"
+path = "saved_lattices/"
 
 
 def load_lwe(n,q,eta,k,seed=0):
@@ -45,13 +46,14 @@ def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthrea
             B[i][j] = int( A[i-k*n,j] )
 
     #TODO: @SASHA make square
-    H11 = deepcopy( B[B.nrows-kappa] ) #the part of basis to be reduced
-    H11r, H11c = H11.shape
+    H11 = B[:len(B)-kappa] #the part of basis to be reduced
+    H11 = IntegerMatrix.from_matrix( [ h11[:len(B)-kappa] for h11 in H11  ] )
+    H11r, H11c = H11.nrows, H11.ncols
     for i in range(H11c):
         print(H11[i])
-    assert(False)
+    # assert(False)
 
-    LR = LatticeReduction( H11 ) #TODO: specify nthreads!
+    LR = LatticeReduction( H11, threads_bkz=nthreads ) #TODO: specify nthreads! / done in LatticeReduction
     bkz_start = time.perf_counter()
     for beta in range(5,beta_bkz+1):
         then_round=time.perf_counter()
@@ -78,29 +80,41 @@ def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthrea
 
     return report
 
+if __name__=="__main__":
+    # (dimension, predicted kappa, predicted beta)
+    params = [(140, 12, 48), (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
+    nworkers, nthreads = 4, 4
 
-# (dimension, predicted kappa, predicted beta)
-params = [(140, 12, 48), (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
+    lats_per_dim = 10 #10
+    inst_per_lat = 10 #10 #how many instances per A, q
+    q, eta = 3329, 3
+    #def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthreads=1)
+    output = []
+    pool = Pool(processes = nworkers )
+    tasks = []
+    for param in params:
+        for latnum in range(lats_per_dim):
+            for instance in range(inst_per_lat):
+                for kappa in range(param[1]-1, param[1]+2,1):
+                    tasks.append( pool.apply_async(
+                        run_preprocessing, (
+                            param[0], #n
+                            q, #q
+                            eta, #eta
+                            1, #k
+                            [latnum,instance], #seed
+                            param[2]-12, #beta_bkz
+                            param[2], #sieve_dim_max
+                            3,  #kappa
+                            nthreads #nthreads
+                        )
+                    ) )
 
-lats_per_dim = 10 #10
-inst_per_lat = 10 #10 #how many instances per A, q
-q, eta = 3329, 3
-#def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,,nthreads=1)
-output = []
-pool = Pool(processes = nthreads )
-tasks = []
-for param in params:
-    for latnum in range(lats_per_dim):
-        for instance in range(inst_per_lat):
-            for kappa in range(param[1]-1, param[1]+2,1):
-                tasks.append( pool.apply_async(
-                    run_preprocessing, (param[0],q,eta,1,instance,param[2]-5,)
-                ) )
+    # run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthreads=1):
 
+    for t in tasks:
+        output.append( t.get() )
+    pool.close()
 
-
-for t in tasks:
-    output.append( t.get() )
-pool.close()
-
-
+    for o_ in output:
+        print(o_)

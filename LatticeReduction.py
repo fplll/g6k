@@ -13,6 +13,7 @@ class LatticeReduction:
   def __init__(
     self,
     basis, #lattice basis to be reduced
+    threads_bkz = 1
   ):
 
     B = IntegerMatrix.from_matrix(basis, int_type="long")
@@ -33,7 +34,7 @@ class LatticeReduction:
     self.__bkz = BKZReduction(M)
 
     params_sieve = SieverParams()
-    params_sieve['threads'] = 32
+    params_sieve['threads'] = threads_bkz
 
     self.__g6k = Siever(M, params_sieve)
 
@@ -50,7 +51,7 @@ class LatticeReduction:
     )
 
     for t in range(tours):
-      if beta <= 65:
+      if beta <=  65: #65:
         self.__bkz(par)
       else:
         pump_n_jump_bkz_tour(self.__g6k, dummy_tracer, beta)
