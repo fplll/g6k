@@ -1338,7 +1338,7 @@ cdef class Siever(object):
         "ll":  self.ll,
         "l":   self.l,
         "r":   self.r,
-        "default_sieve": self._params["default_sieve"],
+        #"default_sieve": self._params["default_sieve"],
         "coeffs": [ list(tmp) for tmp in self.itervalues() ]
       }
       with open( filename, "wb" ) as file:
@@ -1348,10 +1348,8 @@ cdef class Siever(object):
     # The pickled data is consisting of:
     # > np.array(np.array) B -- reduced basis ;
     # > int contexts ll, l, r;
-    # > string default_sieve;
     # > a list coeffs of arrays of (r-ll) integers representing coordinates of db's vectors w.r.t. the local basis
     #   defined by B, ll and r.
-    # Only Siever objects using bgj1 sieve are currently supported.
     @classmethod
     def restore_from_file(cls,filename):
       # raise NotImplementedError("Restoring Siever object from pickled data is not yet implemented.")
@@ -1360,8 +1358,6 @@ cdef class Siever(object):
           data = pickle.load( file )
       B = data["B"]
       ll, l, r = data["ll"], data["l"], data["r"]
-      default_sieve = data["default_sieve"]
-      # assert default_sieve == "bgj1", f"Siever type {default_sieve} not supported. Use bgj1."
       coeffs = data["coeffs"]
 
       B = IntegerMatrix.from_matrix( B, int_type="long" )
@@ -1372,7 +1368,6 @@ cdef class Siever(object):
 
       param_sieve = SieverParams()
       param_sieve['threads'] = 5 #TODO: pass as an argument?
-      param_sieve['default_sieve'] = default_sieve
       mySiever =  Siever(G,param_sieve)
       mySiever.initialize_local(ll,l,r)
 

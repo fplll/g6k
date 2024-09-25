@@ -121,10 +121,10 @@ def attacker(input_dict, n_guess_coord, dist_sq_bnd, tracer_exp=None):
     param_sieve = SieverParams()
     param_sieve['threads'] = 5
     # param_sieve['db_size_factor'] = 3.75
-    param_sieve['default_sieve'] = "bgj1"
+    # param_sieve['default_sieve'] = "bgj1"
     g6k = Siever(G,param_sieve)
     g6k.initialize_local(n-sieve_dim,n-sieve_dim,n)
-    g6k()
+    g6k("bdgl2")
     g6k.M.update_gso()
 
     vec_index = 0
@@ -166,7 +166,7 @@ def alg_3(g6k,B,H11,t,n_guess_coord, dist_sq_bnd, tracer_alg3=None):
     #TODO: dist_sq_bnd has changed at this point (or even in attacker)
     ctilde1 = alg_2_batched( g6k,target_candidates,H11,betamax, dist_sq_bnd, tracer_alg3=None )
     v1 = np.array( G_.B.multiply_left( ctilde1 ) )
-    #how do I keep a track of v2?
+    #keep a track of v2?
     argminv = None
     minv = 10**12
     for vtilde2 in vtilde2s:

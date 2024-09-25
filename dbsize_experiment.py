@@ -14,7 +14,7 @@ except ModuleNotFoundError:
 
 def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperiments):
     babai_suc = 0
-    approx_fact = 1.03
+    approx_fact = 1.02
     ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
     print(f"launching n, betamax, sieve_dim = {n, betamax, sieve_dim}")
 
@@ -85,6 +85,21 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
     buckets = max(buckets, 2**(blocks-1))
 
     dbsize_start = g6k.db_size()
+    lambda1 = 10**32
+    cntr = 0
+    for tmp in g6k.itervalues():
+        break
+    v = np.array( g6k.M.B.multiply_left(tmp) )
+    nvsq = (v@v)
+    print(nvsq, end=", ")
+    if nvsq < lambda1:
+        lambda1 = nvsq
+    cntr += 1
+
+    print()
+    lambda1 = lambda1**0.5
+    print(f"gh: {gh}, lambda1: {lambda1}")
+    lambda1 = min(gh, lambda1)
 
     for j in range(n_shrinkings):
         slicer = RandomizedSlicer(g6k)
@@ -95,11 +110,10 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
 
         for i in range(Nexperiments):
             c = [ randrange(-10,10) for k in range(n) ]
-            e = np.array( random_on_sphere(n, 0.46*gh) )
+            e = np.array( random_on_sphere(n, 0.46 * gh) )
             #print("e:", e)
             print(f"gauss: {gh} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
             e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
-            print("projected target squared length:", (e_@e_))
 
             b = G.B.multiply_left( c )
             b_ = np.array(b,dtype=np.int64)
@@ -110,6 +124,9 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
             B_gs = [ np.array( from_canonical_scaled(G, G.B[k], offset=sieve_dim), dtype=np.float64 ) for k in range(G.d - sieve_dim, G.d) ]
             t_gs_reduced = reduce_to_fund_par_proj(B_gs,(t_gs),sieve_dim) #reduce the target w.r.t. B_gs
             t_gs_shift = t_gs-t_gs_reduced #find the shift to be applied after the slicer
+
+            print("projected reduced target squared length:", (t_gs_reduced@t_gs_reduced))
+            print("projected error squared length:", (e_@e_))
 
 
             # - - - Babai check - - -
@@ -137,7 +154,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
 
                 slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=ceil((1./nrand_)**sieve_dim) + 100)
                 try:
-                    slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (approx_fact*(e_@e_)))
+                    slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (approx_fact**2 * (e_@e_)))
                     iterator = slicer.itervalues_t()
                     for tmp in iterator:
                         out_gs_reduced = tmp  #cdb[0]
@@ -160,8 +177,11 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
                         #this_instance_succseeded = True
                     else:
                         slicer_fail[j] += 1
+                        found_nrm_sq = out_gs@out_gs
+                        print(f"FAIL: {found_nrm_sq}")
+                        assert ( found_nrm_sq>0.999*(e_@e_) ), f"Found impossible vector! {found_nrm_sq} < {(e_@e_)}"
 
-                except Exception as e: print(e)
+                except Exception as e: print(f" - - - {e} - - -")
 
         g6k.shrink_db(shrink_factor*g6k.db_size())
 
@@ -182,7 +202,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
 
 if __name__ == '__main__':
 
-    Nexperiments = 50
+    Nexperiments = 150
     Nlats = 1
     path = "saved_lattices/"
     isExist = os.path.exists(path)
