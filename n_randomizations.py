@@ -93,7 +93,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments, nthreads=1):
 
         c = [ randrange(-10,10) for j in range(n) ]
         #e = np.array( [ randrange(-8,9) for j in range(n) ],dtype=np.int64 )
-        e = np.array( random_on_sphere(n, 0.46*gh) )
+        e = np.array( random_on_sphere(n, 0.49*gh) )
 
         print(f"gauss: {gh} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
         e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
@@ -140,17 +140,18 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments, nthreads=1):
             #g6k.dump_on_disk( filename )
             #then = perf_counter()
             ctr = 0
-            this_instance_succseeded = False
+            #this_instance_succseeded = False
             for nrand in range_:
-                if this_instance_succseeded: #can only enter here after a succsessful slicer
-                    slicer_suc[ctr] += 1
-                    continue
+                #if this_instance_succseeded: #can only enter here after a succsessful slicer
+                #    slicer_suc[ctr] += 1
+                #    continue
 
                 slicer = RandomizedSlicer(g6k)
                 slicer.set_nthreads(2);
                 slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=nrand)
                 try:
-                    slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (approx_fact**2*(e_@e_)))
+                    slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (approx_fact*approx_fact*(e_@e_)))
+
                     iterator = slicer.itervalues_t()
                     for tmp in iterator:
                         out_gs_reduced = tmp  #cdb[0]
@@ -185,7 +186,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments, nthreads=1):
                         print(f"SUCCESS")
                         print(f"found found_nrm_sq (succ): {found_nrm_sq}")
                         slicer_suc[ctr] += 1
-                        this_instance_succseeded = True
+                       # this_instance_succseeded = True
                     else:
                         print("SLICER fail")
                         slicer_fail[ctr] += 1
@@ -213,12 +214,12 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments, nthreads=1):
 #paramset2 = {"n": 120, "b": [i for i in range(42, 56)], "nrands": [i for i in range(600,900,50)] }
 
 if __name__ == '__main__':
-    n_rerand_min, n_rerand_max, step = 10, 71, 10
+    n_rerand_min, n_rerand_max, step = 20, 171, 50
     range_ = range(n_rerand_min, n_rerand_max, step)
     # babai_suc = 0
     # slicer_suc = [0]*len(range_)
     # slicer_fail = [0]*len(range_)
-    Nexperiments = 10
+    Nexperiments = 200
     Nlats = 5
     path = "saved_lattices/"
     isExist = os.path.exists(path)
@@ -227,11 +228,19 @@ if __name__ == '__main__':
             os.makedirs(path)
         except:
             pass
-
-
+    #TODO: make the factor in front of gh as input
+    # TODO: rename approx_fact as len_slack
+    # Output on
+    #  Nexperiments = 200
+    # Nlats = 5
+    # n, betamax, sieve_dim = 60, 48, 60
+    # 0.49*gh
+    #
+    # [[(20, 118), (70, 197), (120, 199), (170, 200)], [(20, 124), (70, 196), (120, 200), (170, 200)], [(20, 121), (70, 195), (120, 200), (170, 200)], [(20, 123), (70, 194), (120, 199), (170, 200)], [(20, 120), (70, 195), (120, 199), (170, 200)]]
     FPLLL.set_precision(250)
-    n, betamax, sieve_dim = 56, 45, 56
-    nthreads = 2
+
+    n, betamax, sieve_dim = 60, 48, 60
+    nthreads = 5
     slicer_threads = 2
     pool = Pool(processes = nthreads )
     tasks = []
