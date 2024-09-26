@@ -151,7 +151,7 @@ def attacker(input_dict, n_guess_coord, sieve_dim_max, nsieves, nthreads=1, trac
     param_sieve = SieverParams()
     param_sieve['threads'] = 5
     g6k = Siever(G,param_sieve)
-    g6k.initialize_local(n-sieve_dim,n-sieve_dim,n)
+    g6k.initialize_local(dim-sieve_dim,dim-sieve_dim,n)
     g6k("bdgl2")
     g6k.M.update_gso()
     """
@@ -205,7 +205,7 @@ def alg_3(g6k,B,H11,t,n_guess_coord, nthreads=1, tracer_alg3=None):
     print()
 
     """
-    We return (if we succeed) (-s,e)[dim-kappa-betamax:n-kappa] to avoid fp errors.
+    We return (if we succeed) (-s,e)[dim-kappa-betamax:dim-kappa] to avoid fp errors.
     """
     #TODO: dist_sq_bnd might have changed at this point (or even in attacker)
     #TODO: deduce what is the betamax
@@ -223,11 +223,12 @@ def alg_3(g6k,B,H11,t,n_guess_coord, nthreads=1, tracer_alg3=None):
     return v
 
 def alg_2_batched( g6k,target_candidates,H11,n_slicer_coord, nthreads=1, tracer_alg2=None ):
-    raise NotImplementedError
+    # raise NotImplementedError
+    sieve_dim = n_slicer_coord
     dist_sq_bnd = 1.0 #TODO: implement
-    G = g6k.gso
+    G = g6k.M
     dim = G.d
-    N = GSO.Mat( G.B[:n-sieve_dim], float_type=ft )
+    N = GSO.Mat( G.B[:dim-sieve_dim], float_type=G.float_type )
     N.update_gso()
 
     # - - - prepare Slicer for batch cvp - - -
@@ -237,23 +238,29 @@ def alg_2_batched( g6k,target_candidates,H11,n_slicer_coord, nthreads=1, tracer_
 
     #WARNING: we do not store t_gs_reduced_list since t_gs_list =  t_gs - gs(shift_babai_c*B)
     #this is a time-memory tradeoff. Since Slicer returns only an error vector, we don\'t
-    #know which of the target candidates it corresponds to.
+    #know which of the target candidates it corresponds to. TODO: or should we?
     t_gs_list = []
+    t_gs_reduced_list = []
     shift_babai_c_list = []
+    target_list_size = len(g6k)
+    nrand = min( 5, target_list_size / len(g6k) )
     for target in target_candidates:
-        t_gs = from_canonical_scaled( G,t,offset=sieve_dim )
-        shift_babai_c = G.babai((n-sieve_dim)*[0] + list(t_gs_non_scaled), start=n-sieve_dim,gso=True)
-        shift_babai = G.B.multiply_left( (n-sieve_dim)*[0] + list( shift_babai_c ) )
-        t_gs_reduced = from_canonical_scaled( G,np.array(t)-shift_babai,offset=sieve_dim ) #this is the actual reduced target
+        t_gs = from_canonical_scaled( G,target,offset=sieve_dim )
+        t_gs_non_scaled = G.from_canonical(target)[-sieve_dim:]
+        shift_babai_c = G.babai((dim-sieve_dim)*[0] + list(t_gs_non_scaled), start=dim-sieve_dim,gso=True)
+        shift_babai = G.B.multiply_left( (dim-sieve_dim)*[0] + list( shift_babai_c ) )
+        t_gs_reduced = from_canonical_scaled( G,np.array(target)-shift_babai,offset=sieve_dim ) #this is the actual reduced target
         # t_gs_shift = from_canonical_scaled( G,shift_babai,offset=sieve_dim )
 
         t_gs_list.append(t_gs)
         shift_babai_c_list.append(shift_babai_c)
+        t_gs_reduced_list.append(t_gs_reduced)
 
         then_gdbwt = perf_counter()
         slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=nrand) #add a candidate to the Slicer
         gdbwt_t = perf_counter() - then_gdbwt #TODO: collect this stat
     #run slicer
+    print(f"running slicer")
     slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (approx_fact*approx_fact*(e_@e_)))
 
     iterator = slicer.itervalues_t()
@@ -261,25 +268,40 @@ def alg_2_batched( g6k,target_candidates,H11,n_slicer_coord, nthreads=1, tracer_
         out_gs_reduced = tmp  #db_t[0] is expected to contain the error vector
         break
     index = 0
-    #now we deduce which target candidate the error vector corresponds to
+    #Now we deduce which target candidate the error vector corresponds to.
+    #The idea is that if t_gs is an answer then t_gs - out_gs_reduced - gs(shift_babai_c*B[-sieve_dim])
+    #is (close to) zero.
     min_norm_err_sq = 10**32
-    target_best = None
+    index_best = None
     for index in range(len(shift_babai_c_list)):
-        shift_babai_c = shift_babai_c_list[index]
         t_gs = t_gs_list[index]
+        t_gs_reduced = t_gs_reduced_list[index]
+        shift_babai_c = shift_babai_c_list[index]
+        shift_babai = G.B.multiply_left( (dim-sieve_dim)*[0] + list( shift_babai_c ) )
+        shift_babai_gs = from_canonical_scaled( G,shift_babai,offset=sieve_dim )
 
-        shift_babai = G.B.multiply_left( (n-sieve_dim)*[0] + list( shift_babai_c ) )
-        t_gs_shift = from_canonical_scaled( G,shift_babai,offset=sieve_dim )
-        out_gs =  out_gs_reduced + t_gs_shift
-        out = to_canonical_scaled( G,out_gs,offset=sieve_dim )
+        #shift introduced by babai + slicer (a lattice vector),
+        #that is, (a candidate for) the solution to CVP
+        sub_solution_gs = shift_babai_gs + ( t_gs_reduced - out_gs)
+        diff_gs = t_gs - sub_solution_gs #an actual error vector we observe == actual error (+ some lattice vector for bad candidates)
+        diff_gs_nrm_sq = diff_gs@diff_gs #its norm. Ideally, == norm of error
+        if diff_gs_nrm_sq < min_norm_err_sq:
+            min_norm_err_sq = diff_gs_nrm_sq
+            index_best = index
+    print(f"min_norm_err_sq: {min_norm_err_sq}, index_best:{index_best}")
+    index = index_best
+    t_gs = t_gs_list[index]
+    t = target_candidates[index]
 
-        bab_1 = G.babai(t-np.array(out),start=n-sieve_dim) #last sieve_dim coordinates of s
-        tmp = t - np.array( G.B[-sieve_dim:].multiply_left(bab_1) )
-        tmp = N.to_canonical( G.from_canonical( tmp, start=0, dimension=n-sieve_dim ) ) #project onto span(B[-sieve_dim:])
-        bab_0 = N.babai(tmp)
+    out = to_canonical_scaled( G,out_gs,offset=sieve_dim )
+    bab_1 = G.babai(t-np.array(out),start=dim-sieve_dim) #last sieve_dim coordinates of s
+    tmp = t - np.array( G.B[-sieve_dim:].multiply_left(bab_1) )
+    tmp = N.to_canonical( G.from_canonical( tmp, start=0, dimension=dim-sieve_dim ) ) #project onto span(B[-sieve_dim:])
+    bab_0 = N.babai(tmp)
+    bab_01=np.array( bab_0+bab_1 ) #shifted answer. Good since it is smaller, thus less rounding error
+    bab_01 += np.array(shift_babai_c)
 
-        bab_01 = np.array( bab_0+bab_1 ) #shifted answer. Good since it is smaller, thus less rounding error
-        bab_01 += np.array(shift_babai_c)
+    print(f"alg2 terminates")
 
 if __name__=="__main__":
     # (dimension, predicted kappa, predicted beta)
