@@ -164,7 +164,7 @@ def attacker(input_dict, n_guess_coord, sieve_dim_max, nsieves, nthreads=1, trac
         for b, s, e in bse:
             try:
                 candidate = alg_3(g6k,B,H11,np.concatenate([b,n*[0]]),n_guess_coord, nthreads=nthreads, tracer_alg3=None)
-                answer = (s.dot(A)) % q
+                answer = np.concatenate( [(s.dot(A)) % q,(dim//2)*[0]] )
                 print( f"answer: {answer}" )
                 print( f"candidate: {candidate}" )
                 #TODO: automate the check
@@ -210,42 +210,47 @@ def alg_3(g6k,B,H11,t,n_guess_coord, nthreads=1, tracer_alg3=None):
     #TODO: dist_sq_bnd might have changed at this point (or even in attacker)
     #TODO: deduce what is the betamax
     betamax = 48
-    ctilde1 = alg_2_batched( g6k,target_candidates,H11, nthreads=nthreads, tracer_alg2=None )
-    v1 = np.array( G_.B.multiply_left( ctilde1 ) )
+    ctilde1 = alg_2_batched( g6k,target_candidates, nthreads=nthreads, tracer_alg2=None )
+    print( f"alive: {len(ctilde1)} | {dim-n_guess_coord}" )
+    v1 = np.array( g6k.M.B[:len(ctilde1)].multiply_left( ctilde1 ) )
+    print( "dead" )
     #keep a track of v2?
     argminv = None
     minv = 10**12
     for vtilde2 in vtilde2s:
-        v = v1+v2
+        v2 = vtilde2
+        v = np.concatenate([v1,[0]])+v2
         vv = v@v
         if vv < minv:
             argminv = v
     return v
 
-def alg_2_batched( g6k,target_candidates,H11, nthreads=1, tracer_alg2=None ):
+def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_alg2=None ):
     # raise NotImplementedError
     print("in alg2")
     sieve_dim = g6k.r-g6k.l #n_slicer_coord
-    dist_sq_bnd = 1.0 #TODO: implement
+    # dist_sq_bnd = 1.0 #TODO: implement
     G = g6k.M
+    B = G.B
     dim = G.d
-    N = GSO.Mat( G.B[:dim-sieve_dim], float_type=G.float_type )
-    N.update_gso()
+    Gsub = GSO.Mat( G.B[:dim-sieve_dim], float_type=G.float_type )
+    Gsub.update_gso()
+    # print(f"dim(Gsub): {Gsub.d}")
 
     # - - - prepare Slicer for batch cvp - - -
     slicer = RandomizedSlicer(g6k)
     slicer.set_nthreads(2);
     # - - - END prepare Slicer for batch cvp - - -
-
+    scaling_vec = np.array( [tmp**0.5 for tmp in G.r()[dim-sieve_dim:]] )
     #WARNING: we do not store t_gs_reduced_list since t_gs_list =  t_gs - gs(shift_babai_c*B)
     #this is a time-memory tradeoff. Since Slicer returns only an error vector, we don\'t
     #know which of the target candidates it corresponds to. TODO: or should we?
-    t_gs_list = []
-    t_gs_reduced_list = []
-    shift_babai_c_list = []
     target_list_size = len(g6k)
     nrand = min( 5, target_list_size / len(g6k) )
     print(f"len(target_candidates): {len(target_candidates)} nrand: {nrand}")
+    t_gs_list = []
+    t_gs_reduced_list = []
+    shift_babai_c_list = []
     for target in target_candidates:
         # print(end=".", flush=True)
         t_gs = from_canonical_scaled( G,target,offset=sieve_dim )
@@ -283,47 +288,35 @@ def alg_2_batched( g6k,target_candidates,H11, nthreads=1, tracer_alg2=None ):
         break
     index = 0
     #Now we deduce which target candidate the error vector corresponds to.
-    #The idea is that if t_gs is an answer then t_gs - out_gs_reduced - gs(shift_babai_c*B[-sieve_dim])
-    #is (close to) zero.
+    #The idea is that if t_gs is an answer then t_gs_reduced - out_gs_reduced is in the projective lat
+    #and is (close to) zero.
     min_norm_err_sq = 10**32
     index_best = None
     for index in range(len(shift_babai_c_list)):
-        t_gs = t_gs_list[index]
-        t_gs_reduced = t_gs_reduced_list[index]
-        shift_babai_c = shift_babai_c_list[index]
-        shift_babai = G.B.multiply_left( (dim-sieve_dim)*[0] + list( shift_babai_c ) )
-        shift_babai_gs = from_canonical_scaled( G,shift_babai,offset=sieve_dim )
+        # t_gs = t_gs_list[index]
+        t_gs_reduced = t_gs_reduced_list[index] #we could do this to t_gs, but this one is shorter
+        t_gs_reduced_non_scaled = t_gs_reduced / scaling_vec
+        shift_babai_c_reduced = G.babai((dim-sieve_dim)*[0] + list(t_gs_non_scaled), start=dim-sieve_dim,gso=True)
+        shift_babai_reduced = G.B.multiply_left( (dim-sieve_dim)*[0] + list( shift_babai_c_reduced ) )
+        shift_babai_reduced = shift_babai_reduced[dim-sieve_dim:]
+        shift_babai_reduced *= scaling_vec
+        t_gs_bab = np.array(t_gs_reduced) - shift_babai_reduced #np.concatenate( [(dim-sieve_dim)*[0],shift_babai_reduced] )
 
-        #shift introduced by babai + slicer (a lattice vector),
-        #that is, (a candidate for) the solution to CVP
-        print(f"ll,l,r: {g6k.ll, g6k.l, g6k.r} | r-l: {g6k.r-g6k.l}")
-        print(f"dim: {dim} | sieve_dim: {sieve_dim} | {len(shift_babai_gs), len(t_gs_reduced), len(out_gs_reduced)}")
-        sub_solution_gs = shift_babai_gs + ( t_gs_reduced - out_gs_reduced)
-        diff_gs = t_gs - sub_solution_gs #an actual error vector we observe == actual error (+ some lattice vector for bad candidates)
+        diff_gs = t_gs_reduced - t_gs_bab #an actual error vector we observe == actual error (+ some lattice vector for bad candidates)
         diff_gs_nrm_sq = diff_gs@diff_gs #its norm. Ideally, == norm of error
         if diff_gs_nrm_sq < min_norm_err_sq:
             min_norm_err_sq = diff_gs_nrm_sq
             index_best = index
     print(f"min_norm_err_sq: {min_norm_err_sq}, index_best:{index_best}")
     index = index_best
-    t_gs = t_gs_list[index]
-    t = target_candidates[index]
-    t_gs_reduced = t_gs_reduced_list[index]
-    out = t_gs_reduced
-    shift_babai_c = shift_babai_c_list[index]
-    shift_babai = G.B[-sieve_dim:].multiply_left(shift_babai_c)
-    t_gs_shift = to_canonical_scaled( G,(dim-sieve_dim)*[0]+list(shift_babai), offset=sieve_dim )
-
-    out_gs =  out_gs_reduced + t_gs_shift
-    out = to_canonical_scaled( G,out_gs,offset=sieve_dim )
-    bab_1 = G.babai(t-np.array(out),start=dim-sieve_dim) #last sieve_dim coordinates of s
-    tmp = t - np.array( G.B[-sieve_dim:].multiply_left(bab_1) )
-    tmp = N.to_canonical( G.from_canonical( tmp, start=0, dimension=dim-sieve_dim ) ) #project onto span(B[-sieve_dim:])
-    bab_0 = N.babai(tmp)
-    bab_01=np.array( bab_0+bab_1 ) #shifted answer. Good since it is smaller, thus less rounding error
-    bab_01 += np.array(shift_babai_c)
+    t = np.array( target_candidates[index] )
+    t_new = t - to_canonical_scaled( G, np.concatenate( [(dim-sieve_dim)*[0], out_gs_reduced] ) )
+    assert len(t_new) == dim
+    bab_01 = G.babai(t_new)
 
     print(f"alg2 terminates")
+    return bab_01
+
 
 if __name__=="__main__":
     # (dimension, predicted kappa, predicted beta)
@@ -353,10 +346,10 @@ if __name__=="__main__":
                     )
             ) )
 
-for t in tasks:
-    output.append( t.get() )
-pool.close()
+    for t in tasks:
+        output.append( t.get() )
+    pool.close()
 
-for o_ in output:
-    print(o_)
-sys.stdout.flush()
+    for o_ in output:
+        print(o_)
+    sys.stdout.flush()
