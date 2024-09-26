@@ -22,7 +22,7 @@ from sample import *
 from preprocessing import run_preprocessing
 #def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthreads=1)
 
-BYPASS_ALG2 = True
+approx_fact = 1.07
 
 max_nsampl = 150 #10**7
 inp_path = "lwe instances/saved_lattices/"
@@ -210,7 +210,7 @@ def alg_3(g6k,B,H11,t,n_guess_coord, nthreads=1, tracer_alg3=None):
     #TODO: dist_sq_bnd might have changed at this point (or even in attacker)
     #TODO: deduce what is the betamax
     betamax = 48
-    ctilde1 = alg_2_batched( g6k,target_candidates,H11,betamax, nthreads=nthreads, tracer_alg2=None )
+    ctilde1 = alg_2_batched( g6k,target_candidates,H11, nthreads=nthreads, tracer_alg2=None )
     v1 = np.array( G_.B.multiply_left( ctilde1 ) )
     #keep a track of v2?
     argminv = None
@@ -222,9 +222,10 @@ def alg_3(g6k,B,H11,t,n_guess_coord, nthreads=1, tracer_alg3=None):
             argminv = v
     return v
 
-def alg_2_batched( g6k,target_candidates,H11,n_slicer_coord, nthreads=1, tracer_alg2=None ):
+def alg_2_batched( g6k,target_candidates,H11, nthreads=1, tracer_alg2=None ):
     # raise NotImplementedError
-    sieve_dim = n_slicer_coord
+    print("in alg2")
+    sieve_dim = g6k.r-g6k.l #n_slicer_coord
     dist_sq_bnd = 1.0 #TODO: implement
     G = g6k.M
     dim = G.d
@@ -244,7 +245,9 @@ def alg_2_batched( g6k,target_candidates,H11,n_slicer_coord, nthreads=1, tracer_
     shift_babai_c_list = []
     target_list_size = len(g6k)
     nrand = min( 5, target_list_size / len(g6k) )
+    print(f"len(target_candidates): {len(target_candidates)} nrand: {nrand}")
     for target in target_candidates:
+        # print(end=".", flush=True)
         t_gs = from_canonical_scaled( G,target,offset=sieve_dim )
         t_gs_non_scaled = G.from_canonical(target)[-sieve_dim:]
         shift_babai_c = G.babai((dim-sieve_dim)*[0] + list(t_gs_non_scaled), start=dim-sieve_dim,gso=True)
@@ -256,16 +259,27 @@ def alg_2_batched( g6k,target_candidates,H11,n_slicer_coord, nthreads=1, tracer_
         shift_babai_c_list.append(shift_babai_c)
         t_gs_reduced_list.append(t_gs_reduced)
 
+        print(target[dim-sieve_dim:])
+        print(f"Doing grow_db")
         then_gdbwt = perf_counter()
         slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=nrand) #add a candidate to the Slicer
         gdbwt_t = perf_counter() - then_gdbwt #TODO: collect this stat
+        print(f"grow_db done in {gdbwt_t}",flush=True)
     #run slicer
     print(f"running slicer")
-    slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (approx_fact*approx_fact*(e_@e_)))
+    blocks = 2 # should be the same as in siever
+    blocks = min(3, max(1, blocks))
+    blocks = min(int(sieve_dim / 28), blocks)
+    sp = g6k.params
+    N = sp["db_size_factor"] * sp["db_size_base"] ** sieve_dim
+    buckets = sp["bdgl_bucket_size_factor"]* 2.**((blocks-1.)/(blocks+1.)) * sp["bdgl_multi_hash"]**((2.*blocks)/(blocks+1.)) * (N ** (blocks/(1.0+blocks)))
+    buckets = min(buckets, sp["bdgl_multi_hash"] * N / sp["bdgl_min_bucket_size"])
+    buckets = max(buckets, 2**(blocks-1))
+    slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (approx_fact*approx_fact*(dist_sq_bnd)))
 
     iterator = slicer.itervalues_t()
     for tmp in iterator:
-        out_gs_reduced = tmp  #db_t[0] is expected to contain the error vector
+        out_gs_reduced = np.array(tmp)  #db_t[0] is expected to contain the error vector
         break
     index = 0
     #Now we deduce which target candidate the error vector corresponds to.
@@ -282,7 +296,9 @@ def alg_2_batched( g6k,target_candidates,H11,n_slicer_coord, nthreads=1, tracer_
 
         #shift introduced by babai + slicer (a lattice vector),
         #that is, (a candidate for) the solution to CVP
-        sub_solution_gs = shift_babai_gs + ( t_gs_reduced - out_gs)
+        print(f"ll,l,r: {g6k.ll, g6k.l, g6k.r} | r-l: {g6k.r-g6k.l}")
+        print(f"dim: {dim} | sieve_dim: {sieve_dim} | {len(shift_babai_gs), len(t_gs_reduced), len(out_gs_reduced)}")
+        sub_solution_gs = shift_babai_gs + ( t_gs_reduced - out_gs_reduced)
         diff_gs = t_gs - sub_solution_gs #an actual error vector we observe == actual error (+ some lattice vector for bad candidates)
         diff_gs_nrm_sq = diff_gs@diff_gs #its norm. Ideally, == norm of error
         if diff_gs_nrm_sq < min_norm_err_sq:
@@ -292,7 +308,13 @@ def alg_2_batched( g6k,target_candidates,H11,n_slicer_coord, nthreads=1, tracer_
     index = index_best
     t_gs = t_gs_list[index]
     t = target_candidates[index]
+    t_gs_reduced = t_gs_reduced_list[index]
+    out = t_gs_reduced
+    shift_babai_c = shift_babai_c_list[index]
+    shift_babai = G.B[-sieve_dim:].multiply_left(shift_babai_c)
+    t_gs_shift = to_canonical_scaled( G,(dim-sieve_dim)*[0]+list(shift_babai), offset=sieve_dim )
 
+    out_gs =  out_gs_reduced + t_gs_shift
     out = to_canonical_scaled( G,out_gs,offset=sieve_dim )
     bab_1 = G.babai(t-np.array(out),start=dim-sieve_dim) #last sieve_dim coordinates of s
     tmp = t - np.array( G.B[-sieve_dim:].multiply_left(bab_1) )
@@ -306,11 +328,12 @@ def alg_2_batched( g6k,target_candidates,H11,n_slicer_coord, nthreads=1, tracer_
 if __name__=="__main__":
     # (dimension, predicted kappa, predicted beta)
     # params = [(140, 12, 48), (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
-    params = [(140, 12, 48)]#, (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
+    # params = [(140, 12, 48)]#, (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
+    params = [(80, 2, 40)]
     nworkers, nthreads = 1, 1
 
-    lats_per_dim = 1
-    inst_per_lat = 10 #how many instances per A, q
+    lats_per_dim = 2 #1
+    inst_per_lat = 2 #10 #how many instances per A, q
     q, eta = 3329, 3
     #def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthreads=1)
     output = []
@@ -318,13 +341,13 @@ if __name__=="__main__":
     tasks = []
     for param in params:
         for latnum in range(lats_per_dim):
-            input_dict = {"n": param[0], "q":q , "eta":eta , "k":1 , "seed":[latnum,10] }
+            input_dict = {"n": param[0], "q":q , "eta":eta , "k":1 , "seed":[latnum,0] }
             tasks.append( pool.apply_async(
                 attacker, (
                     input_dict, #input_dict
                     param[1]-1, #n_guess_coord
                     param[2]+4, #sieve_dim_max
-                    7,  #nsieves
+                    2, #7,  #nsieves
                     nthreads, #nthreads
                     None, #tracer_exp
                     )

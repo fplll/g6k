@@ -86,7 +86,7 @@ void RandomizedSlicer::randomize_target_small_task(Entry_t &t)
 }
 
 void RandomizedSlicer::grow_db_with_target(const double t_yr[], size_t n_per_target){
-
+    std::cout << "in grow_db"  << std::endl;
     Entry_t input_t;
 
     for(int i = 0; i < MAX_SIEVING_DIM; i++){
@@ -101,6 +101,12 @@ void RandomizedSlicer::grow_db_with_target(const double t_yr[], size_t n_per_tar
     unsigned long const start = db_t.size();
     unsigned long const N = start+n_per_target;
 
+    if(!uid_hash_table_t.insert_uid(input_t.uid)){
+        std::cerr << "The original target is already in db" << std::endl;
+        // exit(0);
+        return;
+    }
+
     db_t.reserve(N);
     cdb_t.reserve(N);
     db_t.resize(N);
@@ -108,10 +114,10 @@ void RandomizedSlicer::grow_db_with_target(const double t_yr[], size_t n_per_tar
 
 
 
-    if(!uid_hash_table_t.insert_uid(input_t.uid)){
-        std::cerr << "The original target is already in db" << std::endl;
-        exit(1);
-    }
+    // if(!uid_hash_table_t.insert_uid(input_t.uid)){
+    //     std::cerr << "The original target is already in db" << std::endl;
+    //     exit(1);
+    // }
     db_t[start] = input_t;
     CompressedEntry ce;
     ce.len = input_t.len;
