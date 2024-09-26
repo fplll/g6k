@@ -22,6 +22,8 @@ from sample import *
 from preprocessing import run_preprocessing
 #def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthreads=1)
 
+BYPASS_ALG2 = True
+
 max_nsampl = 150 #10**7
 inp_path = "lwe instances/saved_lattices/"
 out_path = "lwe instances/reduced_lattices/"
@@ -223,6 +225,8 @@ def alg_3(g6k,B,H11,t,n_guess_coord, nthreads=1, tracer_alg3=None):
 def alg_2_batched( g6k,target_candidates,H11,n_slicer_coord, nthreads=1, tracer_alg2=None ):
     raise NotImplementedError
     dist_sq_bnd = 1.0 #TODO: implement
+
+    for target
 
 if __name__=="__main__":
     # (dimension, predicted kappa, predicted beta)

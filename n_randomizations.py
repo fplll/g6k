@@ -122,23 +122,23 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments, nthreads=1):
         N = GSO.Mat( G.B[:n-sieve_dim], float_type=ft )
         N.update_gso()
         bab_1 = G.babai(t-np.array(out),start=n-sieve_dim) #last sieve_dim coordinates of s
-        tmp = t - np.array( G.B[-sieve_dim:].multiply_left(bab_1) )
-        tmp = N.to_canonical( G.from_canonical( tmp, start=0, dimension=n-sieve_dim ) ) #project onto span(B[-sieve_dim:])
-        bab_0 = N.babai(tmp)
 
-        bab_01=np.array( bab_0+bab_1 )
+        # tmp = t - np.array( G.B[-sieve_dim:].multiply_left(bab_1) )
+        # tmp = N.to_canonical( G.from_canonical( tmp, start=0, dimension=n-sieve_dim ) ) #project onto span(B[-sieve_dim:])
+        # bab_0 = N.babai(tmp)
+        #
+        # bab_01=np.array( bab_0+bab_1 )
+        # succ = all(c==bab_01)
+
         #print((f"recovered*B^(-1): {bab_0+bab_1}"))
         #print(c)
         #print(f"Coeffs of b found: {(c==bab_01)}")
-        succ = all(c==bab_01)
+
+        succ = all( np.array( c[G.d-sieve_dim:] )==bab_1 )
         print(f"Babai Success: {succ}")
         if succ:
             babai_suc+=1
         if not succ:
-
-            #filename = f"bdgl2_n{n}_b{sieve_dim}.pkl"
-            #g6k.dump_on_disk( filename )
-            #then = perf_counter()
             ctr = 0
             #this_instance_succseeded = False
             for nrand in range_:

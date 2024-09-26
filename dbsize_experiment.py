@@ -119,13 +119,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
             N = GSO.Mat( G.B[:n-sieve_dim], float_type=ft )
             N.update_gso()
             bab_1 = G.babai(t-np.array(out),start=n-sieve_dim) #last sieve_dim coordinates of s
-            tmp = t - np.array( G.B[-sieve_dim:].multiply_left(bab_1) )
-            tmp = N.to_canonical( G.from_canonical( tmp, start=0, dimension=n-sieve_dim ) ) #project onto span(B[-sieve_dim:])
-            bab_0 = N.babai(tmp)
-
-            bab_01=np.array( bab_0+bab_1 ) #shifted answer. Good since it is smaller, thus less rounding error
-            bab_01 += np.array(shift_babai_c)
-            succ = all(c==bab_01)
+            succ = all( np.array( c[G.d-sieve_dim:] )==bab_1 )
             print(f"Babai Success: {succ}")
             if succ:
                 babai_suc+=1
