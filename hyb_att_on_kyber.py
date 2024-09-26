@@ -146,16 +146,6 @@ def attacker(input_dict, n_guess_coord, sieve_dim_max, nsieves, nthreads=1, trac
     int_type = B.int_type
     ft = "dd" if config.have_qd else "mpfr"
 
-    #TODO: make dimension incremention + BKZ functionality
-    """
-    param_sieve = SieverParams()
-    param_sieve['threads'] = 5
-    g6k = Siever(G,param_sieve)
-    g6k.initialize_local(dim-sieve_dim,dim-sieve_dim,n)
-    g6k("bdgl2")
-    g6k.M.update_gso()
-    """
-
     for sieveid in range(nsieves):
         vec_index = 0
         filename_siever = out_path+f'g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+sieveid}'
@@ -246,7 +236,7 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
     #this is a time-memory tradeoff. Since Slicer returns only an error vector, we don\'t
     #know which of the target candidates it corresponds to. TODO: or should we?
     target_list_size = len(g6k)
-    nrand = min( 5, target_list_size / len(g6k) )
+    nrand = 100 #min( 5, target_list_size / len(g6k) )
     print(f"len(target_candidates): {len(target_candidates)} nrand: {nrand}")
     t_gs_list = []
     t_gs_reduced_list = []
@@ -285,6 +275,7 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
     iterator = slicer.itervalues_t()
     for tmp in iterator:
         out_gs_reduced = np.array(tmp)  #db_t[0] is expected to contain the error vector
+        cur_nrm_sq = out_gs_reduced@out_gs_reduced
         break
     index = 0
     #Now we deduce which target candidate the error vector corresponds to.

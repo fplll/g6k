@@ -55,6 +55,7 @@ b_ = np.array(b,dtype=np.int64)
 t_ = e+b_
 t = [ int(tt) for tt in t_ ]
 e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
+print(f"e_: {e_}")
 
 target_candidates = [t]
 for _ in range(5):
@@ -64,7 +65,7 @@ for _ in range(5):
     target_candidates.append( tcand )
 
 #alg_2_batched( g6k,target_candidates,H11, nthreads=1, tracer_alg2=None )
-bab_01 = alg_2_batched( g6k,target_candidates,dist_sq_bnd=e_@e_  )
+bab_01 = np.array( alg_2_batched( g6k,target_candidates,dist_sq_bnd=e_@e_  ) )
 print(f"c: {c}")
 print(bab_01)
-print(f"sqerr orig: {e_@e_}")
+print(f"alg_2_batch succsess: {(bab_01==c)}")
