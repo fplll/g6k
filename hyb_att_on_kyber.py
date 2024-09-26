@@ -22,7 +22,7 @@ from sample import *
 from preprocessing import run_preprocessing
 #def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthreads=1)
 
-max_nsampl = 10**7
+max_nsampl = 150 #10**7
 inp_path = "lwe instances/saved_lattices/"
 out_path = "lwe instances/reduced_lattices/"
 
@@ -161,7 +161,7 @@ def attacker(input_dict, n_guess_coord, sieve_dim_max, nsieves, nthreads=1, trac
         # g6k.params["nthreads"] = nthreads #readonly
         for b, s, e in bse:
             try:
-                candidate = alg_3(g6k,B,H11,b,n_guess_coord, nthreads=nthreads, tracer_alg3=None)
+                candidate = alg_3(g6k,B,H11,np.concatenate([b,n*[0]]),n_guess_coord, nthreads=nthreads, tracer_alg3=None)
                 answer = (s.dot(A)) % q
                 print( f"answer: {answer}" )
                 print( f"candidate: {candidate}" )
@@ -176,30 +176,38 @@ def attacker(input_dict, n_guess_coord, sieve_dim_max, nsieves, nthreads=1, trac
                 pass
 
 def alg_3(g6k,B,H11,t,n_guess_coord, nthreads=1, tracer_alg3=None):
-    raise NotImplementedError
+    # raise NotImplementedError
     # - - - prepare targets - - -
     then_start = perf_counter()
+    dim = B.nrows
     # t_gs = from_canonical_scaled( G,t,offset=sieve_dim )
 
-    t1, t2 = t[:-kappa], t[-kappa:]
+    t1, t2 = t[:-n_guess_coord], t[-n_guess_coord:]
     slicer = RandomizedSlicer(g6k)
     distrib = centeredBinomial(eta)
     #TODO: make/(check if is) practical
-    nsampl = ceil( 2 ** ( D.entropy * kappa ) )
+    nsampl = ceil( 2 ** ( distrib.entropy * n_guess_coord ) )
     print(f"nsampl: {nsampl}")
     nsampl = min(max_nsampl, nsampl)
     target_candidates = [t1] #first target is always the original one
-    vtilde2s = [np.array((n-kappa)*[0] + t2)]
-    for _ in range(nsampl): #Alg 3 steps 4-7
-        etilde2 = np.array( (dim-kappa)*[0] + distrib.sample( kappa ) ) #= (0 | e2)
-        vtilde2 = np.array((n-kappa)*[0] + t2)-etilde2
-        t1_ = np.array( t1+kappa*[0] ) - np.array(H11.multiply_left(vtilde2))
+    vtilde2s = [np.array((dim-n_guess_coord)*[0] + list(t2))]
+    for times in range(nsampl): #Alg 3 steps 4-7
+        if times!=0 and times%64 == 0:
+            print(f"{times} done out of {nsampl}", end=", ")
+        etilde2 = np.array( distrib.sample( n_guess_coord ) ) #= (0 | e2)
+        vtilde2 = np.array(t2)-etilde2
+        # print(f"len(vtilde2): {len(vtilde2)} len(t1): {len(t1)}")
+        # print(f"dim: {dim} n_guess_coord: {n_guess_coord}")
+        t1_ = np.array( list(t1) ) - np.array(H11.multiply_left(vtilde2))
         target_candidates.append( t1_ )
+    print()
 
     """
     We return (if we succeed) (-s,e)[dim-kappa-betamax:n-kappa] to avoid fp errors.
     """
     #TODO: dist_sq_bnd might have changed at this point (or even in attacker)
+    #TODO: deduce what is the betamax
+    betamax = 48
     ctilde1 = alg_2_batched( g6k,target_candidates,H11,betamax, nthreads=nthreads, tracer_alg2=None )
     v1 = np.array( G_.B.multiply_left( ctilde1 ) )
     #keep a track of v2?
