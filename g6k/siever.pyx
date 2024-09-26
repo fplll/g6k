@@ -1372,7 +1372,7 @@ cdef class Siever(object):
       mySiever.initialize_local(ll,l,r)
 
       loc_dim = r-ll #the dimension of sieve
-      assert len(coeffs[0]) == r-ll, f"Corrupted siever context: expected {r-ll} got {len(coeffs[0])}."
+      assert len(coeffs[0]) == r-l, f"Corrupted siever context: expected {r-l} got {len(coeffs[0])}."
       for i in range(len(coeffs)):
           coeffs[i] += (MAX_SIEVING_DIM-loc_dim)*[0]
 
@@ -1381,8 +1381,8 @@ cdef class Siever(object):
       cdef ZT[128] c_row #temp vector
       cdef vector[ZT*] c_x_arr
 
-      if len(coeffs[0]) != MAX_SIEVING_DIM:
-          raise ValueError(f"Each row must have {MAX_SIEVING_DIM} elements")
+      # if len(coeffs[0]) != MAX_SIEVING_DIM:
+      #     raise ValueError(f"Each row must have {MAX_SIEVING_DIM} elements")
       # for row in coeffs[:-1]:
       #     cdef ZT[128] c_row #allocate a temp vector
       #     for j in range(MAX_SIEVING_DIM):
@@ -1394,7 +1394,7 @@ cdef class Siever(object):
       #   print([ tmp[i] for i in range(64) ])
       # mySiever._core.append_db(c_x_arr)
       for row in coeffs:
-          for j in range(MAX_SIEVING_DIM):
+          for j in range(len(coeffs[0])):
               c_row[j] = row[j]
           # c_x_arr.push_back(c_row)
           # print(c_row)
