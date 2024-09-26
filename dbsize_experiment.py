@@ -14,7 +14,7 @@ except ModuleNotFoundError:
 
 def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperiments, nthreads):
     babai_suc = 0
-    approx_fact = 1.02
+    approx_fact = 1.055
     ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
     print(f"launching n, betamax, sieve_dim = {n, betamax, sieve_dim}")
 

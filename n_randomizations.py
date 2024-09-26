@@ -150,7 +150,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments, nthreads=1):
                 slicer.set_nthreads(2);
                 slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=nrand)
                 try:
-                    slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (approx_fact*(e_@e_)))
+                    slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (approx_fact**2*(e_@e_)))
                     iterator = slicer.itervalues_t()
                     for tmp in iterator:
                         out_gs_reduced = tmp  #cdb[0]
