@@ -196,52 +196,52 @@ def attack_on_kyber(n,q,eta,k,betamax,ntours=5,seed=[0,0]):
         pass
 
     return report
+if __name__ == "__main__":
+    path = "exp_folder/"
+    isExist = os.path.exists(path)
+    if not isExist:
+        try:
+            os.makedirs(path)
+        except:
+            pass    #still in docker if isExists==False, for some reason folder can exist and this will throw an exception.
 
-path = "exp_folder/"
-isExist = os.path.exists(path)
-if not isExist:
-    try:
-        os.makedirs(path)
-    except:
-        pass    #still in docker if isExists==False, for some reason folder can exist and this will throw an exception.
+    nthreads = 2
+    lats_per_dim = 2
+    inst_per_lat = 10 #how many instances per A, q
+    q, eta = 3329, 3
 
-nthreads = 2
-lats_per_dim = 5
-inst_per_lat = 10 #how many instances per A, q
-q, eta = 3329, 3
+    nks = [ (120+10*i,1) for i in range(1) ]
+    output = []
+    pool = Pool(processes = nthreads )
+    tasks = []
 
-nks = [ (120+10*i,1) for i in range(1) ]
-output = []
-pool = Pool(processes = nthreads )
-tasks = []
+    for nk in nks:
+        n, k = nk[0], 1
+        for latnum in range(lats_per_dim):
+            gen_and_dump_lwe(nk[0], q, eta,k, ntar=inst_per_lat, seed=latnum)
 
-for nk in nks:
-    n, k = nk[0], 1
-    for latnum in range(lats_per_dim):
-        gen_and_dump_lwe(nk[0], q, eta,k, ntar=inst_per_lat, seed=latnum)
+    # for nk in nks:
+    #     n, k = nk[0], 1
+    #     for latnum in range(lats_per_dim):
+            # gen_and_dump_lwe(nk[0], q, eta,k, nk[1], latnum)
+            for tstnum in range(inst_per_lat):
+                tasks.append( pool.apply_async(
+                    attack_on_kyber, (nk[0],q,eta,k,80,5,[latnum,tstnum])
+                    ) )
 
-for nk in nks:
-    n, k = nk[0], 1
-    for latnum in range(lats_per_dim):
-        # gen_and_dump_lwe(nk[0], q, eta,k, nk[1], latnum)
-        for tstnum in range(inst_per_lat):
-            tasks.append( pool.apply_async(
-                attack_on_kyber, (nk[0],q,eta,k,80,5,[latnum,tstnum])
-                ) )
+    # for nk in nks:
+    #     for _ in range(tests_per_dim):
+    #         tasks.append( pool.apply_async(
+    #             attack_on_kyber, (nk[0],3329,eta,nk[1],26,5)
+    #             ) )
 
-# for nk in nks:
-#     for _ in range(tests_per_dim):
-#         tasks.append( pool.apply_async(
-#             attack_on_kyber, (nk[0],3329,eta,nk[1],26,5)
-#             ) )
+    for t in tasks:
+            output.append( t.get() )
 
-for t in tasks:
-        output.append( t.get() )
+    pool.close()
 
-pool.close()
+    name = f"exp105-2.pkl"
+    with open( path+name, "wb" ) as file:
+        pickle.dump( output,file )
 
-name = f"exp105-2.pkl"
-with open( path+name, "wb" ) as file:
-    pickle.dump( output,file )
-
-print(output)
+    print(output)

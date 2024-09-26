@@ -134,9 +134,9 @@ if __name__=="__main__":
                         eta, #eta
                         1, #k
                         [latnum,0], #seed, second value is irrelevant
-                        param[2]-1, #beta_bkz
+                        param[2], #beta_bkz
                         param[2]+4, #sieve_dim_max
-                        7,  #nsieves
+                        4,  #nsieves
                         kappa, #kappa
                         nthreads #nthreads
                         )

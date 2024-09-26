@@ -153,7 +153,7 @@ def attacker(input_dict, n_guess_coord, sieve_dim_max, nsieves, nthreads=1, trac
         # g6k.params["nthreads"] = nthreads #readonly
         for b, s, e in bse:
             try:
-                candidate = alg_3(g6k,B,H11,np.concatenate([b,n*[0]]),n_guess_coord, nthreads=nthreads, tracer_alg3=None)
+                candidate = alg_3(g6k,B,H11,np.concatenate([b,n*[0]]),n_guess_coord, eta, nthreads=nthreads, tracer_alg3=None)
                 answer = np.concatenate( [(s.dot(A)) % q,(dim//2)*[0]] )
                 print( f"answer: {answer}" )
                 print( f"candidate: {candidate}" )
@@ -167,11 +167,12 @@ def attacker(input_dict, n_guess_coord, sieve_dim_max, nsieves, nthreads=1, trac
                 print("g6k load supposedly successfull.")
                 pass
 
-def alg_3(g6k,B,H11,t,n_guess_coord, nthreads=1, tracer_alg3=None):
+def alg_3(g6k,B,H11,t,n_guess_coord, eta, nthreads=1, tracer_alg3=None):
     # raise NotImplementedError
     # - - - prepare targets - - -
     then_start = perf_counter()
     dim = B.nrows
+    print(f"dim: {dim}")
     # t_gs = from_canonical_scaled( G,t,offset=sieve_dim )
 
     t1, t2 = t[:-n_guess_coord], t[-n_guess_coord:]
@@ -183,14 +184,26 @@ def alg_3(g6k,B,H11,t,n_guess_coord, nthreads=1, tracer_alg3=None):
     nsampl = min(max_nsampl, nsampl)
     target_candidates = [t1] #first target is always the original one
     vtilde2s = [np.array((dim-n_guess_coord)*[0] + list(t2))]
+
+    # B[:dim-n_guess_coord][0][:dim-n_guess_coord] #this does not work
+    H12 = IntegerMatrix.from_matrix( [list(b)[:dim-n_guess_coord] for b in B[dim-n_guess_coord:]] )
     for times in range(nsampl): #Alg 3 steps 4-7
         if times!=0 and times%64 == 0:
             print(f"{times} done out of {nsampl}", end=", ")
         etilde2 = np.array( distrib.sample( n_guess_coord ) ) #= (0 | e2)
+        # print(f"len etilde2: {len(etilde2)}")
         vtilde2 = np.array(t2)-etilde2
+        tmp = np.concatenate([(dim-n_guess_coord)*[0] , vtilde2])
+        vtilde2s.append( tmp )
+        #compute H12*H22^-1 * vtilde2 = H12*vtilde2 since H22 is identity
+        tmp = H12.multiply_left(vtilde2)
+        # tmp = t - np.concatenate( [tmp, n_guess_coord*[0]] )
+
         # print(f"len(vtilde2): {len(vtilde2)} len(t1): {len(t1)}")
         # print(f"dim: {dim} n_guess_coord: {n_guess_coord}")
-        t1_ = np.array( list(t1) ) - np.array(H11.multiply_left(vtilde2))
+        t1_ = np.array( list(t1) ) - tmp
+        print(t1_)
+        # print(f"len t1_: {len(t1_)}")
         target_candidates.append( t1_ )
     print()
 
@@ -201,16 +214,16 @@ def alg_3(g6k,B,H11,t,n_guess_coord, nthreads=1, tracer_alg3=None):
     #TODO: deduce what is the betamax
     betamax = 48
     ctilde1 = alg_2_batched( g6k,target_candidates, nthreads=nthreads, tracer_alg2=None )
-    print( f"alive: {len(ctilde1)} | {dim-n_guess_coord}" )
+
     v1 = np.array( g6k.M.B[:len(ctilde1)].multiply_left( ctilde1 ) )
-    print( "dead" )
     #keep a track of v2?
     argminv = None
     minv = 10**12
     for vtilde2 in vtilde2s:
         v2 = vtilde2
-        v = np.concatenate([v1,[0]])+v2
+        v = np.concatenate([v1,n_guess_coord*[0]])+v2
         vv = v@v
+        # print(f"v: {v}")
         if vv < minv:
             argminv = v
     return v
@@ -236,7 +249,7 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
     #this is a time-memory tradeoff. Since Slicer returns only an error vector, we don\'t
     #know which of the target candidates it corresponds to. TODO: or should we?
     target_list_size = len(g6k)
-    nrand = 100 #min( 5, target_list_size / len(g6k) )
+    nrand = 150 #min( 5, target_list_size / len(g6k) )
     print(f"len(target_candidates): {len(target_candidates)} nrand: {nrand}")
     t_gs_list = []
     t_gs_reduced_list = []
@@ -254,12 +267,12 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
         shift_babai_c_list.append(shift_babai_c)
         t_gs_reduced_list.append(t_gs_reduced)
 
-        print(target[dim-sieve_dim:])
-        print(f"Doing grow_db")
+        # print(target[dim-sieve_dim:])
+        # print(f"Doing grow_db")
         then_gdbwt = perf_counter()
         slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=nrand) #add a candidate to the Slicer
         gdbwt_t = perf_counter() - then_gdbwt #TODO: collect this stat
-        print(f"grow_db done in {gdbwt_t}",flush=True)
+        # print(f"grow_db done in {gdbwt_t}",flush=True)
     #run slicer
     print(f"running slicer")
     blocks = 2 # should be the same as in siever
@@ -291,7 +304,7 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
         shift_babai_reduced = G.B.multiply_left( (dim-sieve_dim)*[0] + list( shift_babai_c_reduced ) )
         shift_babai_reduced = shift_babai_reduced[dim-sieve_dim:]
         shift_babai_reduced *= scaling_vec
-        t_gs_bab = np.array(t_gs_reduced) - shift_babai_reduced #np.concatenate( [(dim-sieve_dim)*[0],shift_babai_reduced] )
+        t_gs_bab = np.array(t_gs_reduced) - shift_babai_reduced
 
         diff_gs = t_gs_reduced - t_gs_bab #an actual error vector we observe == actual error (+ some lattice vector for bad candidates)
         diff_gs_nrm_sq = diff_gs@diff_gs #its norm. Ideally, == norm of error
@@ -329,7 +342,7 @@ if __name__=="__main__":
             tasks.append( pool.apply_async(
                 attacker, (
                     input_dict, #input_dict
-                    param[1]-1, #n_guess_coord
+                    param[1], #n_guess_coord
                     param[2]+4, #sieve_dim_max
                     2, #7,  #nsieves
                     nthreads, #nthreads

@@ -48,8 +48,8 @@ g6k.M.update_gso()
 
 print(f"dbsize: {len(g6k)}")
 
-c = [ randrange(-3,4) for j in range(n) ]
-e = np.array( random_on_sphere(n,0.04*gh) )
+c = [ randrange(-30,31) for j in range(n) ]
+e = np.array( random_on_sphere(n,0.44*gh) )
 b = G.B.multiply_left( c )
 b_ = np.array(b,dtype=np.int64)
 t_ = e+b_
