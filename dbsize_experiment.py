@@ -12,7 +12,7 @@ try:
 except ModuleNotFoundError:
     from multiprocessing import Pool
 
-def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperiments, slicer_threads):
+def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperiments, nthreads):
     babai_suc = 0
     approx_fact = 1.02
     ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
@@ -47,7 +47,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
         lll = LLL.Reduction(G)
         lll()
 
-        bkz = LatticeReduction(B)
+        bkz = LatticeReduction(B,threads_bkz=nthreads)
         for beta in range(5,betamax+1):
             then_round=time.perf_counter()
             bkz.BKZ(beta,tours=5)
@@ -63,7 +63,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
     # - - - end Make all fpylll objects - - -
     # make Siver object
     param_sieve = SieverParams()
-    param_sieve['threads'] = 1
+    param_sieve['threads'] = nthreads
     g6k = Siever(G,param_sieve)
     g6k.initialize_local(n-sieve_dim,n-sieve_dim,n)
     print("Running bdgl2...")
@@ -85,8 +85,8 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
     dbsize_start = g6k.db_size()
 
     for j in range(n_shrinkings):
-        slicer = RandomizedSlicer(g6k)
-        slicer.set_nthreads(slicer_threads);
+        # slicer = RandomizedSlicer(g6k)
+        # slicer.set_nthreads(nthreads);
         nrand_, _ = batchCVPP_cost(sieve_dim,100,dbsize_start**(1./sieve_dim),1) #100 can be any constant >1
         print("nrand:", (1./nrand_)**sieve_dim)
         print("Running experiment ", j, "out of ", n_shrinkings)
@@ -130,9 +130,11 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
             if succ:
                 babai_suc+=1
 
-
             if not succ:
-
+                #need to define it here since old targets and their rerandomizations
+                #would remain to be in the db_t
+                slicer = RandomizedSlicer(g6k)
+                slicer.set_nthreads(nthreads);
                 slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=ceil((1./nrand_)**sieve_dim))
                 try:
                     slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (approx_fact**2 * (e_@e_)))
@@ -151,7 +153,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
                     tmp = N.to_canonical( G.from_canonical( tmp, start=0, dimension=n-sieve_dim ) ) #project onto span(B[-sieve_dim:])
                     bab_0 = N.babai(tmp)
 
-                    bab_01=np.array( bab_0+bab_1 )
+                    bab_01 =  np.array( bab_0+bab_1 ) #shifted answer. Good since it is smaller, thus less rounding error
                     bab_01 += np.array(shift_babai_c)
                     print(f"Success: {all(c==bab_01)}")
                     if (all(c==bab_01)):
@@ -160,6 +162,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
                     else:
                         slicer_fail[j] += 1
                         print(f"FAIL")
+                        found_nrm_sq = out_gs@out_gs #meant to be an error modulo Voronoi cell
                         assert ( found_nrm_sq>0.999*(e_@e_) ), f"Found impossible vector! {found_nrm_sq} < {(e_@e_)}"
 
                 except Exception as e: print(f" - - - {e} - - -")
@@ -196,8 +199,8 @@ if __name__ == '__main__':
 
     FPLLL.set_precision(250)
     n, betamax, sieve_dim = 56, 45, 56
-    nthreads = 1
-    slicer_threads = 1
+    nthreads = 2
+    slicer_threads = 2
     shrink_factor = 0.95
     n_shrinkings = 20
     pool = Pool(processes = nthreads )

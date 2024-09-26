@@ -11,7 +11,7 @@ try:
 except ModuleNotFoundError:
     from multiprocessing import Pool
 
-def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
+def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments, nthreads=1):
     babai_suc = 0
     approx_fact = 1.1
     ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
@@ -48,7 +48,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
         lll = LLL.Reduction(G)
         lll()
 
-        bkz = LatticeReduction(B)
+        bkz = LatticeReduction(B, threads_bkz=nthreads)
         for beta in range(5,betamax+1):
             then_round=time.perf_counter()
             bkz.BKZ(beta,tours=5)
@@ -64,9 +64,9 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
     # - - - end Make all fpylll objects - - -
 
 
-
+    # rinv_ = np.array( [sqrt(gh/tt) for tt in G.r()[G.d-sieve_dim:]], dtype=np.float64 ) #transform. coeffs btwn scaled and non-scaled gs coords
     param_sieve = SieverParams()
-    param_sieve['threads'] = 1
+    param_sieve['threads'] = nthreads
     g6k = Siever(G,param_sieve)
     g6k.initialize_local(n-sieve_dim,n-sieve_dim,n)
     print("Running bdgl2...")
@@ -88,10 +88,12 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
     for i in range(Nexperiments):
 
         print("Running experiment ", i, "out of ", Nexperiments-1)
+        if i%5==0:
+            sys.stdout.flush()
 
         c = [ randrange(-10,10) for j in range(n) ]
         #e = np.array( [ randrange(-8,9) for j in range(n) ],dtype=np.int64 )
-        e = np.array( random_on_sphere(n, 1.0*gh/2) )
+        e = np.array( random_on_sphere(n, 0.46*gh) )
 
         print(f"gauss: {gh} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
         e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
@@ -153,31 +155,41 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments):
                     for tmp in iterator:
                         out_gs_reduced = tmp  #cdb[0]
                         break
-                    out_gs = out_gs_reduced + t_gs_shift
+                    out_gs =  out_gs_reduced + t_gs_shift #t_gs_shift + suspected error
 
                     # - - - Check - - - -
                     out = to_canonical_scaled( G,out_gs,offset=sieve_dim )
 
-                    projerr = G.to_canonical( G.from_canonical(e,start=n-sieve_dim), start=n-sieve_dim)
-                    diff_v =  np.array(projerr)-np.array(out)
-
-
                     N = GSO.Mat( G.B[:n-sieve_dim], float_type=ft )
                     N.update_gso()
+
+                    """
+                    out_gs_fpylll_format = out_gs * rinv_ #translate from unsceled to the scaled representation for babai
+                    bab_1 = G.babai(t_gs_non_scaled-out_gs_fpylll_format,start=n-sieve_dim) #last sieve_dim coordinates of s
+                    tmp = t - np.array( G.B[-sieve_dim:].multiply_left(bab_1) )
+                    tmp = N.to_canonical( G.from_canonical( tmp, start=0, dimension=n-sieve_dim ) ) #project onto span(B[-sieve_dim:])
+                    bab_0 = N.babai(tmp)
+                    """
                     bab_1 = G.babai(t-np.array(out),start=n-sieve_dim) #last sieve_dim coordinates of s
                     tmp = t - np.array( G.B[-sieve_dim:].multiply_left(bab_1) )
                     tmp = N.to_canonical( G.from_canonical( tmp, start=0, dimension=n-sieve_dim ) ) #project onto span(B[-sieve_dim:])
                     bab_0 = N.babai(tmp)
 
-                    bab_01=np.array( bab_0+bab_1 )
-                    bab_01 += np.array(shift_babai_c) #shifted answer. Good since it is smaller, thus less rounding error
+
+                    bab_01=np.array( bab_0+bab_1 ) #shifted answer. Good since it is smaller, thus less rounding error
+                    bab_01 += np.array(shift_babai_c)
                     print(f"Slicer Success: {all(c==bab_01)}")
+                    out_gs_reduced = np.array( out_gs_reduced )
+                    found_nrm_sq = out_gs_reduced@out_gs_reduced
                     if (all(c==bab_01)):
+                        print(f"SUCCESS")
+                        print(f"found found_nrm_sq (succ): {found_nrm_sq}")
                         slicer_suc[ctr] += 1
                         this_instance_succseeded = True
                     else:
                         print("SLICER fail")
                         slicer_fail[ctr] += 1
+                        print(f"found found_nrm_sq: {found_nrm_sq}")
                         # print(f"c: {c}")
                         # print(f"bab_01: {bab_01}")
                         # print(f"c-shift_c{np.array(c)-np.array(shift_babai_c)}")
@@ -218,8 +230,9 @@ if __name__ == '__main__':
 
 
     FPLLL.set_precision(250)
-    n, betamax, sieve_dim = 55, 48, 55
-    nthreads = 1
+    n, betamax, sieve_dim = 56, 45, 56
+    nthreads = 2
+    slicer_threads = 2
     pool = Pool(processes = nthreads )
     tasks = []
 
@@ -228,7 +241,7 @@ if __name__ == '__main__':
         # density_plot = run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments)
         # density_plots.append(density_plot)
         tasks.append( pool.apply_async(
-            run_exp, (lat_id, n, betamax, sieve_dim, range_, Nexperiments)
+            run_exp, (lat_id, n, betamax, sieve_dim, range_, Nexperiments, slicer_threads)
         ) )
 
     for t in tasks:
