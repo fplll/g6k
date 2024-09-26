@@ -13,13 +13,14 @@ except ModuleNotFoundError:
     from multiprocessing import Pool
 
 def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperiments, nthreads):
-    babai_suc = 0
+
     approx_fact = 1.055
     ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
     print(f"launching n, betamax, sieve_dim = {n, betamax, sieve_dim}")
 
     slicer_suc = [0]*n_shrinkings
     slicer_fail = [0]*n_shrinkings
+    babai_suc = [0]*n_shrinkings
     # - - - try load a lattice - - -
     filename = f"saved_lattices/bdgl2_n{n}_b{sieve_dim}_{lat_id}.pkl"
     nothing_to_load = True
@@ -93,7 +94,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
 
         for i in range(Nexperiments):
             c = [ randrange(-10,10) for k in range(n) ]
-            e = np.array( random_on_sphere(n, 0.48 * gh) ) #error vector
+            e = np.array( random_on_sphere(n, 0.5 * gh) ) #error vector
             print(f"gauss: {gh} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
             e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
 
@@ -121,8 +122,9 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
             bab_1 = G.babai(t-np.array(out),start=n-sieve_dim) #last sieve_dim coordinates of s
             succ = all( np.array( c[G.d-sieve_dim:] )==bab_1 )
             print(f"Babai Success: {succ}")
+
             if succ:
-                babai_suc+=1
+                babai_suc[j]+=1
 
             if not succ:
                 #need to define it here since old targets and their rerandomizations
@@ -172,7 +174,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
     cntr = 0
     s = 1
     for j in range(n_shrinkings):
-        density_plot.append( (s,slicer_suc[cntr]+babai_suc) )
+        density_plot.append( (s,slicer_suc[cntr]+babai_suc[cntr]) )
         cntr+=1
         s *= shrink_factor
     return density_plot
@@ -192,11 +194,11 @@ if __name__ == '__main__':
 
 
     FPLLL.set_precision(250)
-    n, betamax, sieve_dim = 56, 45, 56
+    n, betamax, sieve_dim = 60, 45, 60
     nthreads = 2
     slicer_threads = 2
-    shrink_factor = 0.95
-    n_shrinkings = 20
+    shrink_factor = 0.7
+    n_shrinkings = 10
     pool = Pool(processes = nthreads )
     tasks = []
 
@@ -214,4 +216,4 @@ if __name__ == '__main__':
         pickle.dump( density_plots, file )
 
     print(density_plots)
-    print(Nexperiments)
+    #print(Nexperiments)
