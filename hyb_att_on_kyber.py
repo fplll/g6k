@@ -122,7 +122,7 @@ def attacker(input_dict, n_guess_coord, sieve_dim_max, nsieves, nthreads=1, trac
     for i in range(nsieves).
     """
     # B, H11, q, eta, k, bse, betamax = input_dict['B'], input_dict['H11'], input_dict['q'], input_dict['eta'], input_dict['k'], input_dict['bse'], input_dict['betamax']
-    n, kappa, q, eta, k, seed = input_dict['n'], input_dict['kappa'], input_dict['q'], input_dict['eta'], input_dict['k'], input_dict['seed']
+    n, kappa, q, eta, k, seed = input_dict['n'], n_guess_coord, input_dict['q'], input_dict['eta'], input_dict['k'], input_dict['seed']
     A, q, eta, k, bse = load_lwe(n,q,eta,k,seed=seed[0])
 
     B = [ [int(0) for i in range(2*k*n)] for j in range(2*k*n) ]
@@ -136,16 +136,13 @@ def attacker(input_dict, n_guess_coord, sieve_dim_max, nsieves, nthreads=1, trac
 
     g6k = Siever.restore_from_file( out_path + f'g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-1}' )
     H11 = g6k.M.B
+    B = IntegerMatrix.from_matrix(B)
 
     dim = B.nrows
     fl = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
 
     int_type = B.int_type
-    G = GSO.Mat( B, U=IntegerMatrix.identity(dim-kappa,int_type=int_type), UinvT=IntegerMatrix.identity(dim-kappa,int_type=int_type), float_type=ft )
-    G.update_gso()
-
-    print(G.get_r(0,0)**0.5)
-    print(f"t_gs: {t_gs} | norm2: {(t_gs@t_gs)}")
+    ft = "dd" if config.have_qd else "mpfr"
 
     #TODO: make dimension incremention + BKZ functionality
     """
@@ -159,9 +156,9 @@ def attacker(input_dict, n_guess_coord, sieve_dim_max, nsieves, nthreads=1, trac
 
     for sieveid in range(nsieves):
         vec_index = 0
-        filename_siever = out_path+f'g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+i}'
+        filename_siever = out_path+f'g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+sieveid}'
         g6k = Siever.restore_from_file(filename_siever)
-        g6k.params["nthreads"] = nthreads
+        # g6k.params["nthreads"] = nthreads #readonly
         for b, s, e in bse:
             try:
                 candidate = alg_3(g6k,B,H11,b,n_guess_coord, nthreads=nthreads, tracer_alg3=None)
@@ -225,7 +222,7 @@ if __name__=="__main__":
     params = [(140, 12, 48)]#, (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
     nworkers, nthreads = 1, 1
 
-    lats_per_dim = 10
+    lats_per_dim = 1
     inst_per_lat = 10 #how many instances per A, q
     q, eta = 3329, 3
     #def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthreads=1)
@@ -234,20 +231,17 @@ if __name__=="__main__":
     tasks = []
     for param in params:
         for latnum in range(lats_per_dim):
-            for kappa in range(param[1]-1, param[1]+2,1):
-                # seed is a list [current latnum, max num of targets
-                #attacker(input_dict, n_guess_coord, sieve_dim_max, nsieves, tracer_exp=None)
-                input_dict = {"n": param[0], "kappa": kappa, "q":q , "eta":eta , "k":1 , "seed":[latnum,10] }
-                tasks.append( pool.apply_async(
-                    attacker, (
-                        input_dict, #input_dict
-                        kappa, #n_guess_coord
-                        param[2]+4, #sieve_dim_max
-                        7,  #nsieves
-                        nthreads, #nthreads
-                        None, #tracer_exp
-                        )
-                ) )
+            input_dict = {"n": param[0], "q":q , "eta":eta , "k":1 , "seed":[latnum,10] }
+            tasks.append( pool.apply_async(
+                attacker, (
+                    input_dict, #input_dict
+                    param[1]-1, #n_guess_coord
+                    param[2]+4, #sieve_dim_max
+                    7,  #nsieves
+                    nthreads, #nthreads
+                    None, #tracer_exp
+                    )
+            ) )
 
 for t in tasks:
     output.append( t.get() )

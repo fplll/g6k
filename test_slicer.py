@@ -9,7 +9,7 @@ import sys
 if __name__ == "__main__":
 
     FPLLL.set_precision(250)
-    n, betamax, sieve_dim = 55, 55, 55 #n=170 is liikely to fail
+    n, betamax, sieve_dim = 55, 55, 50 #n=170 is liikely to fail
     ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
     # - - - try load a lattice - - -
     filename = f"bdgl2_n{n}_b{sieve_dim}.pkl"
