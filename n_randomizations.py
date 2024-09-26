@@ -85,6 +85,9 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments, nthreads=1):
     buckets = min(buckets, sp["bdgl_multi_hash"] * N / sp["bdgl_min_bucket_size"])
     buckets = max(buckets, 2**(blocks-1))
 
+    N = GSO.Mat( G.B[:n-sieve_dim], float_type=ft )
+    N.update_gso()
+
     for i in range(Nexperiments):
 
         print("Running experiment ", i, "out of ", Nexperiments-1)
@@ -161,8 +164,8 @@ def run_exp(lat_id, n, betamax, sieve_dim, range_, Nexperiments, nthreads=1):
                     # - - - Check - - - -
                     out = to_canonical_scaled( G,out_gs,offset=sieve_dim )
 
-                    N = GSO.Mat( G.B[:n-sieve_dim], float_type=ft )
-                    N.update_gso()
+                    # N = GSO.Mat( G.B[:n-sieve_dim], float_type=ft )
+                    # N.update_gso()
 
                     """
                     out_gs_fpylll_format = out_gs * rinv_ #translate from unsceled to the scaled representation for babai

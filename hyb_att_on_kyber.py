@@ -225,8 +225,61 @@ def alg_3(g6k,B,H11,t,n_guess_coord, nthreads=1, tracer_alg3=None):
 def alg_2_batched( g6k,target_candidates,H11,n_slicer_coord, nthreads=1, tracer_alg2=None ):
     raise NotImplementedError
     dist_sq_bnd = 1.0 #TODO: implement
+    G = g6k.gso
+    dim = G.d
+    N = GSO.Mat( G.B[:n-sieve_dim], float_type=ft )
+    N.update_gso()
 
-    for target
+    # - - - prepare Slicer for batch cvp - - -
+    slicer = RandomizedSlicer(g6k)
+    slicer.set_nthreads(2);
+    # - - - END prepare Slicer for batch cvp - - -
+
+    #WARNING: we do not store t_gs_reduced_list since t_gs_list =  t_gs - gs(shift_babai_c*B)
+    #this is a time-memory tradeoff. Since Slicer returns only an error vector, we don\'t
+    #know which of the target candidates it corresponds to.
+    t_gs_list = []
+    shift_babai_c_list = []
+    for target in target_candidates:
+        t_gs = from_canonical_scaled( G,t,offset=sieve_dim )
+        shift_babai_c = G.babai((n-sieve_dim)*[0] + list(t_gs_non_scaled), start=n-sieve_dim,gso=True)
+        shift_babai = G.B.multiply_left( (n-sieve_dim)*[0] + list( shift_babai_c ) )
+        t_gs_reduced = from_canonical_scaled( G,np.array(t)-shift_babai,offset=sieve_dim ) #this is the actual reduced target
+        # t_gs_shift = from_canonical_scaled( G,shift_babai,offset=sieve_dim )
+
+        t_gs_list.append(t_gs)
+        shift_babai_c_list.append(shift_babai_c)
+
+        then_gdbwt = perf_counter()
+        slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=nrand) #add a candidate to the Slicer
+        gdbwt_t = perf_counter() - then_gdbwt #TODO: collect this stat
+    #run slicer
+    slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (approx_fact*approx_fact*(e_@e_)))
+
+    iterator = slicer.itervalues_t()
+    for tmp in iterator:
+        out_gs_reduced = tmp  #db_t[0] is expected to contain the error vector
+        break
+    index = 0
+    #now we deduce which target candidate the error vector corresponds to
+    min_norm_err_sq = 10**32
+    target_best = None
+    for index in range(len(shift_babai_c_list)):
+        shift_babai_c = shift_babai_c_list[index]
+        t_gs = t_gs_list[index]
+
+        shift_babai = G.B.multiply_left( (n-sieve_dim)*[0] + list( shift_babai_c ) )
+        t_gs_shift = from_canonical_scaled( G,shift_babai,offset=sieve_dim )
+        out_gs =  out_gs_reduced + t_gs_shift
+        out = to_canonical_scaled( G,out_gs,offset=sieve_dim )
+
+        bab_1 = G.babai(t-np.array(out),start=n-sieve_dim) #last sieve_dim coordinates of s
+        tmp = t - np.array( G.B[-sieve_dim:].multiply_left(bab_1) )
+        tmp = N.to_canonical( G.from_canonical( tmp, start=0, dimension=n-sieve_dim ) ) #project onto span(B[-sieve_dim:])
+        bab_0 = N.babai(tmp)
+
+        bab_01 = np.array( bab_0+bab_1 ) #shifted answer. Good since it is smaller, thus less rounding error
+        bab_01 += np.array(shift_babai_c)
 
 if __name__=="__main__":
     # (dimension, predicted kappa, predicted beta)
