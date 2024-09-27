@@ -110,6 +110,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
             shift_babai = G.B.multiply_left( (n-sieve_dim)*[0] + list( shift_babai_c ) )
             t_gs_reduced = from_canonical_scaled( G,np.array(t)-shift_babai,offset=sieve_dim ) #this is the actual reduced target
             t_gs_shift = from_canonical_scaled( G,shift_babai,offset=sieve_dim )
+            print(f"t_gs_reduced:{t_gs_reduced[:32]}")
 
             print("projected reduced target squared length:", (t_gs_reduced@t_gs_reduced))
             print("projected error squared length:", (e_@e_))
@@ -194,9 +195,9 @@ if __name__ == '__main__':
 
 
     FPLLL.set_precision(250)
-    n, betamax, sieve_dim = 70, 55, 70
+    n, betamax, sieve_dim = 50, 45, 50
     nthreads = 50 # number of workers
-    slicer_threads = 2 # threads the slicer will use 
+    slicer_threads = 2 # threads the slicer will use
     shrink_factor = 0.7
     n_shrinkings = 10
     pool = Pool(processes = nthreads )
