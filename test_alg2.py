@@ -8,7 +8,7 @@ import sys
 
 from hyb_att_on_kyber import alg_2_batched
 
-n, betamax, sieve_dim = 55, 55, 50 #n=170 is liikely to fail
+n, betamax, sieve_dim = 120, 52,50 #n=170 is liikely to fail
 ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
 
 print(f"Nothing to load. Computing")

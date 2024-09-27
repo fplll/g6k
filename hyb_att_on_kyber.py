@@ -167,7 +167,7 @@ def attacker(input_dict, n_guess_coord, sieve_dim_max, nsieves, nthreads=1, trac
                 print("g6k load supposedly successfull.")
                 pass
 
-def alg_3(g6k,B,H11,t,n_guess_coord, eta, nthreads=1, tracer_alg3=None):
+def alg_3(g6k,B,H11,t,n_guess_coord, eta, dist_sq_bnd=1.0, nthreads=1, tracer_alg3=None):
     # raise NotImplementedError
     # - - - prepare targets - - -
     then_start = perf_counter()
@@ -183,26 +183,25 @@ def alg_3(g6k,B,H11,t,n_guess_coord, eta, nthreads=1, tracer_alg3=None):
     print(f"nsampl: {nsampl}")
     nsampl = min(max_nsampl, nsampl)
     target_candidates = [t1] #first target is always the original one
-    vtilde2s = [np.array((dim-n_guess_coord)*[0] + list(t2))]
+    vtilde2s = [np.array(t2) ]
 
     # B[:dim-n_guess_coord][0][:dim-n_guess_coord] #this does not work
     H12 = IntegerMatrix.from_matrix( [list(b)[:dim-n_guess_coord] for b in B[dim-n_guess_coord:]] )
-    for times in range(nsampl): #Alg 3 steps 4-7
+    for times in range(nsampl+2): #Alg 3 steps 4-7
         if times!=0 and times%64 == 0:
             print(f"{times} done out of {nsampl}", end=", ")
         etilde2 = np.array( distrib.sample( n_guess_coord ) ) #= (0 | e2)
         # print(f"len etilde2: {len(etilde2)}")
         vtilde2 = np.array(t2)-etilde2
         tmp = np.concatenate([(dim-n_guess_coord)*[0] , vtilde2])
-        vtilde2s.append( tmp )
+        vtilde2s.append( vtilde2   )
         #compute H12*H22^-1 * vtilde2 = H12*vtilde2 since H22 is identity
         tmp = H12.multiply_left(vtilde2)
-        # tmp = t - np.concatenate( [tmp, n_guess_coord*[0]] )
 
         # print(f"len(vtilde2): {len(vtilde2)} len(t1): {len(t1)}")
         # print(f"dim: {dim} n_guess_coord: {n_guess_coord}")
         t1_ = np.array( list(t1) ) - tmp
-        print(t1_)
+        # print(t1_)
         # print(f"len t1_: {len(t1_)}")
         target_candidates.append( t1_ )
     print()
@@ -213,16 +212,19 @@ def alg_3(g6k,B,H11,t,n_guess_coord, eta, nthreads=1, tracer_alg3=None):
     #TODO: dist_sq_bnd might have changed at this point (or even in attacker)
     #TODO: deduce what is the betamax
     betamax = 48
-    ctilde1 = alg_2_batched( g6k,target_candidates, nthreads=nthreads, tracer_alg2=None )
+    ctilde1 = alg_2_batched( g6k,target_candidates, dist_sq_bnd, nthreads=nthreads, tracer_alg2=None )
 
     v1 = np.array( g6k.M.B[:len(ctilde1)].multiply_left( ctilde1 ) )
     #keep a track of v2?
     argminv = None
     minv = 10**12
     for vtilde2 in vtilde2s:
-        v2 = vtilde2
+        tmp = H12.multiply_left(vtilde2)
+        # v2 = np.concatenate( [tmp,vtilde2] )
+        v2 = np.concatenate( [(dim-n_guess_coord)*[0],vtilde2] )
         v = np.concatenate([v1,n_guess_coord*[0]])+v2
-        vv = v@v
+        v_t = (v-t)
+        vv = v_t@v_t
         # print(f"v: {v}")
         if vv < minv:
             argminv = v
@@ -257,10 +259,16 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
     for target in target_candidates:
         # print(end=".", flush=True)
         t_gs = from_canonical_scaled( G,target,offset=sieve_dim )
-        t_gs_non_scaled = G.from_canonical(target)[-sieve_dim:]
-        shift_babai_c = G.babai((dim-sieve_dim)*[0] + list(t_gs_non_scaled), start=dim-sieve_dim,gso=True)
+        t_gs_non_scaled = G.from_canonical(target)[dim-sieve_dim:]
+        shift_babai_c =  list( G.babai( list(t_gs_non_scaled), start=dim-sieve_dim, dimension=sieve_dim, gso=True) )
         shift_babai = G.B.multiply_left( (dim-sieve_dim)*[0] + list( shift_babai_c ) )
         t_gs_reduced = from_canonical_scaled( G,np.array(target)-shift_babai,offset=sieve_dim ) #this is the actual reduced target
+        assert len(t_gs_reduced) == sieve_dim
+        # t_gs_reduced = np.concatenate( [(dim-sieve_dim)*[0],t_gs_reduced[(dim-sieve_dim):]] )
+        # debug = G.from_canonical( (np.array(target)-shift_babai) )
+        # print(f"t_gs_reduced:{debug}")
+        assert all( abs( t_gs_reduced[dim-sieve_dim:] ) <0.501 ) #assert that the last Sieve dim coords are size reduced
+
         # t_gs_shift = from_canonical_scaled( G,shift_babai,offset=sieve_dim )
         print("t_gs_reduced:", t_gs_reduced)
 

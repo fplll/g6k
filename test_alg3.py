@@ -100,13 +100,13 @@ def alg_3_ans(g6k,B,H11,t,n_guess_coord, eta, ans, nthreads=1, tracer_alg3=None)
     return v
 
 if __name__=="__main__":
-    n, k = 70, 1
+    n, k = 65, 1
     eta = 3
-    n_guess_coord, n_slicer_coord = 5, 50
+    n_guess_coord, n_slicer_coord = 5, 40
     sieve_dim_max = n_slicer_coord
     nsieves = 2
     nthreads = 2
-    betamax = 40
+    betamax = 42
     A,q,bse = generateLWEInstances(n, q = 3329, eta = eta, k=k, ntar=1)
     b, s, e = bse[0]
 
@@ -139,7 +139,11 @@ if __name__=="__main__":
 
     t = np.concatenate([b,n*[0]])
     answer = np.concatenate( [(s.dot(A)) % q,(dim//2)*[0]] )
-    g6k(alg="bdgl")
+    g6k(alg="bdgl2")
+
+    e_ = e[:-n_guess_coord]
+    e_ = from_canonical_scaled( G,e_,offset=n_slicer_coord )
+    dist_sq_bnd = e_@e_
 
     for i in range(n-n_guess_coord):
         for j in range(n-n_guess_coord):
@@ -147,8 +151,9 @@ if __name__=="__main__":
     B = IntegerMatrix.from_matrix(Binit)
     # print(B)
 
-    v = alg_3(g6k,B,H11,t,n_guess_coord, eta, nthreads=nthreads, tracer_alg3=None)
+    v = alg_3(g6k,B,H11,t,n_guess_coord, eta, dist_sq_bnd=0.45, nthreads=nthreads, tracer_alg3=None)
     # v = alg_3_ans(g6k,B,H11,t,n_guess_coord, eta, ans=np.concatenate([-e,s]), nthreads=nthreads, tracer_alg3=None)
     print(answer)
     print(v)
+    print(f"dist_sq_bnd: {dist_sq_bnd}")
     # print(([-s,e])) #np.concatenate
