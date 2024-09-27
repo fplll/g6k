@@ -168,6 +168,7 @@ def attacker(input_dict, n_guess_coord, sieve_dim_max, nsieves, nthreads=1, trac
                 pass
 
 def alg_3(g6k,B,H11,t,n_guess_coord, eta, dist_sq_bnd=1.0, nthreads=1, tracer_alg3=None):
+    #TODO: inject correct target and see what happens
     # raise NotImplementedError
     # - - - prepare targets - - -
     then_start = perf_counter()
@@ -218,16 +219,19 @@ def alg_3(g6k,B,H11,t,n_guess_coord, eta, dist_sq_bnd=1.0, nthreads=1, tracer_al
     #keep a track of v2?
     argminv = None
     minv = 10**12
+    cntr=0
     for vtilde2 in vtilde2s:
+        t = target_candidates[cntr]
         tmp = H12.multiply_left(vtilde2)
         # v2 = np.concatenate( [tmp,vtilde2] )
         v2 = np.concatenate( [(dim-n_guess_coord)*[0],vtilde2] )
-        v = np.concatenate([v1,n_guess_coord*[0]])+v2
-        v_t = (v-t)
+        v = np.concatenate([v1,n_guess_coord*[0]])+v2+np.concatenate( [ np.array( H12.multiply_left(vtilde2) ), n_guess_coord*[0] ] )
+        v_t = v-np.concatenate([t,n_guess_coord*[0]])
         vv = v_t@v_t
         # print(f"v: {v}")
         if vv < minv:
             argminv = v
+        cntr += 1
     return v
 
 def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_alg2=None ):
@@ -278,7 +282,8 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
         # print(target[dim-sieve_dim:])
         # print(f"Doing grow_db")
         then_gdbwt = perf_counter()
-        slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=nrand) #add a candidate to the Slicer
+        slicer.grow_db_with_target(t_gs_reduced, n_per_target=nrand)
+        # slicer.grow_db_with_target((dim-sieve_dim)*[0] + [float(tt) for tt in t_gs_reduced[dim-sieve_dim:]], n_per_target=nrand) #add a candidate to the Slicer
         gdbwt_t = perf_counter() - then_gdbwt #TODO: collect this stat
         # print(f"grow_db done in {gdbwt_t}",flush=True)
     #run slicer

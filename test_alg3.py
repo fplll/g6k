@@ -13,6 +13,7 @@ from sample import *
 
 inp_path = "lwe instances/saved_lattices/"
 out_path = "lwe instances/reduced_lattices/"
+max_nsampl = 5000
 
 def kyberGen(n, q = 3329, eta = 3, k=1):
     polys = []
@@ -37,7 +38,29 @@ def generateLWEInstances(n, q = 3329, eta = 3, k=1, ntar=5):
 
     return A,q,bse
 
-def alg_3_ans(g6k,B,H11,t,n_guess_coord, eta, ans, nthreads=1, tracer_alg3=None):
+def batch_babai( g6k,target_candidates, dist_sq_bnd ):
+    G = g6k.M
+
+    bs = []
+    index = 0
+    minnorm, best_index = 10**32, 0
+    for t in target_candidates:
+        cb = G.babai(t)
+        b = np.array( G.B.multiply_left( cb ) )
+        bs.append(b)
+
+        t = np.array(t)
+        curnrm = (b-t)@(b-t)
+        if curnrm < minnorm:
+            minnorm = curnrm
+            best_index = index
+            best_cb = cb
+        index+=1
+    print(f"minnorm: {minnorm**0.5}")
+    print(f"best_cb: {best_cb}")
+    return best_cb
+
+def alg_3_debug(g6k,B,H11,t,n_guess_coord, eta, s, dist_sq_bnd=1.0, nthreads=1, tracer_alg3=None):
     # raise NotImplementedError
     # - - - prepare targets - - -
     then_start = perf_counter()
@@ -45,29 +68,30 @@ def alg_3_ans(g6k,B,H11,t,n_guess_coord, eta, ans, nthreads=1, tracer_alg3=None)
     print(f"dim: {dim}")
     # t_gs = from_canonical_scaled( G,t,offset=sieve_dim )
 
-    t1, t2 = t[:dim-n_guess_coord], t[dim-n_guess_coord:]
-    slicer = RandomizedSlicer(g6k)
+    t1, t2 = t[:-n_guess_coord], t[-n_guess_coord:]
+    # slicer = RandomizedSlicer(g6k)
     distrib = centeredBinomial(eta)
     #TODO: make/(check if is) practical
     nsampl = ceil( 2 ** ( distrib.entropy * n_guess_coord ) )
     print(f"nsampl: {nsampl}")
-    nsampl = 1 #min(max_nsampl, nsampl)
-    target_candidates = [t1] #first target is always the original one
-    vtilde2s = [np.array((dim-n_guess_coord)*[0] + list(t2))]
+    nsampl = min(max_nsampl, nsampl)
+    target_candidates = []
+    vtilde2s = []
 
     # B[:dim-n_guess_coord][0][:dim-n_guess_coord] #this does not work
     H12 = IntegerMatrix.from_matrix( [list(b)[:dim-n_guess_coord] for b in B[dim-n_guess_coord:]] )
-    for times in range(nsampl): #Alg 3 steps 4-7
+    for times in range(120): #Alg 3 steps 4-7
         if times!=0 and times%64 == 0:
             print(f"{times} done out of {nsampl}", end=", ")
-        etilde2 = ans[-n_guess_coord:] #np.array( distrib.sample( n_guess_coord ) ) #= (0 | e2)
+        if times>0:
+            etilde2 = np.array( distrib.sample( n_guess_coord ) ) #= (0 | e2)
+        else:
+            etilde2 = np.array(-s[-n_guess_coord:])
         # print(f"len etilde2: {len(etilde2)}")
         vtilde2 = np.array(t2)-etilde2
-        tmp = np.concatenate([(dim-n_guess_coord)*[0] , vtilde2])
-        vtilde2s.append( tmp )
+        vtilde2s.append( vtilde2  )
         #compute H12*H22^-1 * vtilde2 = H12*vtilde2 since H22 is identity
         tmp = H12.multiply_left(vtilde2)
-        # tmp = t - np.concatenate( [tmp, n_guess_coord*[0]] )
 
         # print(f"len(vtilde2): {len(vtilde2)} len(t1): {len(t1)}")
         # print(f"dim: {dim} n_guess_coord: {n_guess_coord}")
@@ -82,31 +106,41 @@ def alg_3_ans(g6k,B,H11,t,n_guess_coord, eta, ans, nthreads=1, tracer_alg3=None)
     """
     #TODO: dist_sq_bnd might have changed at this point (or even in attacker)
     #TODO: deduce what is the betamax
-    betamax = 48
-    ctilde1 = alg_2_batched( g6k,target_candidates, nthreads=nthreads, tracer_alg2=None )
+    # betamax = 48
+    # ctilde1 = alg_2_batched( g6k,target_candidates, dist_sq_bnd=0.5, nthreads=nthreads, tracer_alg2=None )
+    ctilde1 = batch_babai( g6k,target_candidates, dist_sq_bnd )
 
-    assert len(ctilde1) == H11.nrows
     v1 = np.array( H11.multiply_left( ctilde1 ) )
     #keep a track of v2?
     argminv = None
     minv = 10**12
+    cntr = 0
     for vtilde2 in vtilde2s:
-        v2 = vtilde2
-        v = np.concatenate([v1,n_guess_coord*[0]])+v2
-        vv = v@v
+        # tmp = np.concatenate( [ H12.multiply_left(vtilde2), n_guess_coord*[0] ] )
+        # v2 = np.concatenate( [tmp,vtilde2] )
+        # print(H12.shape, len(vtilde2))
+        v2 = np.concatenate( [(dim-n_guess_coord)*[0],vtilde2] )
+        babshift = np.concatenate( [ H11.multiply_left( G.babai(H12.multiply_left(vtilde2)) ), n_guess_coord*[0] ] )
+        v = np.concatenate([v1,n_guess_coord*[0]]) + v2 + np.concatenate( [ np.array( H12.multiply_left(vtilde2) ), n_guess_coord*[0] ] )
+
+        print(v)
+        t = target_candidates[cntr]
+        v_t = v-np.concatenate([t,n_guess_coord*[0]]) #+ tmp
+        vv = v_t@v_t
         # print(f"v: {v}")
         if vv < minv:
             argminv = v
+        cntr+=1
     return v
 
 if __name__=="__main__":
-    n, k = 65, 1
+    n, k = 100, 1
     eta = 3
-    n_guess_coord, n_slicer_coord = 5, 40
+    n_guess_coord, n_slicer_coord = 5, 45
     sieve_dim_max = n_slicer_coord
     nsieves = 2
     nthreads = 2
-    betamax = 42
+    betamax = 45
     A,q,bse = generateLWEInstances(n, q = 3329, eta = eta, k=k, ntar=1)
     b, s, e = bse[0]
 
@@ -129,8 +163,10 @@ if __name__=="__main__":
         LR.BKZ( beta )
         print(f"BKZ-{beta} done in {perf_counter()-then}")
 
+    H11 = LR.basis
     H11r, H11c = H11.nrows, H11.ncols
-    G = GSO.Mat( H11,U=IntegerMatrix.identity(H11r), UinvT=IntegerMatrix.identity(H11r), float_type=ft )
+    G = GSO.Mat( H11,U=IntegerMatrix.identity(H11r,int_type=H11.int_type), UinvT=IntegerMatrix.identity(H11r,int_type=H11.int_type), float_type=ft )
+    H11r, H11c = H11.nrows, H11.ncols
     G.update_gso()
     param_sieve = SieverParams()
     param_sieve['threads'] = nthreads
@@ -138,10 +174,10 @@ if __name__=="__main__":
     g6k.initialize_local(H11r-sieve_dim_max, H11r-sieve_dim_max+nsieves ,H11r)
 
     t = np.concatenate([b,n*[0]])
-    answer = np.concatenate( [(s.dot(A)) % q,(dim//2)*[0]] )
+    answer = np.concatenate( [b-e,s] )
     g6k(alg="bdgl2")
 
-    e_ = e[:-n_guess_coord]
+    e_ = e
     e_ = from_canonical_scaled( G,e_,offset=n_slicer_coord )
     dist_sq_bnd = e_@e_
 
@@ -152,8 +188,10 @@ if __name__=="__main__":
     # print(B)
 
     v = alg_3(g6k,B,H11,t,n_guess_coord, eta, dist_sq_bnd=0.45, nthreads=nthreads, tracer_alg3=None)
-    # v = alg_3_ans(g6k,B,H11,t,n_guess_coord, eta, ans=np.concatenate([-e,s]), nthreads=nthreads, tracer_alg3=None)
+    # v = alg_3_debug(g6k,B,H11,t,n_guess_coord, eta, s, nthreads=nthreads, tracer_alg3=None)
     print(answer)
     print(v)
-    print(f"dist_sq_bnd: {dist_sq_bnd}")
+    # print(f"dist_sq_bnd: {dist_sq_bnd}")
     # print(([-s,e])) #np.concatenate
+    print(answer==v)
+    print( (answer==v)[:dim-n_guess_coord] )

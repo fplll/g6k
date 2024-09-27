@@ -6,9 +6,11 @@ from g6k.slicer import RandomizedSlicer
 from utils import *
 import sys
 
+from random import shuffle
+
 from hyb_att_on_kyber import alg_2_batched
 
-n, betamax, sieve_dim = 120, 52,50 #n=170 is liikely to fail
+n, betamax, sieve_dim = 80, 57, 57 #n=170 is liikely to fail
 ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
 
 print(f"Nothing to load. Computing")
@@ -56,6 +58,7 @@ t_ = e+b_
 t = [ int(tt) for tt in t_ ]
 e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
 print(f"e_: {e_}")
+print(f"r: {[rr**0.5 for rr in G.r()]}")
 
 target_candidates = [t]
 for _ in range(5):
@@ -63,6 +66,7 @@ for _ in range(5):
     tcand_ = e2 + e + b_
     tcand = [ int(tt) for tt in t_ ]
     target_candidates.append( tcand )
+shuffle(target_candidates)
 
 #alg_2_batched( g6k,target_candidates,H11, nthreads=1, tracer_alg2=None )
 bab_01 = np.array( alg_2_batched( g6k,target_candidates,dist_sq_bnd=e_@e_  ) )
