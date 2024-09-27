@@ -86,7 +86,7 @@ void RandomizedSlicer::randomize_target_small_task(Entry_t &t)
 }
 
 void RandomizedSlicer::grow_db_with_target(const double t_yr[], size_t n_per_target){
-    std::cout << "in grow_db"  << std::endl;
+    //std::cout << "in grow_db"  << std::endl;
     Entry_t input_t;
 
     for(int i = 0; i < MAX_SIEVING_DIM; i++){

@@ -274,6 +274,7 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
         assert all( abs( t_gs_reduced[dim-sieve_dim:] ) <0.501 ) #assert that the last Sieve dim coords are size reduced
 
         # t_gs_shift = from_canonical_scaled( G,shift_babai,offset=sieve_dim )
+        print("t_gs_reduced:", t_gs_reduced)
 
         t_gs_list.append(t_gs)
         shift_babai_c_list.append(shift_babai_c)
