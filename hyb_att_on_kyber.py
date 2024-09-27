@@ -262,6 +262,7 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
         shift_babai = G.B.multiply_left( (dim-sieve_dim)*[0] + list( shift_babai_c ) )
         t_gs_reduced = from_canonical_scaled( G,np.array(target)-shift_babai,offset=sieve_dim ) #this is the actual reduced target
         # t_gs_shift = from_canonical_scaled( G,shift_babai,offset=sieve_dim )
+        print("t_gs_reduced:", t_gs_reduced)
 
         t_gs_list.append(t_gs)
         shift_babai_c_list.append(shift_babai_c)
