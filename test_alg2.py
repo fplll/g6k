@@ -10,12 +10,12 @@ from random import shuffle
 
 from hyb_att_on_kyber import alg_2_batched
 
-n, betamax, sieve_dim = 80, 57, 57 #n=170 is liikely to fail
+n, betamax, sieve_dim = 100, 50, 50 #n=170 is liikely to fail
 ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
 
 print(f"Nothing to load. Computing")
 B = IntegerMatrix(n,n)
-B.randomize("qary", k=n//2, bits=11.705)
+B.randomize("qary", k=n//2, bits=17.705)
 G = GSO.Mat(B, float_type=ft)
 G.update_gso()
 
@@ -51,13 +51,14 @@ g6k.M.update_gso()
 print(f"dbsize: {len(g6k)}")
 
 c = [ randrange(-30,31) for j in range(n) ]
-e = np.array( random_on_sphere(n,0.44*gh) )
+e = np.array( random_on_sphere(n,0.14*gh) )
 b = G.B.multiply_left( c )
 b_ = np.array(b,dtype=np.int64)
 t_ = e+b_
 t = [ int(tt) for tt in t_ ]
 e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
-print(f"e_: {e_}")
+print(f"ee_: {e_@e_}")
+print(f"rii: {G.r()[-sieve_dim]}")
 print(f"r: {[rr**0.5 for rr in G.r()]}")
 
 target_candidates = [t]

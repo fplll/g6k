@@ -140,7 +140,7 @@ def attacker(input_dict, n_guess_coord, sieve_dim_max, nsieves, nthreads=1, trac
     H11 = g6k.M.B
     B = IntegerMatrix.from_matrix(B)
 
-    dim = B.nrows
+    dim = 2*k*n
     fl = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
 
     int_type = B.int_type
@@ -187,15 +187,32 @@ def alg_3(g6k,B,H11,t,n_guess_coord, eta, dist_sq_bnd=1.0, nthreads=1, tracer_al
     vtilde2s = [np.array(t2) ]
 
     # B[:dim-n_guess_coord][0][:dim-n_guess_coord] #this does not work
+    # H12 = IntegerMatrix.from_matrix( [list(b)[:dim-n_guess_coord] for b in B[dim-n_guess_coord:]] )
+    # for times in range(nsampl): #Alg 3 steps 4-7
+    #     if times!=0 and times%64 == 0:
+    #         print(f"{times} done out of {nsampl}", end=", ")
+    #     etilde2 = np.array( distrib.sample( n_guess_coord ) ) #= (0 | e2)
+    #     # print(f"len etilde2: {len(etilde2)}")
+    #     vtilde2 = np.array(t2)-etilde2
+    #     tmp = np.concatenate([(dim-n_guess_coord)*[0] , vtilde2])
+    #     vtilde2s.append( vtilde2   )
+    #     #compute H12*H22^-1 * vtilde2 = H12*vtilde2 since H22 is identity
+    #     tmp = H12.multiply_left(vtilde2)
+    #
+    #     # print(f"len(vtilde2): {len(vtilde2)} len(t1): {len(t1)}")
+    #     # print(f"dim: {dim} n_guess_coord: {n_guess_coord}")
+    #     t1_ = t1 - tmp #
+    #     # print(t1_)
+    #     # print(f"len t1_: {len(t1_)}")
+    #     target_candidates.append( t1_ )
     H12 = IntegerMatrix.from_matrix( [list(b)[:dim-n_guess_coord] for b in B[dim-n_guess_coord:]] )
-    for times in range(nsampl+2): #Alg 3 steps 4-7
+    for times in range(nsampl): #Alg 3 steps 4-7
         if times!=0 and times%64 == 0:
             print(f"{times} done out of {nsampl}", end=", ")
         etilde2 = np.array( distrib.sample( n_guess_coord ) ) #= (0 | e2)
         # print(f"len etilde2: {len(etilde2)}")
         vtilde2 = np.array(t2)-etilde2
-        tmp = np.concatenate([(dim-n_guess_coord)*[0] , vtilde2])
-        vtilde2s.append( vtilde2   )
+        vtilde2s.append( vtilde2  )
         #compute H12*H22^-1 * vtilde2 = H12*vtilde2 since H22 is identity
         tmp = H12.multiply_left(vtilde2)
 
@@ -212,7 +229,6 @@ def alg_3(g6k,B,H11,t,n_guess_coord, eta, dist_sq_bnd=1.0, nthreads=1, tracer_al
     """
     #TODO: dist_sq_bnd might have changed at this point (or even in attacker)
     #TODO: deduce what is the betamax
-    betamax = 48
     ctilde1 = alg_2_batched( g6k,target_candidates, dist_sq_bnd, nthreads=nthreads, tracer_alg2=None )
 
     v1 = np.array( g6k.M.B[:len(ctilde1)].multiply_left( ctilde1 ) )
@@ -221,23 +237,24 @@ def alg_3(g6k,B,H11,t,n_guess_coord, eta, dist_sq_bnd=1.0, nthreads=1, tracer_al
     minv = 10**12
     cntr=0
     for vtilde2 in vtilde2s:
-        t = target_candidates[cntr]
+        # t = target_candidates[cntr]
         tmp = H12.multiply_left(vtilde2)
-        # v2 = np.concatenate( [tmp,vtilde2] )
         v2 = np.concatenate( [(dim-n_guess_coord)*[0],vtilde2] )
-        v = np.concatenate([v1,n_guess_coord*[0]])+v2+np.concatenate( [ np.array( H12.multiply_left(vtilde2) ), n_guess_coord*[0] ] )
-        v_t = v-np.concatenate([t,n_guess_coord*[0]])
+        v = np.concatenate([v1,n_guess_coord*[0]]) + v2 + np.concatenate( [ np.array( H12.multiply_left(vtilde2) ), n_guess_coord*[0] ] )
+        v_t = v - np.array(t) #-np.concatenate([t,n_guess_coord*[0]])
         vv = v_t@v_t
         # print(f"v: {v}")
         if vv < minv:
+            minv = vv
             argminv = v
         cntr += 1
-    return v
+    return argminv
 
 def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_alg2=None ):
     # raise NotImplementedError
-    print("in alg2")
     sieve_dim = g6k.r-g6k.l #n_slicer_coord
+    print(f"in alg2 sieve_dim={sieve_dim}")
+
     # dist_sq_bnd = 1.0 #TODO: implement
     G = g6k.M
     B = G.B
@@ -254,8 +271,8 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
     #WARNING: we do not store t_gs_reduced_list since t_gs_list =  t_gs - gs(shift_babai_c*B)
     #this is a time-memory tradeoff. Since Slicer returns only an error vector, we don\'t
     #know which of the target candidates it corresponds to. TODO: or should we?
-    target_list_size = len(g6k)
-    nrand = 150 #min( 5, target_list_size / len(g6k) )
+    target_list_size =  2 * g6k.db_size() #len(g6k)
+    nrand = min( 250, target_list_size / len(target_candidates ) )
     print(f"len(target_candidates): {len(target_candidates)} nrand: {nrand}")
     t_gs_list = []
     t_gs_reduced_list = []
@@ -268,12 +285,8 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
         shift_babai = G.B.multiply_left( (dim-sieve_dim)*[0] + list( shift_babai_c ) )
         t_gs_reduced = from_canonical_scaled( G,np.array(target)-shift_babai,offset=sieve_dim ) #this is the actual reduced target
         assert len(t_gs_reduced) == sieve_dim
-        # t_gs_reduced = np.concatenate( [(dim-sieve_dim)*[0],t_gs_reduced[(dim-sieve_dim):]] )
-        # debug = G.from_canonical( (np.array(target)-shift_babai) )
-        # print(f"t_gs_reduced:{debug}")
         assert all( abs( t_gs_reduced[dim-sieve_dim:] ) <0.501 ) #assert that the last Sieve dim coords are size reduced
 
-        # t_gs_shift = from_canonical_scaled( G,shift_babai,offset=sieve_dim )
         print("t_gs_reduced:", t_gs_reduced)
 
         t_gs_list.append(t_gs)
@@ -314,7 +327,9 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
         # t_gs = t_gs_list[index]
         t_gs_reduced = t_gs_reduced_list[index] #we could do this to t_gs, but this one is shorter
         t_gs_reduced_non_scaled = t_gs_reduced / scaling_vec
-        shift_babai_c_reduced = G.babai((dim-sieve_dim)*[0] + list(t_gs_non_scaled), start=dim-sieve_dim,gso=True)
+        # shift_babai_c_reduced = G.babai((dim-sieve_dim)*[0] + list(t_gs_non_scaled), start=dim-sieve_dim,gso=True)
+        shift_babai_c_reduced =  shift_babai_c_list[index]
+
         shift_babai_reduced = G.B.multiply_left( (dim-sieve_dim)*[0] + list( shift_babai_c_reduced ) )
         shift_babai_reduced = shift_babai_reduced[dim-sieve_dim:]
         shift_babai_reduced *= scaling_vec
@@ -328,6 +343,8 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
     print(f"min_norm_err_sq: {min_norm_err_sq}, index_best:{index_best}")
     index = index_best
     t = np.array( target_candidates[index] )
+    #we substitute the obtaied error from the target and call babai to
+    #account for an fp error
     t_new = t - to_canonical_scaled( G, np.concatenate( [(dim-sieve_dim)*[0], out_gs_reduced] ) )
     assert len(t_new) == dim
     bab_01 = G.babai(t_new)
