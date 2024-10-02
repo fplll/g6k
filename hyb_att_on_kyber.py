@@ -78,7 +78,7 @@ def prepare_kyber(n,q,eta,k,betamax,kappa,seed=[0,0]): #for debug purposes
     try:
         A, q, eta, k, bse = load_lwe(n,q,eta,k,seed[0]) #D["A"], D["q"], D["bse"]
         filename = f"g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+i}"
-        g6k = Siever.restore_from_file(  )
+        g6k = Siever.restore_from_file( filename )
     except FileNotFoundError:
         gen_and_dump_lwe(n, q, eta, k, ntar, seed[0])
         A, q, eta,k, bse = load_lwe(n,q,eta,k,seed[0]) #D["A"], D["q"], D["bse"]
@@ -265,7 +265,7 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
 
     # - - - prepare Slicer for batch cvp - - -
     slicer = RandomizedSlicer(g6k)
-    slicer.set_nthreads(2);
+    slicer.set_nthreads(1);
     # - - - END prepare Slicer for batch cvp - - -
     scaling_vec = np.array( [tmp**0.5 for tmp in G.r()[dim-sieve_dim:]] )
     #WARNING: we do not store t_gs_reduced_list since t_gs_list =  t_gs - gs(shift_babai_c*B)
