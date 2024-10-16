@@ -1,4 +1,5 @@
 from experiments.lwe_gen import *
+from sample import Distribution, centeredBinomial
 
 import sys,os
 import time
@@ -7,6 +8,8 @@ from fpylll import *
 from fpylll.algorithms.bkz2 import BKZReduction
 from fpylll.tools.quality import basis_quality
 from math import log, sqrt
+
+from fpylll.util import gaussian_heuristic
 
 try:
     from multiprocess import Pool  # you might need pip install multiprocess
@@ -162,6 +165,11 @@ def attack_on_kyber_primal(n,q,eta,k,betapre,betastrat,pumpstrat,ntours=5,seed=[
     B, A, q, eta, k, bse = prepare_kyber(n,q,eta,k,betapre,seed, nthreads=5)
     dim = B.nrows+1 #dimension of Kannan
 
+    D = centeredBinomial( eta )
+    # D.secondMoment**0.5 = alpha * q
+    alpha = D.secondMoment**0.5 / q
+    sigma =  D.secondMoment**0.5
+
     print(f"Total instances per lat: {len(bse)} seed={seed[1]}")
     b, s, e = bse[seed[1]]
 
@@ -268,6 +276,9 @@ def attack_on_kyber_primal(n,q,eta,k,betapre,betastrat,pumpstrat,ntours=5,seed=[
                     report["beta"] = beta
                     return report
         # - - - The pump stage - - -
+        rr = g6k.M.r()
+        pump_est = chi_square_estimate( rr,sigma )
+        print(f"Estimated pump dim: {pump_est}")
         beta_pump, d4free = pumpstrat[1:]
         if M.get_r(0,0) >= 1.05*tarnrmsq:
             llb = g6k.M.d - beta_pump
@@ -280,7 +291,7 @@ def attack_on_kyber_primal(n,q,eta,k,betapre,betastrat,pumpstrat,ntours=5,seed=[
             d = g6k.M.d
             if verbose:
                 print()
-                print( "Starting svp pump_{%d, %d, %d} task_id = {seed}" % (llb, d-llb, f) ) # noqa
+                print( f"Starting svp pump_{(llb, d-llb, f)} task_id = {seed}"  ) # noqa
                 sys.stdout.flush()
 
 
@@ -321,7 +332,7 @@ if __name__ == "__main__":
             pass    #still in docker if isExists==False, for some reason folder can exist and this will throw an exception.
 
     nthreads = 3
-    nworkers = 3
+    nworkers = 4
     lats_per_dim = 10
     inst_per_lat = 10 #how many instances per A, q
     q, eta = 3329, 3
@@ -358,13 +369,11 @@ if __name__ == "__main__":
         for latnum in range(lats_per_dim):
             for tstnum in range(inst_per_lat):
                 betastrat = D["strats"][n]
-                pumpstrat = D["pumps"][n]
-                # tmp = 88
-                # pumpstrat = [2*n+1-tmp, tmp, 10]
+                # pumpstrat = D["pumps"][n]
 
-                # betastrat = [(56, 7, 1), (70, 7, 1), (74, 7, 2), (79, 7, 2)]
-                # tmp = 105
-                # pumpstrat = [2*n+1-tmp, tmp, 10]
+                # betastrat = [(70,7,1),(79,7,3),(72,4,2)]
+                tmp = 100
+                pumpstrat = [2*n+1-tmp, tmp, 8]
                 tasks.append( pool.apply_async(
                     attack_on_kyber_primal, (nk[0],q,eta,k,betapre,betastrat,pumpstrat,5,[latnum,tstnum],nthreads)
                     ) )
