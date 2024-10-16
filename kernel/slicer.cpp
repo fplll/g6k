@@ -124,7 +124,7 @@ void RandomizedSlicer::grow_db_with_target(const double t_yr[], size_t n_per_tar
     ce.c = input_t.c;
     ce.i = start;
     cdb_t[start] = ce;
-
+    std::cout << "ce.len  is" << ce.len << std::endl;
 
     for( size_t i = start+1; i < N; i++)
     {

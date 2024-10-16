@@ -272,7 +272,7 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
     #this is a time-memory tradeoff. Since Slicer returns only an error vector, we don\'t
     #know which of the target candidates it corresponds to. TODO: or should we?
     target_list_size =  2 * g6k.db_size() #len(g6k)
-    nrand = min( 250, target_list_size / len(target_candidates ) )
+    nrand = 150 #min( 250, target_list_size / len(target_candidates ) )
     print(f"len(target_candidates): {len(target_candidates)} nrand: {nrand}")
     t_gs_list = []
     t_gs_reduced_list = []
@@ -282,12 +282,11 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
         t_gs = from_canonical_scaled( G,target,offset=sieve_dim )
         t_gs_non_scaled = G.from_canonical(target)[dim-sieve_dim:]
         shift_babai_c =  list( G.babai( list(t_gs_non_scaled), start=dim-sieve_dim, dimension=sieve_dim, gso=True) )
+        print( f"shift_babai_c: {shift_babai_c}" )
         shift_babai = G.B.multiply_left( (dim-sieve_dim)*[0] + list( shift_babai_c ) )
         t_gs_reduced = from_canonical_scaled( G,np.array(target)-shift_babai,offset=sieve_dim ) #this is the actual reduced target
         assert len(t_gs_reduced) == sieve_dim
         assert all( abs( t_gs_reduced[dim-sieve_dim:] ) <0.501 ) #assert that the last Sieve dim coords are size reduced
-
-        print("t_gs_reduced:", t_gs_reduced)
 
         t_gs_list.append(t_gs)
         shift_babai_c_list.append(shift_babai_c)
@@ -296,6 +295,7 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
         # print(target[dim-sieve_dim:])
         # print(f"Doing grow_db")
         then_gdbwt = perf_counter()
+        print(f"supposed ce.len: {t_gs_reduced@t_gs_reduced}")
         slicer.grow_db_with_target(t_gs_reduced, n_per_target=nrand)
         # slicer.grow_db_with_target((dim-sieve_dim)*[0] + [float(tt) for tt in t_gs_reduced[dim-sieve_dim:]], n_per_target=nrand) #add a candidate to the Slicer
         gdbwt_t = perf_counter() - then_gdbwt #TODO: collect this stat
@@ -310,44 +310,68 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
     buckets = sp["bdgl_bucket_size_factor"]* 2.**((blocks-1.)/(blocks+1.)) * sp["bdgl_multi_hash"]**((2.*blocks)/(blocks+1.)) * (N ** (blocks/(1.0+blocks)))
     buckets = min(buckets, sp["bdgl_multi_hash"] * N / sp["bdgl_min_bucket_size"])
     buckets = max(buckets, 2**(blocks-1))
-    slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (approx_fact*approx_fact*(dist_sq_bnd)))
-
+    # slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (approx_fact*approx_fact*(dist_sq_bnd)))
+    print(f"t_gs_reduced: {t_gs_reduced}")
     iterator = slicer.itervalues_t()
     for tmp in iterator:
         out_gs_reduced = np.array(tmp)  #db_t[0] is expected to contain the error vector
         cur_nrm_sq = out_gs_reduced@out_gs_reduced
         break
+
+    print(f"out_gs_reduced-t_gs_reduced: {out_gs_reduced-t_gs_reduced}")
+    print(f"out_gs_reduced: {out_gs_reduced}")
     index = 0
     #Now we deduce which target candidate the error vector corresponds to.
     #The idea is that if t_gs is an answer then t_gs_reduced - out_gs_reduced is in the projective lat
     #and is (close to) zero.
-    min_norm_err_sq = 10**32
+    min_norm_err_sq = float("inf")
     index_best = None
+    b_best = None
     for index in range(len(shift_babai_c_list)):
-        # t_gs = t_gs_list[index]
+        """
         t_gs_reduced = t_gs_reduced_list[index] #we could do this to t_gs, but this one is shorter
-        t_gs_reduced_non_scaled = t_gs_reduced / scaling_vec
-        # shift_babai_c_reduced = G.babai((dim-sieve_dim)*[0] + list(t_gs_non_scaled), start=dim-sieve_dim,gso=True)
+        b_gs_reduced = from_canonical_scaled( G,t_gs_reduced-out_gs_reduced,offset=sieve_dim )
+        b_gs_reduced = b_gs_reduced / scaling_vec
+        b_reduced = G.babai(list(b_gs_reduced), start=dim-sieve_dim, dimension=sieve_dim, gso=True)
+        b_reduced = G.B.multiply_left( (dim-sieve_dim)*[0] + list( b_reduced ) )
+
+        shift_babai_c_reduced =  shift_babai_c_list[index]
+        shift_babai_reduced = G.B.multiply_left( (dim-sieve_dim)*[0] + list( shift_babai_c_reduced ) )
+
+        b = np.array( shift_babai_reduced ) + np.array( b_reduced )
+        t = target_candidates[index]
+
+        diff = np.array( t ) - np.array( b ) #an actual error vector we observe == actual error (+ some lattice vector for bad candidates)
+        diff_gs_nrm_sq = diff@diff #its norm. Ideally, == norm of error
+        """
+        t_gs_reduced = t_gs_reduced_list[index] #we could do this to t_gs, but this one is shorter
         shift_babai_c_reduced =  shift_babai_c_list[index]
 
         shift_babai_reduced = G.B.multiply_left( (dim-sieve_dim)*[0] + list( shift_babai_c_reduced ) )
-        shift_babai_reduced = shift_babai_reduced[dim-sieve_dim:]
-        shift_babai_reduced *= scaling_vec
-        t_gs_bab = np.array(t_gs_reduced) - shift_babai_reduced
+        shift_babai_reduced_gs = from_canonical_scaled( G,shift_babai_reduced, offset=sieve_dim )
+        guess = np.array(t_gs_reduced - out_gs_reduced)
+        print(len(guess),len(shift_babai_reduced_gs))
+        guess = guess + shift_babai_reduced_gs
 
-        diff_gs = t_gs_reduced - t_gs_bab #an actual error vector we observe == actual error (+ some lattice vector for bad candidates)
+        t_gs = t_gs_list[index]
+        diff_gs = t_gs - guess #an actual error vector we observe == actual error (+ some lattice vector for bad candidates)
         diff_gs_nrm_sq = diff_gs@diff_gs #its norm. Ideally, == norm of error
+
         if diff_gs_nrm_sq < min_norm_err_sq:
             min_norm_err_sq = diff_gs_nrm_sq
             index_best = index
+            # b_best = b
+
     print(f"min_norm_err_sq: {min_norm_err_sq}, index_best:{index_best}")
     index = index_best
     t = np.array( target_candidates[index] )
     #we substitute the obtaied error from the target and call babai to
     #account for an fp error
-    t_new = t - to_canonical_scaled( G, np.concatenate( [(dim-sieve_dim)*[0], out_gs_reduced] ) )
+    # t_new = t - to_canonical_scaled( G, np.concatenate( [(dim-sieve_dim)*[0], out_gs_reduced] ) )
+    t_new = t - to_canonical_scaled( G, out_gs_reduced, offset=sieve_dim )
     assert len(t_new) == dim
     bab_01 = G.babai(t_new)
+    # bab_01 = G.babai(b_best)
 
     print(f"alg2 terminates")
     return bab_01

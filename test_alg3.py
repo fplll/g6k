@@ -150,7 +150,7 @@ def alg_3_debug(g6k,B,H11,target,n_guess_coord, eta, s, dist_sq_bnd=1.0, nthread
     # t_gs = from_canonical_scaled( G,t,offset=sieve_dim )
 
     t1, t2 = target[:-n_guess_coord], target[-n_guess_coord:]
-    slicer = RandomizedSlicer(g6k)
+    # slicer = RandomizedSlicer(g6k)
     distrib = centeredBinomial(eta)
     #TODO: make/(check if is) practical
     nsampl = ceil( 2 ** ( distrib.entropy * n_guess_coord ) )
@@ -165,7 +165,7 @@ def alg_3_debug(g6k,B,H11,target,n_guess_coord, eta, s, dist_sq_bnd=1.0, nthread
     diff = target - bab_candidate
     if diff@diff < dist_sq_bnd: #if babai somewhat succeeds, we return the answer
         print("babai seems to succseed")
-        return bab_candidate
+        # return bab_candidate
 
     H12 = IntegerMatrix.from_matrix( [list(b)[:dim-n_guess_coord] for b in B[dim-n_guess_coord:]] )
     for times in range(1): #Alg 3 steps 4-7
@@ -237,8 +237,8 @@ def alg_3_debug(g6k,B,H11,target,n_guess_coord, eta, s, dist_sq_bnd=1.0, nthread
 if __name__=="__main__":
     n, k = 75, 1
     eta = 3
-    n_guess_coord, n_slicer_coord = 5, 45
-    betamax = 47
+    n_guess_coord, n_slicer_coord = 10, 52
+    betamax = 52
     sieve_dim_max = n_slicer_coord
     nsieves = 2
     nthreads = 2
@@ -292,7 +292,7 @@ if __name__=="__main__":
 
     e_ = e
     e_ = from_canonical_scaled( G,e_,offset=n_slicer_coord+n_guess_coord )[:n_slicer_coord]
-    dist_sq_bnd = 0.00000001 #e_@e_
+    dist_sq_bnd = 0.001 #e_@e_
 
     B = IntegerMatrix.from_matrix(Binit)
     # print(B)

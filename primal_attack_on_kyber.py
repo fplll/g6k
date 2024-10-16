@@ -17,15 +17,34 @@ try:
   from g6k import Siever, SieverParams
   from g6k.algorithms.bkz import pump_n_jump_bkz_tour
   from g6k.utils.stats import dummy_tracer
+  from g6k.algorithms.pump import pump
 except ImportError:
   raise ImportError("g6k not installed")
 
 from LatticeReduction import LatticeReduction, BKZ_SIEVING_CROSSOVER
+n_max = 128 #max_sieve_dim
 
 import pickle
 MAX_LOOPS = 2
 inp_path = "lwe instances/saved_lattices/"
 out_path = "lwe instances/reduced_lattices/"
+
+# - - - https://github.com/Summwer/pro-pnj-bkz - - -
+from scipy.special import chdtr
+def chi_square_estimate(rr,sigma, succ_prob =  1/14.):
+    d = len(rr)
+    for beta in range(30,d):
+        GH = gaussian_heuristic(rr[d-beta:])
+        length=(GH/(sigma**2))
+        if(chdtr(beta, length) >= succ_prob):
+            return beta
+
+def expected_value_estimate(rr,sigma):
+    d = len(rr)
+    for beta in range(30,d):
+        if(gaussian_heuristic(rr[d-beta:]) >= (sigma**2 * (d-1) + 1) * beta/(1.*d)):
+            return beta
+# - - -
 
 def flatter_interface( fpylllB ):
     flatter_is_installed = os.system( "flatter -h > /dev/null" ) == 0
@@ -134,11 +153,13 @@ def prepare_kyber(n,q,eta,k,betapre,seed=[0,0], nthreads=5): #for debug purposes
 
     return B, A, q, eta,k, bse
 
-def attack_on_kyber(n,q,eta,k,betapre,betamax,ntours=5,seed=[0,0],nthreads=5):
+def attack_on_kyber_primal(n,q,eta,k,betapre,betastrat,pumpstrat,ntours=5,seed=[0,0],nthreads=5):
     # prepeare the lattice
+    print(f"Enforcing pumpNjumpBKZ strategy {betastrat}")
+    print(f"Enforcing pump strategy {pumpstrat}")
     print( f"launching {n,q,eta,k,seed}" )
     # A, q, eta, k, bse = load_lwe(n,q,eta,k,seed[0]) #D["A"], D["q"], D["bse"]
-    B, A, q, eta,k, bse = prepare_kyber(n,q,eta,k,betapre,seed, nthreads=5)
+    B, A, q, eta, k, bse = prepare_kyber(n,q,eta,k,betapre,seed, nthreads=5)
     dim = B.nrows+1 #dimension of Kannan
 
     print(f"Total instances per lat: {len(bse)} seed={seed[1]}")
@@ -177,18 +198,22 @@ def attack_on_kyber(n,q,eta,k,betapre,betamax,ntours=5,seed=[0,0],nthreads=5):
         "kyb": ( n,q,eta,k ),
         "beta": 2,
         "time": llltime,
-        "projinfo": {}
+        "time_pump": 0,
+        "projinfo": {},
+        "succ": False,
     }
     if lll.M.get_r(0,0) <= tarnrmsq:
         print(f"LLL recovered secret!")
         report["beta"] = beta
+        report["succ"] = True
         return report
 
     flags = BKZ.AUTO_ABORT|BKZ.MAX_LOOPS|BKZ.GH_BND
     bkz = BKZReduction(G)
 
     cumtime = 0
-    for beta in range(betapre-1,min(betamax+1,BKZ_SIEVING_CROSSOVER)):    #BKZ reduce the basis
+    # for beta in range(betapre-1,51):    #BKZ reduce the basis
+    for beta in range(3,26):    #BKZ reduce the basis
         par = BKZ.Param(beta,
                                max_loops=MAX_LOOPS,
                                flags=flags,
@@ -220,10 +245,11 @@ def attack_on_kyber(n,q,eta,k,betapre,betamax,ntours=5,seed=[0,0],nthreads=5):
 
         #we do not use LatticeReduction here since we do not neccesarily
         #want to run all the tours and can interupt after any given one.
-        for beta in range(max(BKZ_SIEVING_CROSSOVER,betapre-1),betamax+1):
-            for t in range(MAX_LOOPS):
+        for beta, jump, tours in betastrat:
+        # for beta in range(max(BKZ_SIEVING_CROSSOVER,betapre-1),betamax+1):
+            for t in range(tours):
                 then_round=time.perf_counter()
-                pump_n_jump_bkz_tour(g6k, dummy_tracer, beta, jump=1,
+                pump_n_jump_bkz_tour(g6k, dummy_tracer, beta, jump=jump,
                  dim4free_fun="default_dim4free_fun",
                  extra_dim4free=0,
                  pump_params={'down_sieve': False},)
@@ -231,17 +257,56 @@ def attack_on_kyber(n,q,eta,k,betapre,betamax,ntours=5,seed=[0,0],nthreads=5):
 
                 # print('tour ', t, ' beta:',beta,' done in:', round_time, 'slope:', basis_quality(M)["/"], 'log r00:', float( log( g6k.M.get_r(0,0),2 )/2 ), 'task_id = ', seed)
                 slope = basis_quality(M)["/"]
-                print(f"Sieve tour: {t}, beta: {beta:}, done in: {round_time : 0.4f}, slope: {slope : 0.6f}, log r00: {log( g6k.M.get_r(0,0),2 )/2 : 0.5f} task_id = {seed}")
+                print(f"Sieve tour: {t}, beta: {beta:}, jump: {jump}, done in: {round_time : 0.4f}, slope: {slope : 0.6f}, log r00: {log( g6k.M.get_r(0,0),2 )/2 : 0.5f} task_id = {seed}")
                 sys.stdout.flush()  #flush after the BKZ call
 
                 report["time"] += round_time
 
                 if M.get_r(0,0) <= tarnrmsq:
                     print(f"succsess! beta={beta}")
+                    report["succ"] = True
                     report["beta"] = beta
                     return report
+        # - - - The pump stage - - -
+        beta_pump, d4free = pumpstrat[1:]
+        if M.get_r(0,0) >= 1.05*tarnrmsq:
+            llb = g6k.M.d - beta_pump
+            f = max(d4free, beta_pump - n_max)
+
+            T0_pump = time.time()
+            print("Without otf, would expect solution at pump_{%d, %d, %d},n_max = %d" % (llb, beta_pump , f, n_max)) # noqa
+
+            verbose = True
+            d = g6k.M.d
+            if verbose:
+                print()
+                print( "Starting svp pump_{%d, %d, %d} task_id = {seed}" % (llb, d-llb, f) ) # noqa
+                sys.stdout.flush()
+
+
+            pump(g6k, dummy_tracer, llb, d-llb, f, verbose=verbose, goal_r0=tarnrmsq * (d - llb)/(1.*d))
+
+
+            T_pump = time.time() - T0_pump
+            report["time_pump"] = T_pump
+            slope = basis_quality(g6k.M)["/"]
+                # fmt = "slope: %.5f, T_pump = %.3f sec, RAM_pump = %.3f GB, walltime: %.3f sec"
+                # print(T_pump)
+
+
+            g6k.lll(0, g6k.full_n)
+
+            if g6k.M.get_r(0,0) <= 1.05*tarnrmsq:
+                print(f"succsess after pump! beta={beta} pump_time = {T_pump}")
+                report["beta"] = beta
+                report["succ"] = True
+                return report
+            else:
+                print(f"Fail after pump! T_pump = {T_pump} task_id = {seed}")
+                report["succ"] = False
     except Exception as excpt:
-        print( excpt )
+        # print( excpt )
+        raise excpt
         print("Sieving died!")
         pass
 
@@ -255,8 +320,8 @@ if __name__ == "__main__":
         except:
             pass    #still in docker if isExists==False, for some reason folder can exist and this will throw an exception.
 
-    nthreads = 2
-    nworkers = 8
+    nthreads = 3
+    nworkers = 3
     lats_per_dim = 10
     inst_per_lat = 10 #how many instances per A, q
     q, eta = 3329, 3
@@ -286,14 +351,22 @@ if __name__ == "__main__":
         print(f"Preprocessing Kyber...")
         for t in pretasks:
             t.get()
-
+    with open("acc_strat","rb") as file:
+        D = pickle.load(file)
     for nk in nks:
         n, k = nk[0], 1
         for latnum in range(lats_per_dim):
             for tstnum in range(inst_per_lat):
-                # output.append( attack_on_kyber(nk[0],q,eta,k,57,70,5,[latnum,tstnum],nthreads) )
+                betastrat = D["strats"][n]
+                pumpstrat = D["pumps"][n]
+                # tmp = 88
+                # pumpstrat = [2*n+1-tmp, tmp, 10]
+
+                # betastrat = [(56, 7, 1), (70, 7, 1), (74, 7, 2), (79, 7, 2)]
+                # tmp = 105
+                # pumpstrat = [2*n+1-tmp, tmp, 10]
                 tasks.append( pool.apply_async(
-                    attack_on_kyber, (nk[0],q,eta,k,betapre,betamax,5,[latnum,tstnum],nthreads)
+                    attack_on_kyber_primal, (nk[0],q,eta,k,betapre,betastrat,pumpstrat,5,[latnum,tstnum],nthreads)
                     ) )
 
 
@@ -302,7 +375,7 @@ if __name__ == "__main__":
 
     pool.close()
 
-    name = f"exp105-2.pkl"
+    name = f"expres.pkl"
     with open( path+name, "wb" ) as file:
         pickle.dump( output,file )
 

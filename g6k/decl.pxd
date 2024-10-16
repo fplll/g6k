@@ -269,6 +269,7 @@ cdef extern from "../kernel/siever.h" nogil:
         # variables (avoid writing to them from the Python layer, if possible)
 
         unsigned int full_n
+        unsigned int max_sieve_dim
         vector[vector[FT]] full_muT
         vector[FT] full_rr
 

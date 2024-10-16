@@ -58,7 +58,7 @@
 void Siever::bgj1_sieve(double alpha)
 {
     CPUCOUNT(100);
-    std::cout << "in bgj1_sieve" << std::endl;
+    // std::cout << "in bgj1_sieve" << std::endl;
     switch_mode_to(SieveStatus::bgj1);
     assert(alpha >= 0); // negative alpha would work, but not match the documentation.
 
