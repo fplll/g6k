@@ -100,12 +100,14 @@ def prepare_kyber(n,q,eta,k,betapre,seed=[0,0], nthreads=5): #for debug purposes
     try: #try load lwe instance
         A, q, eta, k, bse = load_lwe(n,q,eta,k,seed[0]) #D["A"], D["q"], D["bse"]
     except FileNotFoundError: #if no such, create one
+        print(f"No kyber instance found... generating.")
         gen_and_dump_lwe(n, q, eta, k, 5, seed[0]) #ntar = 5
         A, q, eta,k, bse = load_lwe(n,q,eta,k,seed[0]) #D["A"], D["q"], D["bse"]
     #try load reduced kyber
     try:
         with open(out_path + f"kyb_preprimal_{n}_{q}_{eta}_{k}_{seed[0]}_{betapre}.pkl", "rb") as file:
             B = pickle.load(file)
+            print(f"Kyber located")
     except (FileNotFoundError, EOFError): #if no such, create one
         B = [ [int(0) for i in range(2*k*n)] for j in range(2*k*n) ]
         for i in range( k*n ):
@@ -260,15 +262,15 @@ if __name__ == "__main__":
     lats_per_dim = 10
     inst_per_lat = 10 #how many instances per A, q
     q, eta = 3329, 3
-    nks = [ (190+10*i,1) for i in range(3) ]
-    betapre,betamax = 55, 75
+    nks = [ (140+10*i,1) for i in range(1) ]
+    betapre,betamax = 55, 62
 
     output = []
     pool = Pool( processes = nworkers )
     tasks = []
 
-    RECOMPUTE_INSTANCE = True
-    RECOMPUTE_KYBER = False
+    RECOMPUTE_INSTANCE = False
+    RECOMPUTE_KYBER = True
     if RECOMPUTE_INSTANCE:
         print(f"Generating Kyber...")
         for nk in nks:
@@ -297,8 +299,8 @@ if __name__ == "__main__":
                     ) )
 
 
-    # for t in tasks:
-    #         output.append( t.get() )
+    for t in tasks:
+            output.append( t.get() )
 
     pool.close()
 
