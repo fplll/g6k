@@ -95,17 +95,28 @@ def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthrea
     param_sieve = SieverParams()
     param_sieve['threads'] = nthreads
     g6k = Siever(G,param_sieve)
-    g6k.initialize_local(H11r-sieve_dim_max, H11r-sieve_dim_max+nsieves-1 ,H11r)
-    for i in range(nsieves):
+    g6k.initialize_local(H11r-sieve_dim_max, H11r-sieve_dim_max+nsieves ,H11r)
+
+    sieve_start = time.perf_counter()
+    g6k(alg="bdgl")
+    i = 0
+    report["bdgl_runtime"][i] = time.perf_counter()-sieve_start
+    print(f"siever-{seed[0]}-{kappa}-{sieve_dim_max-nsieves+i} finished in added time {time.perf_counter()-sieve_start}\n" )
+    sys.stdout.flush()
+    #NOTE: this dumps
+    assert g6k.r - g6k.l == sieve_dim_max-nsieves+i, f"g6k context: {g6k.r - g6k.l} != {sieve_dim_max-nsieves+i}"
+    g6k.dump_on_disk(out_path+f'g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+i}.pkl')
+    for i in range(1,nsieves):
+        g6k.extend_left(1)
         sieve_start = time.perf_counter()
         g6k(alg="bdgl")
         report["bdgl_runtime"][i] = time.perf_counter()-sieve_start
         print(f"siever-{seed[0]}-{kappa}-{sieve_dim_max-nsieves+i} finished in added time {time.perf_counter()-sieve_start}\n" )
         sys.stdout.flush()
         #NOTE: this dumps
-        assert g6k.r - g6k.l == sieve_dim_max-nsieves-1+i, f"g6k context: {g6k.r - g6k.l} != {sieve_dim_max-nsieves-1+i}"
-        g6k.dump_on_disk(out_path+f'g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves-1+i}.pkl')
-        g6k.extend_left(1)
+        assert g6k.r - g6k.l == sieve_dim_max-nsieves+i, f"g6k context: {g6k.r - g6k.l} != {sieve_dim_max-nsieves+i}"
+        g6k.dump_on_disk(out_path+f'g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+i}.pkl')
+
 
     print(report)
     sys.stdout.flush()
@@ -115,14 +126,14 @@ if __name__=="__main__":
     # (dimension, predicted kappa, predicted beta)
     # params = [(140, 12, 48), (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
     #params = [(140, 12, 48)]#, (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
-    params = [(144, 13, 50)]
+    params = [(125, 10, 45)]
     nsieves = 5
     nworkers, nthreads =  5,5 #20, 4
 
     # lats_per_dim = 10
     # inst_per_lat = 10 #how many instances per A, q
     lats_per_dim = 2
-    inst_per_lat = 5 #how many instances per A, q
+    inst_per_lat = 10 #how many instances per A, q
     q, eta = 3329, 3
     #def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthreads=1)
     output = []
