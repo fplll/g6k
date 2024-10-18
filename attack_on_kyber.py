@@ -259,18 +259,18 @@ if __name__ == "__main__":
 
     nthreads = 5
     nworkers = 5
-    lats_per_dim = 2 #10
+    lats_per_dim = 10 #10
     inst_per_lat = 10 #10 #how many instances per A, q
     q, eta = 3329, 3
-    nks = [ (144+10*i,1) for i in range(1) ]
-    betapre,betamax = 55, 77
+    nks = [ (170+10*i,1) for i in range(1) ]
+    betapre,betamax = 80, 125
 
     output = []
     pool = Pool( processes = nworkers )
     tasks = []
 
     RECOMPUTE_INSTANCE = False
-    RECOMPUTE_KYBER = False
+    RECOMPUTE_KYBER = True
     if RECOMPUTE_INSTANCE:
         print(f"Generating Kyber...")
         for nk in nks:
