@@ -269,8 +269,8 @@ if __name__ == "__main__":
     pool = Pool( processes = nworkers )
     tasks = []
 
-    RECOMPUTE_INSTANCE = True #False
-    RECOMPUTE_KYBER = True
+    RECOMPUTE_INSTANCE = False 
+    RECOMPUTE_KYBER = False
     if RECOMPUTE_INSTANCE:
         print(f"Generating Kyber...")
         for nk in nks:
