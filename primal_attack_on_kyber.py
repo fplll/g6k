@@ -278,7 +278,9 @@ def attack_on_kyber_primal(n,q,eta,k,betapre,betastrat,pumpstrat,ntours=5,seed=[
         # - - - The pump stage - - -
         rr = g6k.M.r()
         pump_est = chi_square_estimate( rr,sigma )
-        print(f"Estimated pump dim: {pump_est}")
+        print(f"Estimated-chi pump dim: {pump_est}")
+        pump_est_old = expected_value_estimate( rr, sigma )
+        print(f"Estimated pump dim: {pump_est_old}")
         beta_pump, d4free = pumpstrat[1:]
         if M.get_r(0,0) >= 1.05*tarnrmsq:
             llb = g6k.M.d - beta_pump
@@ -331,13 +333,13 @@ if __name__ == "__main__":
         except:
             pass    #still in docker if isExists==False, for some reason folder can exist and this will throw an exception.
 
-    nthreads = 3
-    nworkers = 4
-    lats_per_dim = 10
+    nthreads = 5
+    nworkers = 3
+    lats_per_dim = 3
     inst_per_lat = 10 #how many instances per A, q
     q, eta = 3329, 3
-    nks = [ (140+10*i,1) for i in range(1) ]
-    betapre,betamax = 55, 75
+    nks = [ (167+10*i,1) for i in range(1) ]
+    betapre,betamax = 96, 75
 
     output = []
     pool = Pool( processes = nworkers )
@@ -368,11 +370,12 @@ if __name__ == "__main__":
         n, k = nk[0], 1
         for latnum in range(lats_per_dim):
             for tstnum in range(inst_per_lat):
-                betastrat = D["strats"][n]
+                # betastrat = D["strats"][n]
                 # pumpstrat = D["pumps"][n]
 
                 # betastrat = [(70,7,1),(79,7,3),(72,4,2)]
-                tmp = 100
+                betastrat = [(i,1,2) for i in range(48,56)] + [(60,5,2), (76,6,2)]
+                tmp = 101
                 pumpstrat = [2*n+1-tmp, tmp, 8]
                 tasks.append( pool.apply_async(
                     attack_on_kyber_primal, (nk[0],q,eta,k,betapre,betastrat,pumpstrat,5,[latnum,tstnum],nthreads)
