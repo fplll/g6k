@@ -95,7 +95,7 @@ def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthrea
     param_sieve = SieverParams()
     param_sieve['threads'] = nthreads
     g6k = Siever(G,param_sieve)
-    g6k.initialize_local(H11r-sieve_dim_max, H11r-sieve_dim_max+nsieves ,H11r)
+    g6k.initialize_local(H11r-sieve_dim_max, H11r-sieve_dim_max+nsieves-1 ,H11r)
     for i in range(nsieves):
         sieve_start = time.perf_counter()
         g6k(alg="bdgl")
@@ -103,7 +103,8 @@ def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthrea
         print(f"siever-{seed[0]}-{kappa}-{sieve_dim_max-nsieves+i} finished in added time {time.perf_counter()-sieve_start}\n" )
         sys.stdout.flush()
         #NOTE: this dumps
-        g6k.dump_on_disk(out_path+f'g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+i}.pkl')
+        assert g6k.r - g6k.l == sieve_dim_max-nsieves-1+i, f"g6k context: {g6k.r - g6k.l} != {sieve_dim_max-nsieves-1+i}"
+        g6k.dump_on_disk(out_path+f'g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves-1+i}.pkl')
         g6k.extend_left(1)
 
     print(report)
