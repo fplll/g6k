@@ -77,7 +77,7 @@ def prepare_kyber(n,q,eta,k,betamax,kappa,seed=[0,0]): #for debug purposes
     print(f"betamax,kappa: {betamax,kappa}")
     try:
         A, q, eta, k, bse = load_lwe(n,q,eta,k,seed[0]) #D["A"], D["q"], D["bse"]
-        filename = f"g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+i}"
+        filename = f"g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+i}.pkl"
         g6k = Siever.restore_from_file( filename )
     except FileNotFoundError:
         gen_and_dump_lwe(n, q, eta, k, ntar, seed[0])
@@ -120,7 +120,7 @@ def attacker(input_dict, n_guess_coord, sieve_dim_max, nsieves, nthreads=1, trac
     param sieve_dim_max: 1 + max dim siever is prepared for
     param nsieves: length of range within which we attempt to find a solution
     Assumes H11 is BKZ-betamax reduced while B is original. Assumes all Sievers are precomputed
-    and stored in out_path+f"/bkzdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+i}"
+    and stored in out_path+f"/kyb_prehybrid_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+i}"
     for i in range(nsieves).
     """
     # B, H11, q, eta, k, bse, betamax = input_dict['B'], input_dict['H11'], input_dict['q'], input_dict['eta'], input_dict['k'], input_dict['bse'], input_dict['betamax']
@@ -136,7 +136,7 @@ def attacker(input_dict, n_guess_coord, sieve_dim_max, nsieves, nthreads=1, trac
         for j in range(k*n):
             B[i][j] = int( A[i-k*n,j] )
 
-    g6k = Siever.restore_from_file( out_path + f'g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-1}' )
+    g6k = Siever.restore_from_file( out_path + f'g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-1}.pkl' )
     H11 = g6k.M.B
     B = IntegerMatrix.from_matrix(B)
 
@@ -148,7 +148,7 @@ def attacker(input_dict, n_guess_coord, sieve_dim_max, nsieves, nthreads=1, trac
 
     for sieveid in range(nsieves):
         vec_index = 0
-        filename_siever = out_path+f'g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+sieveid}'
+        filename_siever = out_path+f'g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+sieveid}.pkl'
         g6k = Siever.restore_from_file(filename_siever)
         # g6k.params["nthreads"] = nthreads #readonly
         for b, s, e in bse:

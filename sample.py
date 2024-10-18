@@ -4,7 +4,7 @@ from math import comb, log2, ceil
 class Distribution:
 
     def __init__(self, D):
-
+        self.PDF = D
         self.population = []
         self.weights = []
 

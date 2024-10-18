@@ -39,7 +39,8 @@ def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthrea
     report = {
         "params": (n,q,eta,k,seed),
         "beta_bkz": beta_bkz,
-        "sieve_dim": sieve_dim_max,
+        "sieve_dim_max": sieve_dim_max,
+        "sieve_dim_min": sieve_dim_max-nsieves+1,
         "kappa": kappa,
         "bkz_runtime": 0,
         "bdgl_runtime": [0]*nsieves,
@@ -81,7 +82,7 @@ def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthrea
     report["bkz_runtime"] = time.perf_counter() - bkz_start
 
     if dump_bkz:
-        with open(out_path+f"/bkzdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+i}", "wb") as f:
+        with open(out_path+f"/kyb_prehybrid_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+i}", "wb") as f:
             pickle.dump({"B": H11}, f)
 
 
@@ -101,7 +102,8 @@ def run_preprocessing(n,q,eta,k,seed,beta_bkz,sieve_dim_max,nsieves,kappa,nthrea
         report["bdgl_runtime"][i] = time.perf_counter()-sieve_start
         print(f"siever-{seed[0]}-{kappa}-{sieve_dim_max-nsieves+i} finished in added time {time.perf_counter()-sieve_start}\n" )
         sys.stdout.flush()
-        g6k.dump_on_disk(out_path+f'g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+i}')
+        #NOTE: this dumps
+        g6k.dump_on_disk(out_path+f'g6kdump_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_max-nsieves+i}.pkl')
         g6k.extend_left(1)
 
     print(report)
@@ -112,8 +114,8 @@ if __name__=="__main__":
     # (dimension, predicted kappa, predicted beta)
     # params = [(140, 12, 48), (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
     #params = [(140, 12, 48)]#, (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
-    params = [(80, 2, 40)]
-    nworkers, nthreads =  3,3 #20, 4
+    params = [(140, 12, 50)]
+    nworkers, nthreads =  3,5 #20, 4
 
     # lats_per_dim = 10
     # inst_per_lat = 10 #how many instances per A, q
@@ -134,9 +136,9 @@ if __name__=="__main__":
                         eta, #eta
                         1, #k
                         [latnum,0], #seed, second value is irrelevant
-                        param[2], #beta_bkz
-                        param[2]+4, #sieve_dim_max
-                        4,  #nsieves
+                        param[2]+1, #beta_bkz
+                        param[2]+5, #sieve_dim_max
+                        5,  #nsieves
                         kappa, #kappa
                         nthreads #nthreads
                         )
@@ -148,4 +150,11 @@ if __name__=="__main__":
 
     for o_ in output:
         print(o_)
+        n,q,eta,k,seed = o_["params"]
+        kappa = o_["kappa"]
+        beta_bkz = o_["beta_bkz"]
+        sieve_dim_max = o_["sieve_dim_max"]
+        sieve_dim_min = o_["sieve_dim_min"]
+        filename = out_path + f"report_prehyb_{n}_{q}_{eta}_{k}_{seed[0]}_{kappa}_{sieve_dim_min}_{sieve_dim_max}.pkl"
+
     sys.stdout.flush()
