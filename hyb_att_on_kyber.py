@@ -335,33 +335,30 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
     for index in range(len(shift_babai_c_list)):
         """
         t_gs_reduced = t_gs_reduced_list[index] #we could do this to t_gs, but this one is shorter
-        b_gs_reduced = from_canonical_scaled( G,t_gs_reduced-out_gs_reduced,offset=sieve_dim )
-        b_gs_reduced = b_gs_reduced / scaling_vec
-        b_reduced = G.babai(list(b_gs_reduced), start=dim-sieve_dim, dimension=sieve_dim, gso=True)
-        b_reduced = G.B.multiply_left( (dim-sieve_dim)*[0] + list( b_reduced ) )
-
-        shift_babai_c_reduced =  shift_babai_c_list[index]
-        shift_babai_reduced = G.B.multiply_left( (dim-sieve_dim)*[0] + list( shift_babai_c_reduced ) )
-
-        b = np.array( shift_babai_reduced ) + np.array( b_reduced )
-        t = target_candidates[index]
-
-        diff = np.array( t ) - np.array( b ) #an actual error vector we observe == actual error (+ some lattice vector for bad candidates)
-        diff_gs_nrm_sq = diff@diff #its norm. Ideally, == norm of error
-        """
-        t_gs_reduced = t_gs_reduced_list[index] #we could do this to t_gs, but this one is shorter
         shift_babai_c_reduced =  shift_babai_c_list[index]
 
         #We guess what was the shift corresponding to the answer.
         shift_babai_reduced = G.B.multiply_left( (dim-sieve_dim)*[0] + list( shift_babai_c_reduced ) )
         shift_babai_reduced_gs = from_canonical_scaled( G,shift_babai_reduced, offset=sieve_dim )
         guess_gs = np.array(t_gs_reduced - out_gs_reduced) #a supposed BDD solution for t_gs_reduced
-        print(len(guess),len(shift_babai_reduced_gs))
+        print(len(guess_gs),len(shift_babai_reduced_gs))
         guess_gs = guess_gs + shift_babai_reduced_gs
 
         t_gs = t_gs_list[index]
-        diff_gs = t_gs - guess #an actual error vector we observe == actual error (+ some lattice vector for bad candidates)
+        diff_gs = t_gs - guess_gs #an actual error vector we observe == actual error (+ some lattice vector for bad candidates)
         diff_gs_nrm_sq = diff_gs@diff_gs #its norm. Ideally, == norm of error
+        """
+        print(f"LEN: {len(target_candidates)}")
+        t_full = target_candidates[index]
+        t_full_gs = from_canonical_scaled( G,t_full,offset=dim ) #we could do this to t_gs, but this one is shorter
+        print(f"{len(t_gs), dim-sieve_dim ,len(out_gs_reduced)} - - - -")
+        guess_gs = np.array(t_full_gs - np.concatenate([(dim-sieve_dim)*[0],out_gs_reduced]))
+        guess_c = G.babai( guess_gs, gso=True )
+        guess = G.B.multiply_left( guess_c )
+        guess_gs = np.array( to_canonical_scaled( G,guess,offset=dim ) )
+        diff_gs = t_full_gs - guess_gs
+
+        diff_gs_nrm_sq = diff_gs@diff_gs
 
         if diff_gs_nrm_sq < min_norm_err_sq:
             min_norm_err_sq = diff_gs_nrm_sq
@@ -374,7 +371,7 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
     #we substitute the obtaied error from the target and call babai to
     #account for an fp error
     # t_new = t - to_canonical_scaled( G, np.concatenate( [(dim-sieve_dim)*[0], out_gs_reduced] ) )
-    t_new = t - to_canonical_scaled( G, out_gs_reduced, offset=sieve_dim )
+    t_new = t - to_canonical_scaled( G, np.concatenate([ (dim-sieve_dim)*[0] , out_gs_reduced ]) )
     assert len(t_new) == dim
     bab_01 = G.babai(t_new)
     # bab_01 = G.babai(b_best)
