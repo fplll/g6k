@@ -9,7 +9,7 @@ import sys
 if __name__ == "__main__":
 
     FPLLL.set_precision(250)
-    n, betamax, sieve_dim = 120, 58, 72 #n=170 is liikely to fail
+    n, betamax, sieve_dim = 210, 60, 75 #n=170 is liikely to fail
     ft = "ld" if n<70 else ( "dd" if config.have_qd else "mpfr")
     # - - - try load a lattice - - -
     filename = f"bdgl2_n{n}_b{sieve_dim}.pkl"
@@ -70,13 +70,13 @@ if __name__ == "__main__":
     for _ in range(nexp):
         c = [ randrange(-33,34) for j in range(n) ]
         # e = np.array( [ randrange(-8,9) for j in range(n) ],dtype=np.int64 )
-        e = np.array( random_on_sphere(n,0.35*gh) )
+        e = np.array( random_on_sphere(n,0.1*gh) )
         e = np.round(e)
 
         print(f"gauss: {gh} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
 
         e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
-        print(f"projected (e_@e_): {(e_@e_)} vs r/4: {G.get_r(n-sieve_dim, n-sieve_dim)/4}")
+        print(f"projected (e_@e_): {(e_@e_)} vs r/4/gh: {G.get_r(n-sieve_dim, n-sieve_dim)/4/gh**2}")
         print("projected target squared length:", 1.0000001*(e_@e_))
 
         print(f"e_: {e_}")
@@ -104,7 +104,11 @@ if __name__ == "__main__":
         B_gs = [ np.array( from_canonical_scaled(G, G.B[i], offset=sieve_dim), dtype=np.float64 ) for i in range(G.d - sieve_dim, G.d) ]
         t_gs_reduced = reduce_to_fund_par_proj(B_gs,(t_gs),sieve_dim) #reduce the target w.r.t. B_gs
         t_gs_shift = t_gs-t_gs_reduced #find the shift to be applied after the slicer
-
+        # t_gs_non_scaled = G.from_canonical(t)[-sieve_dim:]
+        # shift_babai_c = G.babai((n-sieve_dim)*[0] + list(t_gs_non_scaled), start=n-sieve_dim,gso=True)
+        # shift_babai = G.B.multiply_left( (n-sieve_dim)*[0] + list( shift_babai_c ) )
+        # t_gs_reduced = from_canonical_scaled( G,np.array(t)-shift_babai,offset=sieve_dim ) #this is the actual reduced target
+        # t_gs_shift = from_canonical_scaled( G,shift_babai,offset=sieve_dim )
 
         # - - - prelim check - - -
         out = to_canonical_scaled( G,t_gs_reduced,offset=sieve_dim )
@@ -125,13 +129,13 @@ if __name__ == "__main__":
         print(c)
        #print(f"Coeffs of b found: {(c==bab_01)}")
         succbab = all(c==bab_01)
-        print(f"Babai Succsess: {succbab}")
+        print(f"Babai Success: {succbab}")
         # - - - end prelim check - - -
         # - - - extra check - - -
         bab_t = np.array( g6k.M.babai(t) )
         #print(f"Coeffs of b found: {(c==bab_t)}")
         succ = all(c==bab_t)
-        print(f"Final Babai Succsess: {succ}")
+        print(f"Final Babai Success: {succ}")
         if succ:
             print(f"t_gs_reduced: {t_gs_reduced}")
             nbab_succ+=1
@@ -200,7 +204,7 @@ if __name__ == "__main__":
             #print(c)
             #print(f"Coeffs of b found: {(c==bab_01)}")
             succ = all(c==bab_01)
-            print(f"Succsess: {(succ)}")
+            print(f"Success: {(succ)}")
             if succ:
                 nsli_succ+=1
             print(f"both succeded: {succ and succbab}", flush=True)

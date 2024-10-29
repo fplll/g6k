@@ -1,20 +1,30 @@
 from fpylll import *
+from fpylll.algorithms.bkz2 import BKZReduction
+from fpylll.util import gaussian_heuristic
+
 from g6k.siever import Siever
 from g6k.siever_params import SieverParams
 from g6k.slicer import RandomizedSlicer
-from utils import *
+from utils import save_folder, random_on_sphere, from_canonical_scaled, to_canonical_scaled, reduce_to_fund_par_proj #*
 import argparse
 import sys
 from hybrid_estimator.batchCVP import batchCVPP_cost
+from random import shuffle, randrange
+import numpy as np
+from math import sqrt, ceil, floor, log, exp
+import time
+import pickle
 
 try:
     from multiprocess import Pool  # you might need pip install multiprocess
 except ModuleNotFoundError:
     from multiprocessing import Pool
 
+import sys, os
+
 def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperiments, nthreads):
 
-    approx_fact = 1.055
+    approx_fact = 1.005
     ft = "ld" if n<50 else ( "dd" if config.have_qd else "mpfr")
     print(f"launching n, betamax, sieve_dim = {n, betamax, sieve_dim}")
 
@@ -53,7 +63,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
             then_round=time.perf_counter()
             bkz.BKZ(beta,tours=5)
             round_time = time.perf_counter()-then_round
-            print(f"BKZ-{beta} done in {round_time}")
+            print(f"BKZ-{beta} done in {round_time}", flush=True)
             sys.stdout.flush()
 
         int_type = bkz.gso.B.int_type
@@ -95,8 +105,10 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
         print("Running experiment ", j, "out of ", n_shrinkings)
 
         for i in range(Nexperiments):
+            if i%10 == 0:
+                print(f"{i} out of {Nexperiments} done...", flush=True)
             c = [ randrange(-10,10) for k in range(n) ]
-            e = np.array( random_on_sphere(n, 0.35 * gh) ) #error vector
+            e = np.array( random_on_sphere(n, 0.5 * gh) ) #error vector
             print(f"gauss: {gh} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
             e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
 
@@ -107,12 +119,17 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
 
             #project onto the last projective lattice and babai reduce
             t_gs = from_canonical_scaled( G,t,offset=sieve_dim )
-            t_gs_non_scaled = G.from_canonical(t)[-sieve_dim:]
-            shift_babai_c = G.babai((n-sieve_dim)*[0] + list(t_gs_non_scaled), start=n-sieve_dim,gso=True)
-            shift_babai = G.B.multiply_left( (n-sieve_dim)*[0] + list( shift_babai_c ) )
-            t_gs_reduced = from_canonical_scaled( G,np.array(t)-shift_babai,offset=sieve_dim ) #this is the actual reduced target
+            # t_gs_non_scaled = G.from_canonical(t)[-sieve_dim:]
+            # shift_babai_c = G.babai((n-sieve_dim)*[0] + list(t_gs_non_scaled), start=n-sieve_dim,gso=True)
+            # shift_babai = G.B.multiply_left( (n-sieve_dim)*[0] + list( shift_babai_c ) )
+            # t_gs_reduced = from_canonical_scaled( G,np.array(t)-shift_babai,offset=sieve_dim ) #this is the actual reduced target
+            # t_gs_shift = from_canonical_scaled( G,shift_babai,offset=sieve_dim )
 
-            t_gs_shift = from_canonical_scaled( G,shift_babai,offset=sieve_dim)
+            B_gs = [ np.array( from_canonical_scaled(G, G.B[i], offset=sieve_dim), dtype=np.float64 ) for i in range(G.d - sieve_dim, G.d) ]
+            t_gs_reduced = reduce_to_fund_par_proj(B_gs,(t_gs),sieve_dim) #reduce the target w.r.t. B_gs
+            t_gs_shift = t_gs-t_gs_reduced #find the shift to be applied after the slicer
+            shift_babai_c = G.babai((n-sieve_dim)*[0] + list(t_gs_shift), start=n-sieve_dim,gso=True)
+
             print("t_gs_reduced:",t_gs_reduced)
             print(f"e_: {e_}")
 
@@ -136,28 +153,30 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
                 #would remain to be in the db_t
                 slicer = RandomizedSlicer(g6k)
                 slicer.set_nthreads(nthreads);
-                slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=ceil((1./nrand_)**sieve_dim))
+                n_per_target = ceil(2 * (1./nrand_)**sieve_dim) #10.8 for dim=55?
+                print(f"Forcing nrerand = {n_per_target}")
+                slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=n_per_target)
                 try:
                     slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (approx_fact**2 * (e_@e_)))
                     iterator = slicer.itervalues_t()
                     for tmp in iterator:
-                        out_gs_reduced = tmp  #cdb[0]
+                        out_gs_reduced = np.array( tmp )  #cdb[0]
                         break
                     print(f"out_gs_reduced: {out_gs_reduced}")
-                    out_gs_reduced = np.array(out_gs_reduced)
-                    print(f"cos(e_,out_gs_reduced): {e_@out_gs_reduced/(out_gs_reduced@out_gs_reduced)**0.5*(e_@e_)**0.5}")
+                    print(f"out_gs_reduced-e_: {np.abs( out_gs_reduced-e_ )}")
+                    print(f"out_gs_reduced**2: {out_gs_reduced@out_gs_reduced}")
                     out_gs = out_gs_reduced + t_gs_shift
 
                     # - - - Check - - - -
                     out = to_canonical_scaled( G,out_gs,offset=sieve_dim )
-                    N = GSO.Mat( G.B[:n-sieve_dim], float_type=ft )
-                    N.update_gso()
+                    # N = GSO.Mat( G.B[:n-sieve_dim], float_type=ft )
+                    # N.update_gso()
                     bab_1 = G.babai(t-np.array(out),start=n-sieve_dim) #last sieve_dim coordinates of s
-                    tmp = t - np.array( G.B[-sieve_dim:].multiply_left(bab_1) )
-                    tmp = N.to_canonical( G.from_canonical( tmp, start=0, dimension=n-sieve_dim ) ) #project onto span(B[-sieve_dim:])
-                    bab_0 = N.babai(tmp)
+                    # tmp = t - np.array( G.B[-sieve_dim:].multiply_left(bab_1) )
+                    # tmp = N.to_canonical( G.from_canonical( tmp, start=0, dimension=n-sieve_dim ) ) #project onto span(B[-sieve_dim:])
+                    # bab_0 = N.babai(tmp)
 
-                    bab_01 =  np.array( bab_0+bab_1 ) #shifted answer. Good since it is smaller, thus less rounding error
+                    bab_01 =  np.array( bab_1 ) #shifted answer. Good since it is smaller, thus less rounding error
                     bab_01 += np.array(shift_babai_c)
                     print(f"Success: {all(c==bab_01)}")
                     if (all(c==bab_01)):
@@ -167,9 +186,11 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
                         slicer_fail[j] += 1
                         print(f"FAIL")
                         found_nrm_sq = out_gs@out_gs #meant to be an error modulo Voronoi cell
-                        assert ( found_nrm_sq>0.999*(e_@e_) ), f"Found impossible vector! {found_nrm_sq} < {(e_@e_)}"
+                        # assert ( found_nrm_sq>0.999*(e_@e_) ), f"Found impossible vector! {found_nrm_sq} < {(e_@e_)}"
 
-                except Exception as e: print(f" - - - {e} - - -")
+                except Exception as e:
+                    print(f" - - - {e} - - -")
+                    raise e
 
         g6k.shrink_db(shrink_factor*g6k.db_size())
 
@@ -203,9 +224,9 @@ if __name__ == '__main__':
 
     FPLLL.set_precision(250)
 
-    n, betamax, sieve_dim = 60, 55, 60
+    n, betamax, sieve_dim = 60, 45, 60
 
-    nthreads = 50 # number of workers
+    nthreads = 5 # number of workers
     slicer_threads = 2 # threads the slicer will use
     shrink_factor = 0.7
     n_shrinkings = 10

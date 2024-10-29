@@ -280,13 +280,18 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
     for target in target_candidates:
         # print(end=".", flush=True)
         t_gs = from_canonical_scaled( G,target,offset=sieve_dim )
-        t_gs_non_scaled = G.from_canonical(target)[dim-sieve_dim:]
-        shift_babai_c =  list( G.babai( list(t_gs_non_scaled), start=dim-sieve_dim, dimension=sieve_dim, gso=True) )
-        print( f"shift_babai_c: {shift_babai_c}" )
-        shift_babai = G.B.multiply_left( (dim-sieve_dim)*[0] + list( shift_babai_c ) )
-        t_gs_reduced = from_canonical_scaled( G,np.array(target)-shift_babai,offset=sieve_dim ) #this is the actual reduced target
-        assert len(t_gs_reduced) == sieve_dim
-        assert all( abs( t_gs_reduced[dim-sieve_dim:] ) <0.501 ) #assert that the last Sieve dim coords are size reduced
+        # t_gs_non_scaled = G.from_canonical(target)[dim-sieve_dim:]
+        # shift_babai_c =  list( G.babai( list(t_gs_non_scaled), start=dim-sieve_dim, dimension=sieve_dim, gso=True) )
+        # print( f"shift_babai_c: {shift_babai_c}" )
+        # shift_babai = G.B.multiply_left( (dim-sieve_dim)*[0] + list( shift_babai_c ) )
+        # t_gs_reduced = from_canonical_scaled( G,np.array(target)-shift_babai,offset=sieve_dim ) #this is the actual reduced target
+        # assert len(t_gs_reduced) == sieve_dim
+        # assert all( abs( t_gs_reduced[dim-sieve_dim:] ) <0.501 ) #assert that the last Sieve dim coords are size reduced
+
+        B_gs = [ np.array( from_canonical_scaled(G, G.B[i], offset=sieve_dim), dtype=np.float64 ) for i in range(G.d - sieve_dim, G.d) ]
+        t_gs_reduced = reduce_to_fund_par_proj(B_gs,(t_gs),sieve_dim) #reduce the target w.r.t. B_gs
+        t_gs_shift = t_gs-t_gs_reduced #find the shift to be applied after the slicer
+        shift_babai_c = G.babai((dim-sieve_dim)*[0] + list(t_gs_shift), start=dim-sieve_dim,gso=True)
 
         t_gs_list.append(t_gs)
         shift_babai_c_list.append(shift_babai_c)
@@ -347,11 +352,12 @@ def alg_2_batched( g6k,target_candidates, dist_sq_bnd=1.0, nthreads=1, tracer_al
         t_gs_reduced = t_gs_reduced_list[index] #we could do this to t_gs, but this one is shorter
         shift_babai_c_reduced =  shift_babai_c_list[index]
 
+        #We guess what was the shift corresponding to the answer.
         shift_babai_reduced = G.B.multiply_left( (dim-sieve_dim)*[0] + list( shift_babai_c_reduced ) )
         shift_babai_reduced_gs = from_canonical_scaled( G,shift_babai_reduced, offset=sieve_dim )
-        guess = np.array(t_gs_reduced - out_gs_reduced)
+        guess_gs = np.array(t_gs_reduced - out_gs_reduced) #a supposed BDD solution for t_gs_reduced
         print(len(guess),len(shift_babai_reduced_gs))
-        guess = guess + shift_babai_reduced_gs
+        guess_gs = guess_gs + shift_babai_reduced_gs
 
         t_gs = t_gs_list[index]
         diff_gs = t_gs - guess #an actual error vector we observe == actual error (+ some lattice vector for bad candidates)
@@ -381,7 +387,7 @@ if __name__=="__main__":
     # (dimension, predicted kappa, predicted beta)
     # params = [(140, 12, 48), (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
     # params = [(140, 12, 48)]#, (150, 13, 57), (160, 13, 67), (170, 13, 76), (180, 14, 84)]
-    params = [(80, 2, 40)]
+    params = [(100, 2, 40)]
     nworkers, nthreads = 1, 1
 
     lats_per_dim = 2 #1
