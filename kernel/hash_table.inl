@@ -78,7 +78,7 @@ inline UidType UidHashTable::compute_uid_t(std::array<LFT,MAX_SIEVING_DIM> const
     //ATOMIC_CPUCOUNT(250);
     UidType res = 0;
     for (size_t i=0; i<n; i++){
-        res+=static_cast<int16_t>(100*y[i])*uid_coeffs[i]; //TODO:use move from https://en.cppreference.com/w/cpp/algorithm/inner_product ?
+        res+=static_cast<int16_t>(128*y[i])*uid_coeffs[i]; //TODO:use move from https://en.cppreference.com/w/cpp/algorithm/inner_product ?
         //std::cout << " " << static_cast<int16_t>(y[i]) << " " <<uid_coeffs[i] << " " << res << std::endl;
     }
 

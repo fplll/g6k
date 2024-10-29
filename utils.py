@@ -64,6 +64,11 @@ def from_canonical_scaled(M, t, offset=None):
     if offset is None:
         offset=M.d
     gh = gaussian_heuristic(M.r()[M.d-offset:])
+    gh = 2**round(log(gh,2))
+    # gh = 1
+    # for tmp in M.r()[M.d-offset:]:
+    #     gh*=tmp
+    # gh = gh**(1/(2*offset))
     t_ = np.array( M.from_canonical(t)[M.d-offset:], dtype=np.float64 )
     r_ = np.array( [sqrt(tt/gh) for tt in M.r()[M.d-offset:]], dtype=np.float64 )
 
@@ -80,6 +85,11 @@ def to_canonical_scaled(M, t, offset=None):
         offset=M.d
 
     gh = gaussian_heuristic(M.r()[-offset:])**0.5
+    gh = 2**round(log(gh,2))
+    # gh = 1
+    # for tmp in M.r()[M.d-offset:]:
+    #     gh*=tmp
+    # gh = gh**(1/(2*offset))
     r_ = np.array( [1/sqrt(tt) for tt in M.r()[-offset:]], dtype=np.float64 ) * gh
     tmp = t*r_
     return M.to_canonical(tmp, start=M.d-offset)

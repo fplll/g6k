@@ -15,7 +15,7 @@ except ModuleNotFoundError:
 def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperiments, nthreads):
 
     approx_fact = 1.055
-    ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
+    ft = "ld" if n<50 else ( "dd" if config.have_qd else "mpfr")
     print(f"launching n, betamax, sieve_dim = {n, betamax, sieve_dim}")
 
     slicer_suc = [0]*n_shrinkings
@@ -70,7 +70,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
     print("Running bdgl2...")
     g6k(alg="bdgl2")
     g6k.M.update_gso()
-    gh = gaussian_heuristic(G.r())**0.5
+    gh = min( gaussian_heuristic(G.r())**0.5, G.r()[0]**0.5 )
     if nothing_to_load:
         g6k.dump_on_disk(filename)
 
@@ -96,7 +96,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
 
         for i in range(Nexperiments):
             c = [ randrange(-10,10) for k in range(n) ]
-            e = np.array( random_on_sphere(n, 0.5 * gh) ) #error vector
+            e = np.array( random_on_sphere(n, 0.35 * gh) ) #error vector
             print(f"gauss: {gh} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
             e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
 
@@ -114,6 +114,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
 
             t_gs_shift = from_canonical_scaled( G,shift_babai,offset=sieve_dim)
             print("t_gs_reduced:",t_gs_reduced)
+            print(f"e_: {e_}")
 
             print("projected reduced target squared length:", (t_gs_reduced@t_gs_reduced))
             print("projected error squared length:", (e_@e_))
@@ -125,7 +126,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
             N.update_gso()
             bab_1 = G.babai(t-np.array(out),start=n-sieve_dim) #last sieve_dim coordinates of s
             succ = all( np.array( c[G.d-sieve_dim:] )==bab_1 )
-            print(f"Babai Success: {succ}")
+            print(f"Babai Success: {succ}", flush=True)
 
             if succ:
                 babai_suc[j]+=1
@@ -142,6 +143,9 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
                     for tmp in iterator:
                         out_gs_reduced = tmp  #cdb[0]
                         break
+                    print(f"out_gs_reduced: {out_gs_reduced}")
+                    out_gs_reduced = np.array(out_gs_reduced)
+                    print(f"cos(e_,out_gs_reduced): {e_@out_gs_reduced/(out_gs_reduced@out_gs_reduced)**0.5*(e_@e_)**0.5}")
                     out_gs = out_gs_reduced + t_gs_shift
 
                     # - - - Check - - - -
@@ -186,7 +190,7 @@ def run_exp(lat_id, n, betamax, sieve_dim, shrink_factor, n_shrinkings, Nexperim
 
 if __name__ == '__main__':
 
-    Nexperiments = 150
+    Nexperiments = 20
     Nlats = 10
     path = "saved_lattices/"
     isExist = os.path.exists(path)
@@ -199,7 +203,7 @@ if __name__ == '__main__':
 
     FPLLL.set_precision(250)
 
-    n, betamax, sieve_dim = 80, 60, 80
+    n, betamax, sieve_dim = 60, 55, 60
 
     nthreads = 50 # number of workers
     slicer_threads = 2 # threads the slicer will use

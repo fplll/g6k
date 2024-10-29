@@ -9,8 +9,8 @@ import sys
 if __name__ == "__main__":
 
     FPLLL.set_precision(250)
-    n, betamax, sieve_dim = 55, 55, 50 #n=170 is liikely to fail
-    ft = "ld" if n<145 else ( "dd" if config.have_qd else "mpfr")
+    n, betamax, sieve_dim = 120, 58, 72 #n=170 is liikely to fail
+    ft = "ld" if n<70 else ( "dd" if config.have_qd else "mpfr")
     # - - - try load a lattice - - -
     filename = f"bdgl2_n{n}_b{sieve_dim}.pkl"
     nothing_to_load = True
@@ -53,7 +53,7 @@ if __name__ == "__main__":
         lll = LLL.Reduction( G )
         lll()
     # - - - end Make all fpylll objects - - -
-    gh = gaussian_heuristic(G.r())**0.5
+    gh = min( [G.r()[0], gaussian_heuristic(G.r())] )**0.5
     param_sieve = SieverParams()
     param_sieve['threads'] = 4
     g6k = Siever(G,param_sieve)
@@ -65,19 +65,21 @@ if __name__ == "__main__":
     print(f"dbsize: {len(g6k)}")
 
     nbab_succ, nsli_succ = 0, 0
-    nexp = 200
+    nexp = 250
 
     for _ in range(nexp):
         c = [ randrange(-33,34) for j in range(n) ]
-        e = np.array( [ randrange(-8,9) for j in range(n) ],dtype=np.int64 )
-        #e = np.array( random_on_sphere(n,0.98*gh/2) )
-
+        # e = np.array( [ randrange(-8,9) for j in range(n) ],dtype=np.int64 )
+        e = np.array( random_on_sphere(n,0.35*gh) )
+        e = np.round(e)
 
         print(f"gauss: {gh} vs r_00: {G.get_r(0,0)**0.5} vs ||err||: {(e@e)**0.5}")
 
         e_ = np.array( from_canonical_scaled(G,e,offset=sieve_dim) )
         print(f"projected (e_@e_): {(e_@e_)} vs r/4: {G.get_r(n-sieve_dim, n-sieve_dim)/4}")
-        print("projected target squared length:", 1.01*(e_@e_))
+        print("projected target squared length:", 1.0000001*(e_@e_))
+
+        print(f"e_: {e_}")
 
         b = G.B.multiply_left( c )
         b_ = np.array(b,dtype=np.int64)
@@ -122,17 +124,19 @@ if __name__ == "__main__":
         print((f"recovered*B^(-1): {bab_0+bab_1}"))
         print(c)
        #print(f"Coeffs of b found: {(c==bab_01)}")
-        succ = all(c==bab_01)
-        print(f"Babai Succsess: {succ}")
+        succbab = all(c==bab_01)
+        print(f"Babai Succsess: {succbab}")
         # - - - end prelim check - - -
         # - - - extra check - - -
         bab_t = np.array( g6k.M.babai(t) )
         #print(f"Coeffs of b found: {(c==bab_t)}")
         succ = all(c==bab_t)
-        print(f"Babai Succsess: {succ}")
+        print(f"Final Babai Succsess: {succ}")
         if succ:
+            print(f"t_gs_reduced: {t_gs_reduced}")
             nbab_succ+=1
-
+        else:
+            print(c==bab_t)
         # - - - end extra check - - -
 
         if not succ:
@@ -147,7 +151,7 @@ if __name__ == "__main__":
             print("target:", [float(tt) for tt in t_gs_reduced])
             print("dbsize", g6k.db_size())
 
-            slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=750)
+            slicer.grow_db_with_target([float(tt) for tt in t_gs_reduced], n_per_target=2*10**4)
 
             blocks = 2 # should be the same as in siever
             blocks = min(3, max(1, blocks))
@@ -165,15 +169,20 @@ if __name__ == "__main__":
             # print("target length:", 1.01*(e_@e_))
             #slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (1.01*(e_@e_)))
 
-            slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (1.01*(e_@e_)))
+            slicer.bdgl_like_sieve(buckets, blocks, sp["bdgl_multi_hash"], (1.005*(e_@e_)))
             iterator = slicer.itervalues_t()
             for tmp in iterator:
-                out_gs_reduced = tmp  #cdb[0]
+                out_gs_reduced = np.array(tmp)  #cdb[0]
                 break
             out_gs = out_gs_reduced + t_gs_shift
 
             # - - - Check - - - -
             out = to_canonical_scaled( G,out_gs,offset=sieve_dim )
+            print(f"out_gs_reduced: {out_gs_reduced}")
+            print(f"e_: {e_}")
+            print(f"e_-out_gs_reduced: {np.abs(e_-out_gs_reduced)}")
+            print(f"|out_gs_reduced|^2: {out_gs_reduced@out_gs_reduced}")
+            print(f"|e_|^2: {e_@e_}")
 
             projerr = G.to_canonical( G.from_canonical(e,start=n-sieve_dim), start=n-sieve_dim)
             diff_v =  np.array(projerr)-np.array(out)
@@ -194,4 +203,5 @@ if __name__ == "__main__":
             print(f"Succsess: {(succ)}")
             if succ:
                 nsli_succ+=1
-        print(f"nbab_succ, nsli_succ: {nbab_succ,nsli_succ+nbab_succ}")
+            print(f"both succeded: {succ and succbab}", flush=True)
+        print(f"nbab_succ, nsli_succ: {nbab_succ,nsli_succ+nbab_succ} out of {nexp}")
