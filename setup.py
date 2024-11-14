@@ -76,7 +76,7 @@ def read_from(filename, field, sep):
 
 with open(os.path.join("g6k", "__init__.py")) as f:
     __version__ = (
-        parse(next(filter(lambda line: line.startswith("__version__"), f))).body[0].value.s
+        parse(next(filter(lambda line: line.startswith("__version__"), f))).body[0].value.value
     )
 
 extra_compile_args = ["-std=c++11"]
