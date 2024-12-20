@@ -96,7 +96,7 @@ git pull # Update if it was checked-out before
 $PIP install -r requirements.txt -r suggestions.txt
 
 $PYTHON setup.py clean
-if ! $PYTHON setup.py build_ext $jobs || $PYTHON setup.py build_ext; then
+if ! ( $PYTHON setup.py build_ext $jobs || $PYTHON setup.py build_ext ); then
     echo "Failed to build FPyLLL!"
     echo "Check the logs above - they'll contain more information."
     exit 5
@@ -108,7 +108,7 @@ cd ..
 # Build G6K
 
 $PYTHON setup.py clean
-if ! $PYTHON setup.py build_ext $jobs --inplace || $PYTHON setup.py build_ext --inplace; then
+if ! ( $PYTHON setup.py build_ext $jobs --inplace || $PYTHON setup.py build_ext --inplace ); then
     echo "Failed to build G6K!"
     echo "Check the logs above - they'll contain more information."
     exit 6
