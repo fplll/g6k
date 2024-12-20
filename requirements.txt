@@ -1,5 +1,5 @@
 Cython>=3.0
-cysignals<1.12.0
+cysignals
 flake8
 ipython
 numpy
