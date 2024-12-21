@@ -36,7 +36,7 @@ import os
 from ast import parse
 
 #
-# `setup,py` consumes files output by `configure` so we insist on running it first.
+# `setup.py` consumes files output by `configure` so we insist on running it first.
 #
 
 if not os.path.exists("configure"):
