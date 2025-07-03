@@ -4,7 +4,7 @@ Sieving parameters.
 """
 
 from contextlib import contextmanager
-from pkg_resources import resource_filename
+from importlib.resources import as_file, files
 from decl cimport MAX_SIEVING_DIM
 
 import warnings
@@ -127,9 +127,8 @@ cdef class SieverParams(object):
         if "gauss_crossover" not in kwds:
             kwds["gauss_crossover"] = 50
         if "simhash_codes_basedir" not in kwds:
-            fname = resource_filename("g6k", "spherical_coding").encode()
-            if fname is None:
-                fname = b"./spherical_coding"
+            with as_file(files("g6k").joinpath("spherical_coding")) as f:
+                fname = str(f.absolute()) if f.exists() else "./spherical_coding"
             kwds["simhash_codes_basedir"] = fname
 
         read_only = False
