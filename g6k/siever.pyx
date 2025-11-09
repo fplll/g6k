@@ -1632,7 +1632,7 @@ cdef class Siever(object):
             >>> id, nrm, w = bl[0]
             >>> id, int(nrm)
             (0, 197445)
-            >>> sum([v**2 for v in A.multiply_left(w)])
+            >>> int(sum([v**2 for v in A.multiply_left(w)]))
             197445
 
             >>> g6k = Siever(A)
@@ -1645,7 +1645,7 @@ cdef class Siever(object):
             >>> id, nrm, w = bl[0]
             >>> id, round(nrm)
             (0, 194629)
-            >>> sum([v**2 for v in A.multiply_left(w)])
+            >>> int(sum([v**2 for v in A.multiply_left(w)]))
             194629
 
         """
