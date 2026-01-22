@@ -48,7 +48,7 @@ struct atomic_size_t_wrapper
     CACHELINE_PAD(pad);
 };
 
-inline bool compare_QEntry(QEntry const& lhs, QEntry const& rhs) { return lhs.len > rhs.len; }
+inline bool compare_QEntry(QEntry const& lhs, QEntry const& rhs) { return lhs.len < rhs.len; }
 
 std::pair<LFT, int8_t> Siever::reduce_to_QEntry(CompressedEntry *ce1, CompressedEntry *ce2)
 {
